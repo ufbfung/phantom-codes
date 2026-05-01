@@ -108,23 +108,25 @@ Phantom Codes draws on five recent (2024-2026) lines of work in LLM-based clinic
 
 What we contribute on top of this prior work:
 
-- **Explicit hallucination bucket** — none of the above frameworks give "code does not exist in the controlled vocabulary" its own outcome class.
-- **Zero-shot vs. constrained as a controlled comparison** — isolates "wandering off the menu" from "genuine ignorance" using the same model.
-- **D4_abbreviated degradation mode** — deliberately strips the canonical display tokens that string-matching baselines depend on, forcing semantic retrieval.
+- **D4_abbreviated as a stress test** — deliberately strips the canonical display tokens that string-matching baselines depend on, forcing semantic retrieval. This is the experiment where LLM-vs-baseline differences should surface most cleanly, and the headline mode of the benchmark.
+- **Hallucination as a first-class outcome** — "code does not exist in the controlled vocabulary" gets its own bucket, mechanically checked against a CMS-published validator. Replaces top-1 accuracy as the headline metric.
+- **Zero-shot vs. constrained as a controlled within-model ablation** — isolates "wandering off the menu" from "genuine ignorance" using the same model and the same input, varying only the candidate-list constraint.
 
 ## References
 
-1. Almeida, V. A., de Camargo, V., Gómez-Bravo, R., et al. (2025). *Large Language Models as Medical Code Selectors: a benchmark using the International Classification of Primary Care.* NeurIPS 2025 Workshop on GenAI for Health. [arXiv:2507.14681](https://arxiv.org/abs/2507.14681)
-2. Bhatti, U. et al. (2025). *MAX-EVAL-11: A Comprehensive Benchmark for Evaluating Large Language Models on Full-Spectrum ICD-11 Medical Coding.* medRxiv. [doi:10.1101/2025.10.30.25339130](https://www.medrxiv.org/content/10.1101/2025.10.30.25339130v1)
-3. Motzfeldt, A., Edin, J., Christensen, C. L., Hardmeier, C., Maaløe, L., & Rogers, A. (2025). *Code Like Humans: A Multi-Agent Solution for Medical Coding.* Findings of EMNLP 2025. [arXiv:2509.05378](https://arxiv.org/abs/2509.05378)
-4. Kim, Y., et al. (2025). *Medical Hallucinations in Foundation Models and Their Impact on Healthcare.* [arXiv:2503.05777](https://arxiv.org/abs/2503.05777)
-5. Li, M., Schlegel, V., Mu, T., Oyewusi, W., Kang, K., & Nenadic, G. (2025). *Evaluation and LLM-Guided Learning of ICD Coding Rationales.* [arXiv:2508.16777](https://arxiv.org/abs/2508.16777)
+The full curated bibliography (16 references organized into foundational landmarks, direct LLM-on-medical-coding evaluations, and clinical-hallucination studies) lives at [paper/sections/references.md](paper/sections/references.md). The five papers most directly inspiring this work:
+
+1. **Soroush et al. 2024 (NEJM AI)** — *Large Language Models Are Poor Medical Coders.* GPT-4 achieves 46% / 34% / 50% exact match on ICD-9 / ICD-10 / CPT respectively; substantial hallucination of non-existent codes. [doi:10.1056/AIdbp2300040](https://ai.nejm.org/doi/full/10.1056/AIdbp2300040)
+2. **Almeida et al. 2025 (NeurIPS GenAI4Health)** — *Large Language Models as Medical Code Selectors.* 33-LLM benchmark on ICPC-2; multi-axis evaluation (F1, cost, latency, format adherence). [arXiv:2507.14681](https://arxiv.org/abs/2507.14681)
+3. **Bhatti et al. 2025** — *MAX-EVAL-11.* MIMIC-III mapped to full-spectrum ICD-11 with weighted scoring by code relevance and diagnostic specificity. [doi:10.1101/2025.10.30.25339130](https://www.medrxiv.org/content/10.1101/2025.10.30.25339130v1)
+4. **Motzfeldt et al. 2025 (EMNLP Findings)** — *Code Like Humans.* Agentic ICD-10 coding traversing the alphabetic index sequentially. [arXiv:2509.05378](https://arxiv.org/abs/2509.05378)
+5. **Kim et al. 2025** — *Medical Hallucinations in Foundation Models and Their Impact on Healthcare.* Defines medical hallucination broadly; benchmarks 11 foundation models. [arXiv:2503.05777](https://arxiv.org/abs/2503.05777)
 
 Foundational references for the 5-way outcome taxonomy:
 
-- Mullenbach, J., Wiegreffe, S., Duke, J., Sun, J., & Eisenstein, J. (2018). *Explainable Prediction of Medical Codes from Clinical Text* (CAML). NAACL. [aclanthology.org/N18-1100](https://aclanthology.org/N18-1100/)
-- Hendrycks, D., & Gimpel, K. (2017). *A Baseline for Detecting Misclassified and Out-of-Distribution Examples in Neural Networks.* ICLR. [arXiv:1610.02136](https://arxiv.org/abs/1610.02136)
-- Ji, Z., Lee, N., Frieske, R., Yu, T., et al. (2023). *Survey of Hallucination in Natural Language Generation.* ACM Computing Surveys. [doi:10.1145/3571730](https://dl.acm.org/doi/10.1145/3571730)
+- Mullenbach et al. 2018 (CAML, NAACL) — hierarchical-match terminology. [aclanthology.org/N18-1100](https://aclanthology.org/N18-1100/)
+- Hendrycks & Gimpel 2017 (ICLR) — OOD detection baseline. [arXiv:1610.02136](https://arxiv.org/abs/1610.02136)
+- Ji et al. 2023 (ACM Computing Surveys) — hallucination survey. [doi:10.1145/3571730](https://dl.acm.org/doi/10.1145/3571730)
 
 ## License
 

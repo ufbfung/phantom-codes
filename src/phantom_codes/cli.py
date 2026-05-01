@@ -112,10 +112,12 @@ def smoke_test(
         False,
         "--llms/--no-llms",
         help=(
-            "Also run LLM models (Claude Haiku zero-shot + constrained + RAG; "
-            "GPT-4o-mini and Gemini 2.5 Flash zero-shot if their keys are set). "
-            "Requires ANTHROPIC_API_KEY env var; OPENAI_API_KEY and GEMINI_API_KEY "
-            "are optional. Costs a few cents per run."
+            "Also run LLM models. Haiku 4.5 runs all three prompting modes "
+            "(zero-shot + constrained + RAG); premium models (Opus 4.7, Sonnet 4.6, "
+            "GPT-5.5, Gemini 2.5 Pro) and economy comparators (GPT-4o-mini, Gemini "
+            "2.5 Flash) run zero-shot only for wiring validation. Requires "
+            "ANTHROPIC_API_KEY; OPENAI_API_KEY and GEMINI_API_KEY are optional. "
+            "Cost: ~$3-5 per run with all keys set."
         ),
     ),
     include_retrieval: bool = typer.Option(
@@ -189,8 +191,10 @@ def smoke_test(
 
     if include_llms:
         if not os.environ.get("ANTHROPIC_API_KEY"):
-            console.print("[red]ANTHROPIC_API_KEY not set — skipping LLM models[/]")
+            console.print("[red]ANTHROPIC_API_KEY not set — skipping Anthropic models[/]")
         else:
+            # Haiku gets all three prompting modes — full wiring validation on the
+            # cheapest model. Premium models are zero-shot only.
             models.extend([
                 make_anthropic_model(
                     name="claude-haiku-4-5:zeroshot",
@@ -202,6 +206,16 @@ def smoke_test(
                     model_id="claude-haiku-4-5",
                     mode=PromptMode.CONSTRAINED,
                     candidates=candidates,
+                ),
+                make_anthropic_model(
+                    name="claude-sonnet-4-6:zeroshot",
+                    model_id="claude-sonnet-4-6",
+                    mode=PromptMode.ZEROSHOT,
+                ),
+                make_anthropic_model(
+                    name="claude-opus-4-7:zeroshot",
+                    model_id="claude-opus-4-7",
+                    mode=PromptMode.ZEROSHOT,
                 ),
             ])
             # RAG-LLM only makes sense when we have a retriever.
@@ -216,21 +230,31 @@ def smoke_test(
                     )
                 )
         if os.environ.get("OPENAI_API_KEY"):
-            models.append(
+            models.extend([
                 make_openai_model(
                     name="gpt-4o-mini:zeroshot",
                     model_id="gpt-4o-mini",
                     mode=PromptMode.ZEROSHOT,
-                )
-            )
+                ),
+                make_openai_model(
+                    name="gpt-5.5:zeroshot",
+                    model_id="gpt-5.5",
+                    mode=PromptMode.ZEROSHOT,
+                ),
+            ])
         if os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"):
-            models.append(
+            models.extend([
                 make_gemini_model(
                     name="gemini-2.5-flash:zeroshot",
                     model_id="gemini-2.5-flash",
                     mode=PromptMode.ZEROSHOT,
-                )
-            )
+                ),
+                make_gemini_model(
+                    name="gemini-2.5-pro:zeroshot",
+                    model_id="gemini-2.5-pro",
+                    mode=PromptMode.ZEROSHOT,
+                ),
+            ])
 
     console.print(f"[bold]Models:[/] {', '.join(m.name for m in models)}")
 

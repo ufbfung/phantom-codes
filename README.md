@@ -66,7 +66,10 @@ uv run phantom-codes --help
 # End-to-end smoke test on local fixtures (no network, no MIMIC):
 uv run phantom-codes smoke-test
 
-# With LLMs (requires ANTHROPIC_API_KEY in .env, ~$0.05):
+# With LLMs (~$3-5 per run with all API keys set):
+#   ANTHROPIC_API_KEY (required) — Haiku, Sonnet, Opus 4.7
+#   OPENAI_API_KEY  (optional)   — GPT-4o-mini, GPT-5.5
+#   GEMINI_API_KEY  (optional)   — Gemini 2.5 Flash, Pro
 uv run phantom-codes smoke-test --llms
 ```
 

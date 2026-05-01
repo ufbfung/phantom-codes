@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import tempfile
+from datetime import UTC, datetime
 from pathlib import Path
 
 import typer
@@ -15,6 +16,7 @@ from phantom_codes.data.disease_groups import load as load_scope
 from phantom_codes.data.gcs_setup import copy_resources
 from phantom_codes.data.icd10cm.validator import load as load_validator
 from phantom_codes.data.prepare import prepare as prepare_pipeline
+from phantom_codes.eval.infra import InfraAssertions, infra_assertions
 from phantom_codes.eval.runner import (
     load_records,
     run_eval,
@@ -130,7 +132,23 @@ def smoke_test(
     ),
     out: str = typer.Option(
         "",
-        help="If set, write the per-prediction long-format CSV to this path.",
+        help=(
+            "If set, write the per-prediction long-format CSV to this path. "
+            "When --infra-only is set and --out is empty, defaults to "
+            "results/raw/smoke_test_{utc_timestamp}.csv (gitignored)."
+        ),
+    ),
+    infra_only: bool = typer.Option(
+        False,
+        "--infra-only",
+        help=(
+            "Blinded scaffolding mode: print structural wiring assertions only "
+            "(call counts, token totals, cache hits, latency, classifier-bucket "
+            "coverage). Suppresses the per-model performance summary. Use this "
+            "during scaffolding to avoid bias from peeking at how each model "
+            "performs on fixtures. Per-prediction CSV is still written so the "
+            "data is available for later debugging."
+        ),
     ),
 ) -> None:
     """End-to-end smoke test on local fixtures.
@@ -259,6 +277,28 @@ def smoke_test(
     console.print(f"[bold]Models:[/] {', '.join(m.name for m in models)}")
 
     df = run_eval(models, records, validator, top_k=5)
+
+    # Resolve the CSV output path. In infra-only mode, auto-default to a
+    # timestamped path under results/raw/ (gitignored) so the data is
+    # preserved without requiring an explicit --out flag.
+    out_path = Path(out) if out else None
+    if infra_only and out_path is None:
+        ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+        out_path = Path("results/raw") / f"smoke_test_{ts}.csv"
+
+    if out_path is not None:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(out_path, index=False)
+        console.print(f"[green]Wrote per-prediction rows to {out_path}[/]")
+
+    if infra_only:
+        _print_infra_assertions(infra_assertions(df))
+        console.print(
+            "[dim]Performance summary suppressed (--infra-only). "
+            "Run without the flag, or analyze the CSV directly, to view results.[/]"
+        )
+        return
+
     summary = summarize_by_model_and_mode(df)
 
     table = Table(title="Smoke test summary (top-1 outcome rates by model × degradation mode)")
@@ -274,9 +314,47 @@ def smoke_test(
         table.add_row(*formatted)
     console.print(table)
 
-    if out:
-        df.to_csv(out, index=False)
-        console.print(f"[green]Wrote per-prediction rows to {out}[/]")
+
+def _print_infra_assertions(assertions: InfraAssertions) -> None:
+    """Render structural wiring assertions to the console.
+
+    Deliberately omits per-model accuracy / hallucination / bucket-distribution
+    information — those are performance signals that bias scaffolding work.
+    """
+    table = Table(title="Smoke test wiring assertions (infra-only — no performance reveal)")
+    table.add_column("model")
+    table.add_column("calls", justify="right")
+    table.add_column("tokens_in", justify="right")
+    table.add_column("tokens_out", justify="right")
+    table.add_column("cache_read", justify="right")
+    table.add_column("p50 ms", justify="right")
+    table.add_column("p95 ms", justify="right")
+
+    for m in assertions.per_model:
+        table.add_row(
+            m.model_name,
+            f"{m.n_calls:,}",
+            f"{m.tokens_in:,}",
+            f"{m.tokens_out:,}",
+            f"{m.cache_read_tokens:,}",
+            f"{m.latency_p50_ms:.0f}" if m.latency_p50_ms is not None else "—",
+            f"{m.latency_p95_ms:.0f}" if m.latency_p95_ms is not None else "—",
+        )
+    console.print(table)
+
+    if assertions.all_buckets_reached:
+        console.print(
+            "[green]✓ Outcome buckets — all 5 reachable "
+            "(exact_match, category_match, chapter_match, out_of_domain, hallucination)[/]"
+        )
+    else:
+        console.print(
+            f"[yellow]⚠ Outcome buckets not reached: {assertions.missing_buckets}[/]"
+        )
+        console.print(
+            "[dim]Expected on small fixture sets if no fixture exercises those classifier "
+            "branches. Confirm by inspecting the CSV directly if concerned about coverage.[/]"
+        )
 
 
 @app.command()

@@ -16,7 +16,7 @@ Take a coded FHIR Condition (e.g., one bearing ICD-10 `E11.9` "Type 2 diabetes m
 
 The benchmark compares:
 
-- **LLMs** — Claude (Sonnet 4.6, Haiku 4.5), GPT-4-class, Gemini 2.5 (Pro, Flash). Both **zero-shot** (no menu, primary experiment) and **constrained** (with candidate list, hallucination control).
+- **LLMs** — Claude (Opus 4.7, Sonnet 4.6, Haiku 4.5), GPT (5.5, 4-class), Gemini 2.5 (Pro, Flash). Three prompting modes: **zero-shot** (no menu, primary experiment), **constrained** (fixed candidate list, hallucination control), and **RAG** (per-record retrieved candidates).
 - **Trained models** — sentence-transformer retrieval (FAISS) and PubMedBERT classification head.
 - **Baselines** — exact, fuzzy (rapidfuzz), TF-IDF nearest neighbor.
 
@@ -79,13 +79,18 @@ src/phantom_codes/
   data/         # fhir_loader, code_set, degrade, abbreviate, disease_groups
                 # icd10cm/  (bundled CMS FY2026 codes for hallucination detection)
                 # access_valuesets/  (CMS ACCESS Model FHIR ValueSets)
-  models/       # base ABC + llm, baselines, (retrieval, classifier — TBD)
+  models/       # base ABC + llm (Anthropic, OpenAI, Google), baselines,
+                #   (retrieval, classifier — TBD)
   eval/         # metrics (5-way taxonomy), runner
   cli.py
 configs/        # YAML configs
-tests/          # unit tests + synthetic fixtures
-benchmarks/     # released open benchmark (Synthea)
-paper/          # LaTeX sources (TBD)
+tests/          # unit tests + synthetic fixtures (114 tests, ruff clean)
+benchmarks/     # released open benchmark (Synthea — TBD)
+paper/
+  sections/     # markdown drafts: 00_introduction.md, references.md;
+                #   future: methods, results, discussion (TBD)
+  figures/      # generated figures (TBD)
+  tables/       # generated tables (TBD)
 ```
 
 ## Roadmap

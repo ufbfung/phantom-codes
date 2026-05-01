@@ -138,11 +138,13 @@ We evaluate this benchmark on FHIR Conditions from MIMIC-IV-FHIR v2.1,
 restricted to ICD-10-CM codes in the CMS ACCESS Model implementation guide
 (diabetes, atherosclerotic cardiovascular disease, CKD stage 3,
 hypertension, dyslipidemia, prediabetes, obesity). Models compared include
-three families of LLMs (Claude Sonnet 4.6 and Haiku 4.5; GPT-4-class;
-Gemini 2.5 Pro and Flash) under both prompting modes; a sentence-transformer
-retrieval baseline with FAISS; a PubMedBERT classification head; and three
-constrained-only baselines (exact match, fuzzy token-set ratio, TF-IDF
-cosine).
+three families of LLMs spanning premium and economy tiers (Claude Opus 4.7,
+Sonnet 4.6, and Haiku 4.5; GPT-5.5 and a GPT-4-class economy comparator;
+Gemini 2.5 Pro and Flash) under three prompting modes (zero-shot,
+constrained, and RAG with per-record bi-encoder retrieval); a frozen
+sentence-transformer retrieval baseline; a PubMedBERT classification head;
+and three constrained-only baselines (exact match, fuzzy token-set ratio,
+TF-IDF cosine).
 
 The empirical contribution we expect to surface is not a model-vs-model
 leaderboard — those exist already and are increasingly saturated. It is the

@@ -29,6 +29,7 @@ from phantom_codes.models.baselines import (
 from phantom_codes.models.llm import (
     PromptMode,
     make_anthropic_model,
+    make_gemini_model,
     make_openai_model,
 )
 
@@ -109,8 +110,10 @@ def smoke_test(
         False,
         "--llms/--no-llms",
         help=(
-            "Also run LLM models (Claude Haiku zero-shot + constrained). Requires "
-            "ANTHROPIC_API_KEY env var. Costs a few cents per run."
+            "Also run LLM models (Claude Haiku zero-shot + constrained; GPT-4o-mini "
+            "and Gemini 2.5 Flash zero-shot if their keys are set). Requires "
+            "ANTHROPIC_API_KEY env var; OPENAI_API_KEY and GEMINI_API_KEY are optional. "
+            "Costs a few cents per run."
         ),
     ),
     out: str = typer.Option(
@@ -186,6 +189,14 @@ def smoke_test(
                 make_openai_model(
                     name="gpt-4o-mini:zeroshot",
                     model_id="gpt-4o-mini",
+                    mode=PromptMode.ZEROSHOT,
+                )
+            )
+        if os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"):
+            models.append(
+                make_gemini_model(
+                    name="gemini-2.5-flash:zeroshot",
+                    model_id="gemini-2.5-flash",
                     mode=PromptMode.ZEROSHOT,
                 )
             )

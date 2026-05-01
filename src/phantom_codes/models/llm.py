@@ -1,4 +1,5 @@
-"""LLM-based code recovery: Claude (Anthropic) and GPT (OpenAI), with two prompting modes.
+"""LLM-based code recovery: Claude (Anthropic), GPT (OpenAI), Gemini (Google), with
+two prompting modes.
 
 Two modes per LLM:
 
@@ -13,10 +14,14 @@ Two modes per LLM:
 Prompt caching:
 - Anthropic: explicit `cache_control: ephemeral` on the system prompt block.
 - OpenAI: automatic for prompts >= 1024 tokens; we just keep the system prompt static.
+- Google: implicit caching on stable prefixes; explicit `cachedContent` is a TODO
+  (separate API resource, worth the wiring once eval volumes justify it).
 
 Structured output:
-- Both providers are pinned to a JSON object with a `predictions` array of ranked
-  candidates. We use Anthropic tool-use (forced tool choice) and OpenAI JSON mode.
+- Anthropic: forced tool use with the `record_predictions` tool.
+- OpenAI: JSON mode (`response_format=json_object`).
+- Google: `response_schema` with `response_mime_type=application/json`.
+All three return the same `{"predictions": [...]}` shape, parsed by `parse_predictions`.
 """
 
 from __future__ import annotations
@@ -40,6 +45,7 @@ class PromptMode(StrEnum):
 class Provider(StrEnum):
     ANTHROPIC = "anthropic"
     OPENAI = "openai"
+    GOOGLE = "google"
 
 
 # Tool / JSON schema for structured output.
@@ -251,6 +257,43 @@ class OpenAIClient:
         return json.loads(content)
 
 
+@dataclass
+class GoogleClient:
+    """Google Gemini with `response_schema` structured output.
+
+    Uses the unified `google-genai` SDK (`from google import genai`). API key resolution
+    order: explicit `api_key` arg → `GEMINI_API_KEY` → `GOOGLE_API_KEY` (the SDK accepts
+    either env var, but we surface both for parity with how Brian sets things in `.env`).
+    """
+
+    model_id: str  # e.g. "gemini-2.5-pro", "gemini-2.5-flash"
+    api_key: str | None = None
+    max_tokens: int = 1024
+
+    def predict_structured(self, system_prompt: str, user_message: str) -> dict[str, Any]:
+        from google import genai
+        from google.genai import types
+
+        key = (
+            self.api_key
+            or os.environ.get("GEMINI_API_KEY")
+            or os.environ["GOOGLE_API_KEY"]
+        )
+        client = genai.Client(api_key=key)
+        resp = client.models.generate_content(
+            model=self.model_id,
+            contents=user_message,
+            config=types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                max_output_tokens=self.max_tokens,
+                response_mime_type="application/json",
+                response_schema=PREDICTION_TOOL_SCHEMA,
+            ),
+        )
+        text = resp.text or "{}"
+        return json.loads(text)
+
+
 # ---------------------------------------------------------------------------
 # Public model class
 # ---------------------------------------------------------------------------
@@ -320,6 +363,23 @@ def make_openai_model(
     return LLMModel(
         name=name,
         client=OpenAIClient(model_id=model_id, api_key=api_key),
+        mode=mode,
+        candidates=candidates,
+    )
+
+
+def make_gemini_model(
+    *,
+    name: str,
+    model_id: str,
+    mode: PromptMode,
+    candidates: list[CandidateCode] | None = None,
+    api_key: str | None = None,
+) -> LLMModel:
+    """Convenience constructor for a Gemini-backed model."""
+    return LLMModel(
+        name=name,
+        client=GoogleClient(model_id=model_id, api_key=api_key),
         mode=mode,
         candidates=candidates,
     )

@@ -23,6 +23,7 @@ dependencies = [
     # LLMs
     "anthropic>=0.40",
     "openai>=1.30",
+    "google-genai>=1.0",
     # Trained models
     "torch>=2.3",
     "transformers>=4.42",

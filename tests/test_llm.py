@@ -18,6 +18,9 @@ from phantom_codes.models.llm import (
     PromptMode,
     build_system_prompt,
     build_user_message,
+    make_anthropic_model,
+    make_gemini_model,
+    make_openai_model,
     parse_predictions,
 )
 
@@ -181,3 +184,43 @@ def test_llm_model_supports_fhir_input() -> None:
     assert "FHIR" in (fake.received_user or "")
     # Verify it's actually JSON-embedded (sanity).
     assert json.dumps(fhir, indent=2) in (fake.received_user or "")
+
+
+# ---------- provider-factory smoke tests (no real API calls) ----------
+
+
+def test_make_anthropic_model_returns_llmmodel_with_anthropic_client() -> None:
+    """Constructor wiring: name, mode, and provider client type are correct."""
+    model = make_anthropic_model(
+        name="claude-haiku-4-5:zeroshot",
+        model_id="claude-haiku-4-5",
+        mode=PromptMode.ZEROSHOT,
+        api_key="fake-anthropic-key",
+    )
+    assert model.name == "claude-haiku-4-5:zeroshot"
+    assert model.mode == PromptMode.ZEROSHOT
+    assert type(model._client).__name__ == "AnthropicClient"
+
+
+def test_make_openai_model_returns_llmmodel_with_openai_client() -> None:
+    model = make_openai_model(
+        name="gpt-4o-mini:zeroshot",
+        model_id="gpt-4o-mini",
+        mode=PromptMode.ZEROSHOT,
+        api_key="fake-openai-key",
+    )
+    assert model.name == "gpt-4o-mini:zeroshot"
+    assert type(model._client).__name__ == "OpenAIClient"
+
+
+def test_make_gemini_model_returns_llmmodel_with_google_client() -> None:
+    model = make_gemini_model(
+        name="gemini-2.5-flash:zeroshot",
+        model_id="gemini-2.5-flash",
+        mode=PromptMode.ZEROSHOT,
+        api_key="fake-gemini-key",
+    )
+    assert model.name == "gemini-2.5-flash:zeroshot"
+    assert type(model._client).__name__ == "GoogleClient"
+    # The model_id is what the SDK will route to.
+    assert model._client.model_id == "gemini-2.5-flash"

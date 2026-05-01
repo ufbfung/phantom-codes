@@ -6,7 +6,7 @@ A reproducible benchmark for evaluating how well LLMs and trained models map deg
 
 **Clinical concept normalization** is the task of mapping mentions of clinical entities (diagnoses, labs, medications) to identifiers in controlled vocabularies (ICD-10-CM, LOINC, RxNorm, etc.). It's a foundational task for healthcare data integration, billing, research cohort construction, and AI-assisted documentation.
 
-**Status:** Phase 0 complete for diagnoses. Degradation pipeline, 5-way outcome taxonomy, ICD-10-CM validator, LLM module (Claude + GPT, zero-shot + constrained), constrained baselines (exact / fuzzy / tfidf), and end-to-end eval runner are implemented and tested (111 tests, ruff clean). Real MIMIC ingestion + trained models forthcoming.
+**Status:** Phase 0 complete for diagnoses. Degradation pipeline, 5-way outcome taxonomy, ICD-10-CM validator, LLM module (Claude + GPT + Gemini, zero-shot + constrained), constrained baselines (exact / fuzzy / tfidf), and end-to-end eval runner are implemented and tested. Real MIMIC ingestion + trained models forthcoming.
 
 **v1 scope:** diagnoses (ICD-10-CM). v2+ extends to labs (LOINC) and medications (RxNorm) using the same framework.
 
@@ -16,7 +16,7 @@ Take a coded FHIR Condition (e.g., one bearing ICD-10 `E11.9` "Type 2 diabetes m
 
 The benchmark compares:
 
-- **LLMs** — Claude Sonnet 4.6, Claude Haiku 4.5, GPT-4-class. Both **zero-shot** (no menu, primary experiment) and **constrained** (with candidate list, hallucination control).
+- **LLMs** — Claude (Sonnet 4.6, Haiku 4.5), GPT-4-class, Gemini 2.5 (Pro, Flash). Both **zero-shot** (no menu, primary experiment) and **constrained** (with candidate list, hallucination control).
 - **Trained models** — sentence-transformer retrieval (FAISS) and PubMedBERT classification head.
 - **Baselines** — exact, fuzzy (rapidfuzz), TF-IDF nearest neighbor.
 
@@ -98,4 +98,8 @@ The 5-way outcome taxonomy, eval runner, and prompt-caching infrastructure are d
 
 ## License
 
-Code: MIT. Released benchmark data: TBD (will follow Synthea's Apache 2.0). MIMIC-derived data is never distributed.
+Code in this repository is released under the [MIT License](LICENSE).
+
+- **MIMIC-derived data is never distributed here** — PhysioNet's Credentialed Health Data License governs the data and prohibits redistribution. Obtain MIMIC-IV-FHIR via your own [PhysioNet credentialing](https://physionet.org/about/citi-course/).
+- **Trained model weights are not released** from this repo. Weights derived from MIMIC are typically redistributed only via PhysioNet's "MIMIC-IV Models" channel under similar credentialing.
+- **Released benchmark data** (Synthea-generated, planned for `benchmarks/synthetic_v1/`) will follow Synthea's Apache 2.0 license.

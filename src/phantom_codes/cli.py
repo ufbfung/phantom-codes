@@ -16,7 +16,13 @@ from phantom_codes.data.disease_groups import load as load_scope
 from phantom_codes.data.gcs_setup import copy_resources
 from phantom_codes.data.icd10cm.validator import load as load_validator
 from phantom_codes.data.prepare import prepare as prepare_pipeline
+from phantom_codes.eval.cost import load_pricing
 from phantom_codes.eval.infra import InfraAssertions, infra_assertions
+from phantom_codes.eval.manifest import (
+    build_manifest,
+    manifest_path_for,
+    write_manifest,
+)
 from phantom_codes.eval.runner import (
     load_records,
     run_eval,
@@ -276,20 +282,45 @@ def smoke_test(
 
     console.print(f"[bold]Models:[/] {', '.join(m.name for m in models)}")
 
+    started_at = datetime.now(UTC)
     df = run_eval(models, records, validator, top_k=5)
+    finished_at = datetime.now(UTC)
 
     # Resolve the CSV output path. In infra-only mode, auto-default to a
     # timestamped path under results/raw/ (gitignored) so the data is
     # preserved without requiring an explicit --out flag.
     out_path = Path(out) if out else None
     if infra_only and out_path is None:
-        ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+        ts = started_at.strftime("%Y%m%dT%H%M%SZ")
         out_path = Path("results/raw") / f"smoke_test_{ts}.csv"
 
     if out_path is not None:
         out_path.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(out_path, index=False)
         console.print(f"[green]Wrote per-prediction rows to {out_path}[/]")
+
+        # Best-effort load of pricing for cost computation in the manifest.
+        pricing_path = Path("configs/pricing.yaml")
+        pricing_table = load_pricing(pricing_path) if pricing_path.exists() else None
+
+        manifest = build_manifest(
+            run_id=started_at.strftime("%Y%m%dT%H%M%SZ"),
+            command_name="smoke-test",
+            started_at=started_at,
+            finished_at=finished_at,
+            seed=cfg.seed,
+            fixtures_path=fixtures,
+            n_records=len(records),
+            n_candidates=len(candidates),
+            models=models,
+            df=df,
+            pricing_table=pricing_table,
+            csv_path=out_path,
+            infra_only=infra_only,
+        )
+        manifest_path = manifest_path_for(out_path)
+        write_manifest(manifest, manifest_path)
+        console.print(f"[green]Wrote run manifest to {manifest_path}[/]")
 
     if infra_only:
         _print_infra_assertions(infra_assertions(df))

@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Virtual envs
+.venv/
+
+# Secrets
+.env
+.env.local
+
+# Notebooks
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Claude Code local state + internal-only docs (don't publish)
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+BACKLOG.md
+*.private.md
+
+# MIMIC-IV-FHIR derived data — DUA prohibits redistribution.
+# Anything that contains MIMIC content stays out of git.
+data/mimic/
+data/derived/
+mimic_*.ndjson*
+*MimicCondition*
+
+# Model artifacts (rebuild from configs)
+models/checkpoints/
+*.pt
+*.bin
+*.safetensors
+faiss_index/
+
+# Results — only aggregated CSVs and the rendered paper PDF are kept.
+results/raw/
+results/predictions/
+results/per_run/
+
+# LaTeX build artifacts
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.log
+paper/*.out
+paper/*.toc
+paper/*.fls
+paper/*.fdb_latexmk
+paper/*.synctex.gz
+paper/sections/*.aux

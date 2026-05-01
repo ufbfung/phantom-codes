@@ -1,0 +1,71 @@
+[project]
+name = "phantom-codes"
+version = "0.1.0"
+description = "Phantom Codes — a reproducible benchmark for hallucination in LLM-based clinical concept normalization."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "Brian Fung", email = "brian@briankfung.com" }
+]
+license = { text = "MIT" }
+keywords = ["clinical-concept-normalization", "icd-10", "clinical-nlp", "mimic", "llm-evaluation", "hallucination"]
+
+dependencies = [
+    # Data + FHIR
+    "pandas>=2.2",
+    "pyarrow>=16",
+    "gcsfs>=2024.6",
+    "fhir-resources>=7.1",
+    # Config
+    "pydantic>=2.7",
+    "pyyaml>=6.0",
+    "typer>=0.12",
+    # LLMs
+    "anthropic>=0.40",
+    "openai>=1.30",
+    # Trained models
+    "torch>=2.3",
+    "transformers>=4.42",
+    "sentence-transformers>=3.0",
+    "faiss-cpu>=1.8",
+    # Baselines
+    "scikit-learn>=1.5",
+    "rapidfuzz>=3.9",
+    # Utilities
+    "rich>=13.7",
+    "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+    "pytest-cov>=5.0",
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "ipykernel>=6.29",
+]
+notebook = [
+    "jupyter>=1.0",
+    "matplotlib>=3.9",
+    "seaborn>=0.13",
+]
+
+[project.scripts]
+phantom-codes = "phantom_codes.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "W"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-ra --strict-markers"

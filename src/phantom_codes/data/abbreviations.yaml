@@ -1,0 +1,67 @@
+# Word/phrase → abbreviation mappings for D4_abbreviated degradation mode.
+#
+# Applied as longest-pattern-first regex substitutions on canonical ICD-10-CM
+# display text. Patterns are case-insensitive but preserve case in non-matched
+# regions. The goal: produce realistic clinical-jargon text that PRESERVES the
+# semantic identity of the underlying diagnosis while STRIPPING the canonical
+# tokens that string-matching baselines depend on.
+#
+# Order matters — list longer patterns first so they match before their substrings.
+# E.g., "Type 2 diabetes mellitus" must come before "diabetes mellitus".
+
+mappings:
+  # Diabetes
+  - { pattern: "Type 2 diabetes mellitus",       abbr: "T2DM" }
+  - { pattern: "Type 1 diabetes mellitus",       abbr: "T1DM" }
+  - { pattern: "diabetes mellitus due to underlying condition", abbr: "secondary DM" }
+  - { pattern: "diabetes mellitus",              abbr: "DM" }
+  - { pattern: "diabetic",                       abbr: "diab" }
+
+  # Diabetes complications
+  - { pattern: "without complications",          abbr: "unc" }
+  - { pattern: "with hyperglycemia",             abbr: "w/ hyperglyc" }
+  - { pattern: "with kidney complications",      abbr: "w/ renal cx" }
+  - { pattern: "with neurological complications", abbr: "w/ neuro cx" }
+  - { pattern: "with circulatory complications", abbr: "w/ vasc cx" }
+
+  # Hypertension
+  - { pattern: "Essential (primary) hypertension", abbr: "essential HTN" }
+  - { pattern: "Hypertensive heart disease",     abbr: "HTN heart dz" }
+  - { pattern: "hypertension",                   abbr: "HTN" }
+
+  # Coronary / atherosclerotic
+  - { pattern: "Atherosclerotic heart disease of native coronary artery", abbr: "native CAD" }
+  - { pattern: "atherosclerotic heart disease",  abbr: "ASCVD" }
+  - { pattern: "coronary artery disease",        abbr: "CAD" }
+  - { pattern: "without angina pectoris",        abbr: "w/o angina" }
+  - { pattern: "with angina pectoris",           abbr: "w/ angina" }
+  - { pattern: "Unstable angina",                abbr: "UA" }
+  - { pattern: "Refractory angina",              abbr: "refractory angina" }
+
+  # Cerebrovascular
+  - { pattern: "Cerebral infarction",            abbr: "CVA" }
+  - { pattern: "Transient global amnesia",       abbr: "TGA" }
+
+  # Kidney
+  - { pattern: "Chronic kidney disease, stage 3a", abbr: "CKD IIIa" }
+  - { pattern: "Chronic kidney disease, stage 3b", abbr: "CKD IIIb" }
+  - { pattern: "Chronic kidney disease",         abbr: "CKD" }
+
+  # Lipids
+  - { pattern: "Pure hypercholesterolemia",      abbr: "pure hyperchol" }
+  - { pattern: "Hyperlipidemia, unspecified",    abbr: "HLD NOS" }
+  - { pattern: "Hyperlipidemia",                 abbr: "HLD" }
+  - { pattern: "Mixed hyperlipidemia",           abbr: "mixed HLD" }
+  - { pattern: "Hypercholesterolemia",           abbr: "hyperchol" }
+
+  # Obesity
+  - { pattern: "Morbid (severe) obesity due to excess calories", abbr: "morbid obesity" }
+  - { pattern: "Obesity, unspecified",           abbr: "obesity NOS" }
+  - { pattern: "obesity",                        abbr: "obesity" }  # no good abbrev — keep
+  - { pattern: "Overweight",                     abbr: "OW" }
+
+  # Prediabetes
+  - { pattern: "Prediabetes",                    abbr: "preDM" }
+
+  # Generic noise reducers
+  - { pattern: " unspecified",                   abbr: " NOS" }

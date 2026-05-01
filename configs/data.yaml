@@ -1,0 +1,24 @@
+# Data ingestion + preparation config.
+#
+# Set `derived_bucket` to a GCS prefix you own, e.g.
+#   derived_bucket: gs://my-research-bucket/phantom-codes
+# Or override via env var or CLI flag.
+
+physionet_bucket: gs://mimic-iv-fhir-2.1.physionet.org
+
+# REQUIRED: replace with your own bucket prefix.
+derived_bucket: gs://CHANGEME-bucket/phantom-codes
+
+# v1 = Conditions only.
+resources:
+  - MimicCondition
+
+# Classification head's vocabulary size; retrieval uses the full 27k value set regardless.
+top_n_codes: 50
+
+# Reproducible splits.
+seed: 42
+splits:
+  train: 0.7
+  val: 0.1
+  test: 0.2

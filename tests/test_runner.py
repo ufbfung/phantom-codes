@@ -181,3 +181,54 @@ def test_evaluate_one_top_k_propagates(tmp_path: Path) -> None:
     rows = evaluate_one(_Top3Model(), rec, load_validator(), top_k=5)
     assert len(rows) == 3
     assert [r["pred_rank"] for r in rows] == [0, 1, 2]
+
+
+def test_evaluate_one_attributes_tokens_only_to_rank0_row(tmp_path: Path) -> None:
+    """Token counts on rank-0 row only; zero on rank-1+ rows. Avoids double-counting."""
+
+    class _UsageModel(ConceptNormalizer):
+        """Minimal model that exposes a `last_usage` attribute."""
+
+        name = "usage-model"
+
+        def predict(self, *, input_fhir=None, input_text=None, top_k=5):
+            from phantom_codes.models.llm import LLMResponse
+
+            self.last_usage = LLMResponse(
+                tool_input={},
+                input_tokens=500,
+                output_tokens=150,
+                cache_read_tokens=6000,
+                cache_creation_tokens=0,
+            )
+            return [
+                Prediction(system=ICD10_SYSTEM, code="E11.9", display=None, score=0.9),
+                Prediction(system=ICD10_SYSTEM, code="E11.0", display=None, score=0.5),
+            ][:top_k]
+
+    records = _build_records(tmp_path)
+    rec = next(r for r in records if r.mode == "D2_no_code")
+    rows = evaluate_one(_UsageModel(), rec, load_validator(), top_k=5)
+    assert len(rows) == 2
+    # Rank 0 carries the full token attribution.
+    assert rows[0]["input_tokens"] == 500
+    assert rows[0]["output_tokens"] == 150
+    assert rows[0]["cache_read_tokens"] == 6000
+    assert rows[0]["latency_ms"] is not None
+    # Rank 1 carries zero tokens, no latency — would otherwise be double-counted.
+    assert rows[1]["input_tokens"] == 0
+    assert rows[1]["output_tokens"] == 0
+    assert rows[1]["cache_read_tokens"] == 0
+    assert rows[1]["latency_ms"] is None
+
+
+def test_evaluate_one_token_columns_are_zero_for_models_without_last_usage(tmp_path: Path) -> None:
+    """Baselines have no last_usage attribute → token columns default to 0, not None."""
+    records = _build_records(tmp_path)
+    d2 = next(r for r in records if r.mode == "D2_no_code")
+    rows = evaluate_one(_OracleModel(), d2, load_validator(), top_k=5)
+    # Oracle on D2 returns nothing → single hallucination row at rank 0.
+    assert rows[0]["input_tokens"] == 0
+    assert rows[0]["output_tokens"] == 0
+    # latency_ms is still measured (runner-level), so it's a float, not None.
+    assert isinstance(rows[0]["latency_ms"], float)

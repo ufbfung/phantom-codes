@@ -6,25 +6,31 @@ DataFrame ready for aggregation.
 
 Output schema (one row per top-k prediction slot):
 
-    model_name    str
-    resource_id   str
-    mode          str            # D1_full | D2_no_code | D3_text_only | D4_abbreviated
-    gt_system     str
-    gt_code       str
-    gt_group      str            # ckm | eckm
-    pred_rank     int            # 0 = top-1, 1 = top-2, ...
-    pred_system   str | None
-    pred_code     str | None
-    pred_display  str | None
-    pred_score    float | None
-    outcome       str            # one of Outcome enum values
-    best_top1     str            # best Outcome among top-1 predictions
-    best_top5     str            # best Outcome among top-5 predictions
+    model_name              str
+    resource_id             str
+    mode                    str    # D1_full | D2_no_code | D3_text_only | D4_abbreviated
+    gt_system               str
+    gt_code                 str
+    gt_group                str    # ckm | eckm
+    pred_rank               int    # 0 = top-1, 1 = top-2, ...
+    pred_system             str | None
+    pred_code               str | None
+    pred_display            str | None
+    pred_score              float | None
+    outcome                 str    # one of Outcome enum values
+    best_top1               str    # best Outcome among top-1 predictions
+    best_top5               str    # best Outcome among top-5 predictions
+    input_tokens            int    # rank-0 row only; 0 elsewhere (avoid double-counting)
+    output_tokens           int
+    cache_read_tokens       int
+    cache_creation_tokens   int
+    latency_ms              float | None  # measured per-call at the runner level
 """
 
 from __future__ import annotations
 
 import json
+import time
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -90,17 +96,32 @@ def evaluate_one(
 
     If the model returns nothing, emit a single row with null predictions and
     HALLUCINATION outcome (the empty-prediction failure mode).
+
+    Token counts and latency are attributed to the rank-0 row only (zero on
+    higher-rank rows) to avoid double-counting at aggregation time. Models
+    without a `last_usage` attribute (baselines, retrieval) get zero tokens
+    but still get a measured latency.
     """
+    started_at = time.perf_counter()
     preds: list[Prediction] = model.predict(
         input_fhir=record.input_fhir,
         input_text=record.input_text,
         top_k=top_k,
     )
+    latency_ms = (time.perf_counter() - started_at) * 1000.0
+
+    # Token usage if the model exposed it (LLMModel, RAGLLMModel).
+    usage = getattr(model, "last_usage", None)
+    input_tokens = getattr(usage, "input_tokens", 0) if usage is not None else 0
+    output_tokens = getattr(usage, "output_tokens", 0) if usage is not None else 0
+    cache_read_tokens = getattr(usage, "cache_read_tokens", 0) if usage is not None else 0
+    cache_creation_tokens = (
+        getattr(usage, "cache_creation_tokens", 0) if usage is not None else 0
+    )
 
     best_top1 = best_outcome_in_topk(preds, record.truth, validator, k=1)
     best_top5 = best_outcome_in_topk(preds, record.truth, validator, k=5)
 
-    rows: list[dict[str, Any]] = []
     base = {
         "model_name": model.name,
         "resource_id": record.resource_id,
@@ -111,30 +132,36 @@ def evaluate_one(
         "best_top1": str(best_top1),
         "best_top5": str(best_top5),
     }
-    if not preds:
-        rows.append({
-            **base,
-            "pred_rank": 0,
-            "pred_system": None,
-            "pred_code": None,
-            "pred_display": None,
-            "pred_score": None,
-            "outcome": str(Outcome.HALLUCINATION),
-        })
-        return rows
 
-    for rank, pred in enumerate(preds):
-        outcome = classify(pred, record.truth, validator)
-        rows.append({
+    def _row(
+        rank: int,
+        pred: Prediction | None,
+        outcome: Outcome,
+    ) -> dict[str, Any]:
+        # Token + latency only on the rank-0 row to avoid double-counting.
+        is_first = rank == 0
+        return {
             **base,
             "pred_rank": rank,
-            "pred_system": pred.system,
-            "pred_code": pred.code,
-            "pred_display": pred.display,
-            "pred_score": pred.score,
+            "pred_system": pred.system if pred else None,
+            "pred_code": pred.code if pred else None,
+            "pred_display": pred.display if pred else None,
+            "pred_score": pred.score if pred else None,
             "outcome": str(outcome),
-        })
-    return rows
+            "input_tokens": input_tokens if is_first else 0,
+            "output_tokens": output_tokens if is_first else 0,
+            "cache_read_tokens": cache_read_tokens if is_first else 0,
+            "cache_creation_tokens": cache_creation_tokens if is_first else 0,
+            "latency_ms": latency_ms if is_first else None,
+        }
+
+    if not preds:
+        return [_row(rank=0, pred=None, outcome=Outcome.HALLUCINATION)]
+
+    return [
+        _row(rank=rank, pred=pred, outcome=classify(pred, record.truth, validator))
+        for rank, pred in enumerate(preds)
+    ]
 
 
 def run_eval(

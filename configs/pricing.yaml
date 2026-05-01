@@ -1,0 +1,79 @@
+# LLM API pricing snapshot — USD per million tokens.
+#
+# IMPORTANT — verify these numbers against the providers' current pricing pages
+# before reporting any cost figures in the paper. Pricing changes; the
+# `snapshot_date` field below records when this file was last validated.
+#
+# Cost computation (eval/cost.py):
+#     cost_usd = (
+#         (input_tokens     / 1_000_000) * input
+#       + (output_tokens    / 1_000_000) * output
+#       + (cache_read_tokens / 1_000_000) * cache_read
+#       + (cache_creation_tokens / 1_000_000) * cache_creation
+#     )
+#
+# Cache fields:
+# - Anthropic: explicit `cache_control: ephemeral` — both `cache_read` and
+#   `cache_creation` apply (creation = 1.25× input; read = 0.10× input typically).
+# - OpenAI: automatic prefix caching for prompts >= 1024 tokens. `cache_read` is
+#   what GPT-5.5 reports as cached_tokens; `cache_creation` not separately
+#   surfaced (set to 0 in code, no cost line here).
+# - Google: explicit `cachedContent` resources have separate per-token pricing;
+#   implicit caching is automatic and not separately billed. `cache_read`
+#   reflects `cached_content_token_count`.
+
+snapshot_date: "2026-05-01"
+
+models:
+  # Anthropic — verified for Opus 4.7 (2026-04 announcement). Sonnet/Haiku
+  # numbers are estimates based on prior tier pricing; CONFIRM before publishing.
+  claude-opus-4-7:
+    input: 5.00
+    output: 25.00
+    cache_read: 0.50
+    cache_creation: 6.25
+    notes: "Verified from Opus 4.7 announcement (2026-04). 1M context tier may have different pricing."
+  claude-sonnet-4-6:
+    input: 3.00
+    output: 15.00
+    cache_read: 0.30
+    cache_creation: 3.75
+    notes: "ESTIMATE — verify against console.anthropic.com pricing."
+  claude-haiku-4-5:
+    input: 1.00
+    output: 5.00
+    cache_read: 0.10
+    cache_creation: 1.25
+    notes: "ESTIMATE — verify against console.anthropic.com pricing."
+
+  # OpenAI — verified for GPT-5.5 from 2026-04 launch.
+  gpt-5.5:
+    input: 5.00
+    output: 30.00
+    cache_read: 0.50
+    cache_creation: 0.00
+    notes: "Verified from GPT-5.5 launch (2026-04). 1M context. >272k input → 2x input / 1.5x output."
+  gpt-5.5-pro:
+    input: 30.00
+    output: 180.00
+    cache_read: 3.00  # estimate
+    cache_creation: 0.00
+    notes: "GPT-5.5-pro pricing per 2026-04 launch. cache_read is an estimate."
+  gpt-4o-mini:
+    input: 0.15
+    output: 0.60
+    cache_read: 0.075
+    cache_creation: 0.00
+
+  # Google — verify against ai.google.dev pricing.
+  gemini-2.5-pro:
+    input: 1.25
+    output: 10.00
+    cache_read: 0.31
+    cache_creation: 0.00
+    notes: "<= 200k tokens. Above 200k: input 2.50, output 15.00."
+  gemini-2.5-flash:
+    input: 0.075
+    output: 0.30
+    cache_read: 0.019
+    cache_creation: 0.00

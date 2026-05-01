@@ -28,13 +28,30 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any, Protocol
 
 from phantom_codes.data.degrade import ICD10_SYSTEM
 from phantom_codes.data.disease_groups import CandidateCode
 from phantom_codes.models.base import ConceptNormalizer, Prediction
+
+
+@dataclass(frozen=True)
+class LLMResponse:
+    """Structured output from an LLM call, plus token-usage metadata.
+
+    Token fields default to 0 so test fakes that don't care about usage can be
+    constructed minimally as `LLMResponse(tool_input={...})`. Real provider
+    clients should populate all relevant fields from the response object.
+    """
+
+    tool_input: dict[str, Any]
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cache_read_tokens: int = 0
+    cache_creation_tokens: int = 0
+    raw_provider_metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class PromptMode(StrEnum):
@@ -191,7 +208,7 @@ class LLMClient(Protocol):
 
     def predict_structured(
         self, system_prompt: str, user_message: str
-    ) -> dict[str, Any]: ...
+    ) -> LLMResponse: ...
 
 
 @dataclass
@@ -202,7 +219,7 @@ class AnthropicClient:
     api_key: str | None = None
     max_tokens: int = 1024
 
-    def predict_structured(self, system_prompt: str, user_message: str) -> dict[str, Any]:
+    def predict_structured(self, system_prompt: str, user_message: str) -> LLMResponse:
         import anthropic
 
         client = anthropic.Anthropic(api_key=self.api_key or os.environ["ANTHROPIC_API_KEY"])
@@ -226,21 +243,33 @@ class AnthropicClient:
             tool_choice={"type": "tool", "name": PREDICTION_TOOL_NAME},
             messages=[{"role": "user", "content": user_message}],
         )
+        tool_input: dict[str, Any] | None = None
         for block in resp.content:
             if getattr(block, "type", None) == "tool_use" and block.name == PREDICTION_TOOL_NAME:
-                return dict(block.input)
-        raise RuntimeError(f"Anthropic response missing expected tool use: {resp}")
+                tool_input = dict(block.input)
+                break
+        if tool_input is None:
+            raise RuntimeError(f"Anthropic response missing expected tool use: {resp}")
+        usage = resp.usage
+        return LLMResponse(
+            tool_input=tool_input,
+            input_tokens=getattr(usage, "input_tokens", 0) or 0,
+            output_tokens=getattr(usage, "output_tokens", 0) or 0,
+            cache_read_tokens=getattr(usage, "cache_read_input_tokens", 0) or 0,
+            cache_creation_tokens=getattr(usage, "cache_creation_input_tokens", 0) or 0,
+            raw_provider_metadata={"model": resp.model, "stop_reason": resp.stop_reason},
+        )
 
 
 @dataclass
 class OpenAIClient:
     """OpenAI GPT with JSON-mode structured output. Prompt caching is automatic."""
 
-    model_id: str  # e.g. "gpt-4o", "gpt-4o-mini"
+    model_id: str  # e.g. "gpt-4o", "gpt-4o-mini", "gpt-5.5"
     api_key: str | None = None
     max_tokens: int = 1024
 
-    def predict_structured(self, system_prompt: str, user_message: str) -> dict[str, Any]:
+    def predict_structured(self, system_prompt: str, user_message: str) -> LLMResponse:
         import openai
 
         client = openai.OpenAI(api_key=self.api_key or os.environ["OPENAI_API_KEY"])
@@ -254,7 +283,25 @@ class OpenAIClient:
             ],
         )
         content = resp.choices[0].message.content or "{}"
-        return json.loads(content)
+        tool_input = json.loads(content)
+        usage = resp.usage
+        prompt_tokens = getattr(usage, "prompt_tokens", 0) or 0
+        completion_tokens = getattr(usage, "completion_tokens", 0) or 0
+        # OpenAI auto-caches; cached tokens are reported as a sub-count of prompt_tokens.
+        cached = 0
+        details = getattr(usage, "prompt_tokens_details", None)
+        if details is not None:
+            cached = getattr(details, "cached_tokens", 0) or 0
+        # Report input_tokens as the *uncached* portion so the math is consistent
+        # across providers: input + cache_read = total billable input.
+        return LLMResponse(
+            tool_input=tool_input,
+            input_tokens=max(prompt_tokens - cached, 0),
+            output_tokens=completion_tokens,
+            cache_read_tokens=cached,
+            cache_creation_tokens=0,  # OpenAI doesn't surface cache writes separately
+            raw_provider_metadata={"model": resp.model, "finish_reason": resp.choices[0].finish_reason},
+        )
 
 
 @dataclass
@@ -270,7 +317,7 @@ class GoogleClient:
     api_key: str | None = None
     max_tokens: int = 1024
 
-    def predict_structured(self, system_prompt: str, user_message: str) -> dict[str, Any]:
+    def predict_structured(self, system_prompt: str, user_message: str) -> LLMResponse:
         from google import genai
         from google.genai import types
 
@@ -291,7 +338,19 @@ class GoogleClient:
             ),
         )
         text = resp.text or "{}"
-        return json.loads(text)
+        tool_input = json.loads(text)
+        meta = getattr(resp, "usage_metadata", None)
+        prompt_tokens = getattr(meta, "prompt_token_count", 0) or 0 if meta else 0
+        completion_tokens = getattr(meta, "candidates_token_count", 0) or 0 if meta else 0
+        cached = getattr(meta, "cached_content_token_count", 0) or 0 if meta else 0
+        return LLMResponse(
+            tool_input=tool_input,
+            input_tokens=max(prompt_tokens - cached, 0),
+            output_tokens=completion_tokens,
+            cache_read_tokens=cached,
+            cache_creation_tokens=0,  # Gemini explicit caching uses separate cachedContent resources
+            raw_provider_metadata={"model": self.model_id},
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -300,7 +359,12 @@ class GoogleClient:
 
 
 class LLMModel(ConceptNormalizer):
-    """LLM-backed `ConceptNormalizer`. Provider + mode are configured at construction."""
+    """LLM-backed `ConceptNormalizer`. Provider + mode are configured at construction.
+
+    After each `predict()` call, `last_usage` holds the `LLMResponse` from the most
+    recent API call (tokens-in, tokens-out, cache reads/writes). The eval runner
+    reads this to populate per-prediction cost columns.
+    """
 
     def __init__(
         self,
@@ -316,6 +380,7 @@ class LLMModel(ConceptNormalizer):
         self._candidates = candidates
         # Eagerly build the system prompt; it's static per model instance.
         self._system_prompt = build_system_prompt(mode, candidates)
+        self.last_usage: LLMResponse | None = None
 
     @property
     def mode(self) -> PromptMode:
@@ -329,8 +394,9 @@ class LLMModel(ConceptNormalizer):
         top_k: int = 5,
     ) -> list[Prediction]:
         user = build_user_message(input_fhir=input_fhir, input_text=input_text)
-        tool_input = self._client.predict_structured(self._system_prompt, user)
-        predictions = parse_predictions(tool_input)
+        response = self._client.predict_structured(self._system_prompt, user)
+        self.last_usage = response
+        predictions = parse_predictions(response.tool_input)
         return predictions[:top_k]
 
 

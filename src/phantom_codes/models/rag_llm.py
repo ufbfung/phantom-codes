@@ -32,6 +32,7 @@ from phantom_codes.models.llm import (
     AnthropicClient,
     GoogleClient,
     LLMClient,
+    LLMResponse,
     OpenAIClient,
     PromptMode,
     build_system_prompt,
@@ -76,6 +77,7 @@ class RAGLLMModel(ConceptNormalizer):
         self._retriever = retriever
         self._retrieve_k = retrieve_k
         self._candidate_lookup: dict[str, CandidateCode] = {c.code: c for c in candidates}
+        self.last_usage: LLMResponse | None = None
 
     def predict(
         self,
@@ -112,8 +114,9 @@ class RAGLLMModel(ConceptNormalizer):
             top_k=top_k,
         )
         user_message = build_user_message(input_fhir=input_fhir, input_text=input_text)
-        tool_input = self._client.predict_structured(system_prompt, user_message)
-        predictions = parse_predictions(tool_input)
+        response = self._client.predict_structured(system_prompt, user_message)
+        self.last_usage = response
+        predictions = parse_predictions(response.tool_input)
         return predictions[:top_k]
 
 

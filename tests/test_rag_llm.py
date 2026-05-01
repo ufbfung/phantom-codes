@@ -12,6 +12,7 @@ from typing import Any
 from phantom_codes.data.degrade import ICD10_SYSTEM
 from phantom_codes.data.disease_groups import CandidateCode
 from phantom_codes.models.base import ConceptNormalizer, Prediction
+from phantom_codes.models.llm import LLMResponse
 from phantom_codes.models.rag_llm import (
     RAGLLMModel,
     make_rag_anthropic_model,
@@ -37,15 +38,22 @@ class _FakeRetriever(ConceptNormalizer):
 class _CapturingLLMClient:
     """LLM client that captures prompts and returns canned predictions."""
 
-    def __init__(self, response: dict[str, Any]) -> None:
+    def __init__(self, response: dict[str, Any], usage: dict[str, int] | None = None) -> None:
         self.response = response
+        self.usage = usage or {}
         self.received_system: str | None = None
         self.received_user: str | None = None
 
-    def predict_structured(self, system_prompt: str, user_message: str) -> dict[str, Any]:
+    def predict_structured(self, system_prompt: str, user_message: str) -> LLMResponse:
         self.received_system = system_prompt
         self.received_user = user_message
-        return self.response
+        return LLMResponse(
+            tool_input=self.response,
+            input_tokens=self.usage.get("input_tokens", 0),
+            output_tokens=self.usage.get("output_tokens", 0),
+            cache_read_tokens=self.usage.get("cache_read_tokens", 0),
+            cache_creation_tokens=self.usage.get("cache_creation_tokens", 0),
+        )
 
 
 def _candidates() -> list[CandidateCode]:
@@ -176,6 +184,43 @@ def test_rag_llm_supports_fhir_input() -> None:
     model.predict(input_fhir=fhir)
     assert "diabetes" in (client.received_user or "")
     assert "FHIR" in (client.received_user or "")
+
+
+def test_rag_llm_captures_last_usage_for_cost_tracking() -> None:
+    """The LLM call's token usage flows through to model.last_usage."""
+    retriever = _FakeRetriever(_retrieved(["E11.9"]))
+    client = _CapturingLLMClient(
+        response={"predictions": [{"code": "E11.9", "display": "T2DM", "confidence": 0.9}]},
+        usage={"input_tokens": 1250, "output_tokens": 150, "cache_read_tokens": 0},
+    )
+    model = RAGLLMModel(
+        name="claude-haiku-4-5:rag",
+        client=client,
+        retriever=retriever,
+        candidates=_candidates(),
+    )
+    assert model.last_usage is None
+    model.predict(input_text="diabetes")
+    assert model.last_usage is not None
+    assert model.last_usage.input_tokens == 1250
+    assert model.last_usage.output_tokens == 150
+    # RAG-LLM has no caching benefit (system prompt changes per call) — verify the
+    # caching column reflects that.
+    assert model.last_usage.cache_read_tokens == 0
+
+
+def test_rag_llm_clears_last_usage_when_retriever_returns_empty() -> None:
+    """If retrieval returns nothing, no LLM call is made and last_usage stays None."""
+    retriever = _FakeRetriever([])
+    client = _CapturingLLMClient(response={"predictions": []})
+    model = RAGLLMModel(
+        name="test",
+        client=client,
+        retriever=retriever,
+        candidates=_candidates(),
+    )
+    model.predict(input_text="x")
+    assert model.last_usage is None
 
 
 # ---------- factory smoke tests (no real API calls) ----------

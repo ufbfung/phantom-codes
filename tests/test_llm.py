@@ -15,6 +15,7 @@ from phantom_codes.data.degrade import ICD10_SYSTEM
 from phantom_codes.data.disease_groups import CandidateCode
 from phantom_codes.models.llm import (
     LLMModel,
+    LLMResponse,
     PromptMode,
     build_system_prompt,
     build_user_message,
@@ -122,15 +123,26 @@ def test_parse_predictions_handles_empty_predictions_array() -> None:
 class _FakeClient:
     """Captures inputs and returns a canned response. Verifies the model wiring."""
 
-    def __init__(self, response: dict[str, Any]) -> None:
+    def __init__(
+        self,
+        response: dict[str, Any],
+        usage: dict[str, int] | None = None,
+    ) -> None:
         self.response = response
+        self.usage = usage or {}
         self.received_system: str | None = None
         self.received_user: str | None = None
 
-    def predict_structured(self, system_prompt: str, user_message: str) -> dict[str, Any]:
+    def predict_structured(self, system_prompt: str, user_message: str) -> LLMResponse:
         self.received_system = system_prompt
         self.received_user = user_message
-        return self.response
+        return LLMResponse(
+            tool_input=self.response,
+            input_tokens=self.usage.get("input_tokens", 0),
+            output_tokens=self.usage.get("output_tokens", 0),
+            cache_read_tokens=self.usage.get("cache_read_tokens", 0),
+            cache_creation_tokens=self.usage.get("cache_creation_tokens", 0),
+        )
 
 
 def test_llm_model_predict_returns_top_k_predictions() -> None:
@@ -184,6 +196,51 @@ def test_llm_model_supports_fhir_input() -> None:
     assert "FHIR" in (fake.received_user or "")
     # Verify it's actually JSON-embedded (sanity).
     assert json.dumps(fhir, indent=2) in (fake.received_user or "")
+
+
+def test_llm_model_last_usage_captures_token_counts() -> None:
+    """After predict(), last_usage should hold the LLMResponse from the most recent call."""
+    fake = _FakeClient(
+        response={"predictions": [{"code": "E11.9", "display": "T2DM", "confidence": 0.9}]},
+        usage={
+            "input_tokens": 500,
+            "output_tokens": 150,
+            "cache_read_tokens": 6000,
+            "cache_creation_tokens": 0,
+        },
+    )
+    model = LLMModel(name="claude-haiku-4-5:zeroshot", client=fake, mode=PromptMode.ZEROSHOT)
+    assert model.last_usage is None
+    model.predict(input_text="diabetes")
+    assert model.last_usage is not None
+    assert model.last_usage.input_tokens == 500
+    assert model.last_usage.output_tokens == 150
+    assert model.last_usage.cache_read_tokens == 6000
+    assert model.last_usage.cache_creation_tokens == 0
+
+
+def test_llm_model_last_usage_overwrites_on_subsequent_calls() -> None:
+    """last_usage reflects the most recent call only, not a cumulative sum."""
+    fake = _FakeClient(
+        response={"predictions": []},
+        usage={"input_tokens": 100, "output_tokens": 50},
+    )
+    model = LLMModel(name="t", client=fake, mode=PromptMode.ZEROSHOT)
+    model.predict(input_text="A")
+    assert model.last_usage is not None
+    assert model.last_usage.input_tokens == 100
+    fake.usage = {"input_tokens": 200, "output_tokens": 75}
+    model.predict(input_text="B")
+    assert model.last_usage.input_tokens == 200  # not 300
+
+
+def test_llm_response_default_token_fields_are_zero() -> None:
+    """Tests fakes can construct LLMResponse with just tool_input."""
+    resp = LLMResponse(tool_input={"predictions": []})
+    assert resp.input_tokens == 0
+    assert resp.output_tokens == 0
+    assert resp.cache_read_tokens == 0
+    assert resp.cache_creation_tokens == 0
 
 
 # ---------- provider-factory smoke tests (no real API calls) ----------

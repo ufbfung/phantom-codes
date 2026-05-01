@@ -32,6 +32,8 @@ from phantom_codes.models.llm import (
     make_gemini_model,
     make_openai_model,
 )
+from phantom_codes.models.rag_llm import make_rag_anthropic_model
+from phantom_codes.models.retrieval import RetrievalModel
 
 app = typer.Typer(
     name="phantom-codes",
@@ -110,10 +112,18 @@ def smoke_test(
         False,
         "--llms/--no-llms",
         help=(
-            "Also run LLM models (Claude Haiku zero-shot + constrained; GPT-4o-mini "
-            "and Gemini 2.5 Flash zero-shot if their keys are set). Requires "
-            "ANTHROPIC_API_KEY env var; OPENAI_API_KEY and GEMINI_API_KEY are optional. "
-            "Costs a few cents per run."
+            "Also run LLM models (Claude Haiku zero-shot + constrained + RAG; "
+            "GPT-4o-mini and Gemini 2.5 Flash zero-shot if their keys are set). "
+            "Requires ANTHROPIC_API_KEY env var; OPENAI_API_KEY and GEMINI_API_KEY "
+            "are optional. Costs a few cents per run."
+        ),
+    ),
+    include_retrieval: bool = typer.Option(
+        True,
+        "--retrieval/--no-retrieval",
+        help=(
+            "Include the bi-encoder retrieval baseline (frozen sentence-transformer "
+            "+ cosine similarity). First run downloads ~80MB of weights."
         ),
     ),
     out: str = typer.Option(
@@ -167,6 +177,16 @@ def smoke_test(
         FuzzyMatchBaseline(candidates),
         TfidfBaseline(candidates),
     ]
+
+    # Bi-encoder retrieval baseline (also reused as the retriever component of
+    # RAG-LLM if LLMs are enabled). Built once; sentence-transformer download
+    # happens here on first run.
+    retrieval_model: RetrievalModel | None = None
+    if include_retrieval:
+        console.print("[dim]Building retrieval encoder (first run downloads weights)...[/]")
+        retrieval_model = RetrievalModel(candidates)
+        models.append(retrieval_model)
+
     if include_llms:
         if not os.environ.get("ANTHROPIC_API_KEY"):
             console.print("[red]ANTHROPIC_API_KEY not set — skipping LLM models[/]")
@@ -184,6 +204,17 @@ def smoke_test(
                     candidates=candidates,
                 ),
             ])
+            # RAG-LLM only makes sense when we have a retriever.
+            if retrieval_model is not None:
+                models.append(
+                    make_rag_anthropic_model(
+                        name="claude-haiku-4-5:rag",
+                        model_id="claude-haiku-4-5",
+                        retriever=retrieval_model,
+                        candidates=candidates,
+                        retrieve_k=20,
+                    )
+                )
         if os.environ.get("OPENAI_API_KEY"):
             models.append(
                 make_openai_model(

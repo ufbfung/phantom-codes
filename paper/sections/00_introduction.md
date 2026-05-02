@@ -1,8 +1,9 @@
 # Introduction
 
-> **Status:** Draft v0 (2026-05-01). Markdown for now; convert to LaTeX once
-> structure stabilizes. Citations use `[Author Year]` keys that map to
-> `paper/sections/references.md`.
+> **Status:** Draft v0 (2026-05-01; updated 2026-05-02 to align training-
+> infrastructure description with §01_methodology). Markdown for now; convert
+> to LaTeX once structure stabilizes. Citations use `[Author Year]` keys
+> that map to `paper/sections/references.md`.
 
 ---
 
@@ -141,8 +142,13 @@ splits of MIMIC-IV-FHIR v2.1, restricted to ICD-10-CM codes in the CMS
 ACCESS Model implementation guide (diabetes, atherosclerotic
 cardiovascular disease, CKD stage 3, hypertension, dyslipidemia,
 prediabetes, obesity). MIMIC is a credentialed dataset; we run all
-training and validation entirely on our own GPU infrastructure (Vertex
-AI Workbench), and MIMIC content never leaves credentialed-access compute.
+training and validation entirely on the corresponding author's own
+laptop hardware (Apple M1 MacBook Pro, 16 GB unified memory) using
+PyTorch's MPS backend, and MIMIC content never leaves that machine —
+not to any cloud GPU, hosted training service, telemetry endpoint, or
+LLM API. § Methods describes the training infrastructure in detail and
+explains why we chose local fine-tuning over cloud GPU even at the
+cost of ~3-5× longer wall-clock per run.
 
 The headline evaluation matrix runs against [Synthea](https://github.com/synthetichealth/synthea)-generated
 FHIR Bundles, an open synthetic patient dataset. Every model in the matrix

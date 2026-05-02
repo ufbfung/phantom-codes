@@ -276,6 +276,23 @@ break-even** — the actual deployment cost includes QA on flagged
 predictions and exception handling. The next subsection computes that
 properly.
 
+### Trained-model training cost (negligible at v1 scale)
+
+The trained PubMedBERT classifier and frozen sentence-transformer
+retrieval baseline contribute essentially zero training cost at v1
+scale: training runs on Brian's M1 MacBook Pro via PyTorch's MPS
+backend (Apple Silicon GPU). Hardware is sunk cost; energy use over a
+~5-hour training run is dominated by the device's idle floor and
+rounds to pennies. We report this for honesty rather than impact —
+locally-trained classifiers are essentially free relative to per-call
+LLM API spend.
+
+For reproducibility purposes: equivalent training on a Vertex AI A100
+40 GB instance would be ~1-2 hours wall clock at ~$3-5/hr = roughly
+$5-10 per training run. Comparable on AWS p4d.24xlarge or Azure
+NCv3-series. Local Apple Silicon is the cheapest path; cloud GPU is
+viable if you don't have suitable local hardware.
+
 ### Caveats to the production extrapolation
 
 - Per-call cost is dominated by zero-shot mode in this projection.

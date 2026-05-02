@@ -58,70 +58,72 @@ ValueSets bundled at [src/phantom_codes/data/access_valuesets/](src/phantom_code
 
 ### Compliance: PhysioNet's responsible-LLM-use policy
 
-PhysioNet's [responsible-LLM-use policy](https://physionet.org/news/post/llm-responsible-use/) (effective 2025-09-24) **explicitly prohibits** sharing credentialed data with third parties, including sending it through commercial LLM APIs (Anthropic, OpenAI, Google, etc.). Phantom Codes is **compliant by design** through a deliberate separation of training and evaluation data:
+PhysioNet's [responsible-LLM-use policy](https://physionet.org/news/post/llm-responsible-use/) (effective 2025-09-24) **explicitly prohibits** sharing credentialed data with third parties, including sending it through commercial LLM APIs (Anthropic, OpenAI, Google, etc.). Phantom Codes is **compliant by design** through a deliberate three-way separation:
 
-- **MIMIC-IV-FHIR** is consumed *only* by trained models (PubMedBERT classifier head, retrieval encoder) running on Brian's own GPU infrastructure (Vertex AI Workbench). It never leaves credentialed-access compute and is never sent to a third-party API.
-- **Synthea-generated FHIR Bundles** are the universal benchmark on which every model — frontier LLMs (Claude, GPT, Gemini), trained models, and baselines — is evaluated. Synthea data contains no real patient information, is freely redistributable, and can be sent to any LLM endpoint.
+- **MIMIC-IV-FHIR** is downloaded directly to the credentialed user's laptop (gitignored under `data/mimic/raw/`) and consumed only by trained models (PubMedBERT classifier head, retrieval encoder) fine-tuned locally on Apple Silicon via PyTorch's MPS backend. **MIMIC content never leaves the laptop** — not to any cloud bucket, training service, or LLM endpoint. (Cloud-based training paths are supported by the same code if a future researcher prefers Vertex AI / AWS / Azure with appropriate compliance review, but our reference implementation is fully local.)
+- **Synthea-generated FHIR Bundles** are the universal benchmark on which every model — frontier LLMs (Claude, GPT, Gemini), trained models, and baselines — is evaluated. Synthea data contains no real patient information, is freely redistributable, and can be sent to any LLM endpoint without policy concern.
 - **Synthetic fixtures** (in `tests/fixtures/`) are hand-built and contain no MIMIC content; safe for smoke tests and CI.
 
-This separation provides two simultaneous benefits: (1) full compliance with PhysioNet's DUA without methodology pivot, and (2) full reproducibility — anyone can replicate the headline benchmark on Synthea without PhysioNet credentialing.
+This separation provides three simultaneous benefits: (1) full compliance with PhysioNet's DUA, (2) full reproducibility — anyone can replicate the headline benchmark on Synthea without PhysioNet credentialing, and (3) the strongest possible auditability story since MIMIC content never traverses any network beyond the initial download from PhysioNet.
 
 **If you reproduce this work**, you are responsible for ensuring your own use complies with PhysioNet's DUA and current policy. We do not redistribute MIMIC data or any model weights derived from it.
 
 ## Data setup
 
-PhysioNet hosts MIMIC-IV-FHIR v2.1 via **HTTPS download and AWS S3 only — there is no GCS mirror** (despite PhysioNet's general support for Google account linking, this specific dataset isn't mirrored to GCS). Three supported paths depending on where you want the data to live:
+PhysioNet hosts MIMIC-IV-FHIR v2.1 via **HTTPS download and AWS S3 only — there is no GCS mirror** (despite PhysioNet's general support for Google account linking, this specific dataset isn't mirrored to GCS). Three supported paths depending on where you want the data to live; **Option 1 (local-only) is our reference setup** and the path used in this paper.
 
-### Option 1: GCP-based (manual download → upload to your own GCS bucket)
+### Option 1 (recommended): Local-only — no cloud at all
 
-This is the path our pipeline supports today. After completing PhysioNet credentialing and CITI training:
+The simplest path and the strongest compliance story: MIMIC content never touches any cloud infrastructure beyond the initial PhysioNet download. After completing PhysioNet credentialing and CITI training:
 
 ```bash
-# 1. Download just the files needed for v1 (~303 MB total) to a scratch directory
-mkdir -p /tmp/mimic-fhir && cd /tmp/mimic-fhir
+# 1. Download the files we need for v1 (~303 MB total) directly into the
+#    repo's gitignored data/ directory:
+mkdir -p data/mimic/raw && cd data/mimic/raw
 
 wget --user YOUR_PHYSIONET_USERNAME --ask-password https://physionet.org/files/mimic-iv-fhir/2.1/fhir/MimicCondition.ndjson.gz
 wget --user YOUR_PHYSIONET_USERNAME --ask-password https://physionet.org/files/mimic-iv-fhir/2.1/fhir/MimicPatient.ndjson.gz
 wget --user YOUR_PHYSIONET_USERNAME --ask-password https://physionet.org/files/mimic-iv-fhir/2.1/fhir/MimicEncounter.ndjson.gz
 
-# 2. Create your own GCS bucket (matching us-central1 keeps egress free):
-gcloud storage buckets create gs://YOUR_BUCKET/ \
-  --project=YOUR_PROJECT --location=US-CENTRAL1 --uniform-bucket-level-access
-
-# 3. Authenticate gcsfs to use the right project for billing:
-gcloud auth application-default login
-gcloud auth application-default set-quota-project YOUR_PROJECT
-
-# 4. Upload to your bucket at the path our pipeline reads from:
-gcloud storage cp *.ndjson.gz gs://YOUR_BUCKET/mimic/raw/
-
-# 5. Update configs/data.yaml: derived_bucket: gs://YOUR_BUCKET
-
-# 6. Verify the upload landed correctly:
-uv run phantom-codes check-data
-```
-
-After step 6 reports all resources present, you can run `uv run phantom-codes prepare` to build the train/val/test parquet splits.
-
-### Option 2: AWS-based pipeline
-
-PhysioNet provides AWS S3 access for credentialed users — see the "Files → Access the files" section at [physionet.org/content/mimic-iv-fhir/2.1/](https://physionet.org/content/mimic-iv-fhir/2.1/) for the documented setup. Our pipeline reads from GCS today; using AWS S3 would require swapping `gcsfs` for `s3fs` in [src/phantom_codes/data/fhir_loader.py](src/phantom_codes/data/fhir_loader.py) and [src/phantom_codes/data/gcs_setup.py](src/phantom_codes/data/gcs_setup.py). Not currently supported in v1 but a contained change if you need it.
-
-### Option 3: Local-only (no cloud)
-
-For development on a laptop without any cloud setup, you can wget the files locally and point `prepare` at the local path directly:
-
-```bash
-mkdir -p data/mimic/raw && cd data/mimic/raw
-wget --user YOUR_PHYSIONET_USERNAME --ask-password https://physionet.org/files/mimic-iv-fhir/2.1/fhir/MimicCondition.ndjson.gz
 cd ../../..
 
+# 2. Run prepare against the local file (override --source flag):
 uv run phantom-codes prepare \
   --source data/mimic/raw/MimicCondition.ndjson.gz \
   --local-out data/derived
 ```
 
-The `data/` directory is gitignored, so downloaded files stay local-only. Useful for iterating on `prepare` and `abbreviations.yaml` before committing to cloud spend.
+`data/` is gitignored so MIMIC content never gets accidentally committed. PubMedBERT training (P2 in the project backlog) also reads from this directory locally, so the data never moves.
+
+### Option 2: GCP-based (download → upload to your own GCS bucket)
+
+If you need MIMIC accessible from cloud-hosted compute (e.g., a Vertex AI Workbench instance for distributed training), upload the locally-downloaded files to your own GCS bucket:
+
+```bash
+# After completing the wget step from Option 1:
+
+# Create your own GCS bucket (matching us-central1 keeps egress free):
+gcloud storage buckets create gs://YOUR_BUCKET/ \
+  --project=YOUR_PROJECT --location=US-CENTRAL1 --uniform-bucket-level-access
+
+# Authenticate gcsfs to use the right project for billing:
+gcloud auth application-default login
+gcloud auth application-default set-quota-project YOUR_PROJECT
+
+# Upload at the path our pipeline reads from:
+gcloud storage cp data/mimic/raw/*.ndjson.gz gs://YOUR_BUCKET/mimic/raw/
+
+# Update configs/data.yaml: derived_bucket: gs://YOUR_BUCKET
+
+# Verify the upload landed correctly:
+uv run phantom-codes check-data
+```
+
+If using cloud-hosted training, the BAA / data-residency review of your cloud provider is your responsibility.
+
+### Option 3: AWS-based pipeline
+
+PhysioNet provides AWS S3 access for credentialed users — see the "Files → Access the files" section at [physionet.org/content/mimic-iv-fhir/2.1/](https://physionet.org/content/mimic-iv-fhir/2.1/) for the documented setup. Our pipeline reads from GCS today; using AWS S3 would require swapping `gcsfs` for `s3fs` in [src/phantom_codes/data/fhir_loader.py](src/phantom_codes/data/fhir_loader.py) and [src/phantom_codes/data/gcs_setup.py](src/phantom_codes/data/gcs_setup.py). Not currently supported in v1 but a contained change if you need it.
 
 ## Getting started (development)
 

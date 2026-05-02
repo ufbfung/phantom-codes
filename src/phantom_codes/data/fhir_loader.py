@@ -23,9 +23,11 @@ def iter_fhir_resources(uri: str | Path) -> Iterator[dict[str, Any]]:
     is_gz = uri_str.endswith(".gz")
 
     if uri_str.startswith("gs://"):
-        import gcsfs  # imported lazily so unit tests don't pull GCP creds
+        # Always reading from the user's own bucket (PhysioNet doesn't host
+        # MIMIC-IV-FHIR on GCS — see README "Data setup").
+        from phantom_codes.data.gcs_setup import make_gcs_filesystem
 
-        fs = gcsfs.GCSFileSystem()
+        fs = make_gcs_filesystem()
         opener = fs.open(uri_str, "rb")
     else:
         opener = open(uri_str, "rb")

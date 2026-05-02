@@ -13,7 +13,6 @@ from phantom_codes.config import DataConfig, load_data_config
 
 def _valid_config_dict() -> dict:
     return {
-        "physionet_bucket": "gs://mimic-iv-fhir-2.1.physionet.org",
         "derived_bucket": "gs://my-bucket/phantom-codes",
         "resources": ["MimicCondition"],
         "top_n_codes": 50,
@@ -44,9 +43,6 @@ def test_bucket_must_be_gs_uri() -> None:
 
 def test_uri_helpers() -> None:
     cfg = DataConfig.model_validate(_valid_config_dict())
-    assert cfg.physionet_uri("MimicCondition") == (
-        "gs://mimic-iv-fhir-2.1.physionet.org/fhir/MimicCondition.ndjson.gz"
-    )
     assert cfg.raw_uri("MimicCondition") == (
         "gs://my-bucket/phantom-codes/mimic/raw/MimicCondition.ndjson.gz"
     )

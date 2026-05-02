@@ -56,6 +56,61 @@ ValueSets bundled at [src/phantom_codes/data/access_valuesets/](src/phantom_code
 - **Primary:** [MIMIC-IV-FHIR v2.1](https://physionet.org/content/mimic-iv-fhir/2.1/) — credentialed access via PhysioNet. Cannot be redistributed; this repo only contains code and synthetic fixtures.
 - **Open benchmark:** [Synthea](https://github.com/synthetichealth/synthea)-generated FHIR Bundles. Released as `benchmarks/synthetic_v1/` once that phase lands.
 
+## Data setup
+
+PhysioNet hosts MIMIC-IV-FHIR v2.1 via **HTTPS download and AWS S3 only — there is no GCS mirror** (despite PhysioNet's general support for Google account linking, this specific dataset isn't mirrored to GCS). Three supported paths depending on where you want the data to live:
+
+### Option 1: GCP-based (manual download → upload to your own GCS bucket)
+
+This is the path our pipeline supports today. After completing PhysioNet credentialing and CITI training:
+
+```bash
+# 1. Download just the files needed for v1 (~303 MB total) to a scratch directory
+mkdir -p /tmp/mimic-fhir && cd /tmp/mimic-fhir
+
+wget --user YOUR_PHYSIONET_USERNAME --ask-password https://physionet.org/files/mimic-iv-fhir/2.1/fhir/MimicCondition.ndjson.gz
+wget --user YOUR_PHYSIONET_USERNAME --ask-password https://physionet.org/files/mimic-iv-fhir/2.1/fhir/MimicPatient.ndjson.gz
+wget --user YOUR_PHYSIONET_USERNAME --ask-password https://physionet.org/files/mimic-iv-fhir/2.1/fhir/MimicEncounter.ndjson.gz
+
+# 2. Create your own GCS bucket (matching us-central1 keeps egress free):
+gcloud storage buckets create gs://YOUR_BUCKET/ \
+  --project=YOUR_PROJECT --location=US-CENTRAL1 --uniform-bucket-level-access
+
+# 3. Authenticate gcsfs to use the right project for billing:
+gcloud auth application-default login
+gcloud auth application-default set-quota-project YOUR_PROJECT
+
+# 4. Upload to your bucket at the path our pipeline reads from:
+gcloud storage cp *.ndjson.gz gs://YOUR_BUCKET/mimic/raw/
+
+# 5. Update configs/data.yaml: derived_bucket: gs://YOUR_BUCKET
+
+# 6. Verify the upload landed correctly:
+uv run phantom-codes check-data
+```
+
+After step 6 reports all resources present, you can run `uv run phantom-codes prepare` to build the train/val/test parquet splits.
+
+### Option 2: AWS-based pipeline
+
+PhysioNet provides AWS S3 access for credentialed users — see the "Files → Access the files" section at [physionet.org/content/mimic-iv-fhir/2.1/](https://physionet.org/content/mimic-iv-fhir/2.1/) for the documented setup. Our pipeline reads from GCS today; using AWS S3 would require swapping `gcsfs` for `s3fs` in [src/phantom_codes/data/fhir_loader.py](src/phantom_codes/data/fhir_loader.py) and [src/phantom_codes/data/gcs_setup.py](src/phantom_codes/data/gcs_setup.py). Not currently supported in v1 but a contained change if you need it.
+
+### Option 3: Local-only (no cloud)
+
+For development on a laptop without any cloud setup, you can wget the files locally and point `prepare` at the local path directly:
+
+```bash
+mkdir -p data/mimic/raw && cd data/mimic/raw
+wget --user YOUR_PHYSIONET_USERNAME --ask-password https://physionet.org/files/mimic-iv-fhir/2.1/fhir/MimicCondition.ndjson.gz
+cd ../../..
+
+uv run phantom-codes prepare \
+  --source data/mimic/raw/MimicCondition.ndjson.gz \
+  --local-out data/derived
+```
+
+The `data/` directory is gitignored, so downloaded files stay local-only. Useful for iterating on `prepare` and `abbreviations.yaml` before committing to cloud spend.
+
 ## Getting started (development)
 
 ```bash
@@ -73,7 +128,7 @@ uv run phantom-codes smoke-test
 uv run phantom-codes smoke-test --llms
 ```
 
-The full MIMIC pipeline requires [PhysioNet credentialed access](https://physionet.org/about/citi-course/) for MIMIC-IV-FHIR v2.1 and a Google account linked to your PhysioNet profile (for GCS read access on the source bucket).
+The full MIMIC pipeline requires [PhysioNet credentialed access](https://physionet.org/about/citi-course/) for MIMIC-IV-FHIR v2.1. See the [Data setup](#data-setup) section above for the manual download + upload workflow (PhysioNet doesn't mirror this dataset to GCS).
 
 ## Repository layout
 

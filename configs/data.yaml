@@ -1,17 +1,25 @@
 # Data ingestion + preparation config.
 #
-# Set `derived_bucket` to a GCS prefix you own, e.g.
-#   derived_bucket: gs://my-research-bucket/phantom-codes
-# Or override via env var or CLI flag.
-
-physionet_bucket: gs://mimic-iv-fhir-2.1.physionet.org
+# `derived_bucket` is your own GCS bucket where you upload the raw MIMIC
+# FHIR ndjson files (downloaded manually from PhysioNet over HTTPS — see
+# the README's "Data setup" section), and where prepared parquet splits
+# get written. Must be a bucket your Google account has Storage Object
+# Admin on. PhysioNet does NOT mirror MIMIC-IV-FHIR to GCS, so there's no
+# upstream PhysioNet bucket to configure here.
 
 # REQUIRED: replace with your own bucket prefix.
-derived_bucket: gs://CHANGEME-bucket/phantom-codes
+derived_bucket: gs://phantom-codes
 
-# v1 = Conditions only.
+# Files to copy from PhysioNet's mirror to your bucket.
+#   v1 (current paper) needs MimicCondition only — the coded diagnoses we evaluate.
+#   MimicPatient + MimicEncounter are cheap optional adds for demographic
+#   stratification and primary-vs-secondary-diagnosis analysis.
+#   v2/v3 will add MimicObservationLabevents (LOINC) and MimicMedicationRequest
+#   (RxNorm) when those papers start.
 resources:
-  - MimicCondition
+  - MimicCondition      # v1: coded diagnoses (235.7 MB)
+  - MimicPatient        # demographic stratification (14.9 MB)
+  - MimicEncounter      # primary vs secondary diagnosis context (52.8 MB)
 
 # Classification head's vocabulary size; retrieval uses the full 27k value set regardless.
 top_n_codes: 50

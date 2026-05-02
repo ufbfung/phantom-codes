@@ -27,23 +27,25 @@ class SplitFractions(BaseModel):
 class DataConfig(BaseModel):
     """Configuration for the data ingestion + preparation pipeline."""
 
-    physionet_bucket: str = Field(
-        default="gs://mimic-iv-fhir-2.1.physionet.org",
-        description="Read-only PhysioNet bucket holding MIMIC-IV-FHIR ndjson.gz files.",
-    )
     derived_bucket: str = Field(
         ...,
-        description="GCS bucket prefix (gs://...) where copied raw + derived data will live.",
+        description=(
+            "GCS bucket prefix (gs://...) where the user-uploaded raw FHIR "
+            "ndjson files live and where derived parquet splits will be "
+            "written. PhysioNet does not host MIMIC-IV-FHIR on GCS, so users "
+            "manually wget the files and `gcloud storage cp` them to their "
+            "own bucket — see README's 'Data setup' section."
+        ),
     )
     resources: list[str] = Field(
         default_factory=lambda: ["MimicCondition"],
-        description="FHIR resource file basenames to fetch (without .ndjson.gz).",
+        description="FHIR resource file basenames the user has uploaded (without .ndjson.gz).",
     )
     top_n_codes: int = Field(default=50, ge=1, description="Vocabulary size for classifier.")
     seed: int = Field(default=42, description="RNG seed for splits and any sampling.")
     splits: SplitFractions = Field(default_factory=SplitFractions)
 
-    @field_validator("derived_bucket", "physionet_bucket")
+    @field_validator("derived_bucket")
     @classmethod
     def _is_gs_uri(cls, v: str) -> str:
         if not v.startswith("gs://"):
@@ -51,12 +53,8 @@ class DataConfig(BaseModel):
         return v.rstrip("/")
 
     def raw_uri(self, resource: str) -> str:
-        """Where a copied raw ndjson lives in the user's derived bucket."""
+        """Where a manually-uploaded raw ndjson lives in the user's derived bucket."""
         return f"{self.derived_bucket}/mimic/raw/{resource}.ndjson.gz"
-
-    def physionet_uri(self, resource: str) -> str:
-        """Where the file lives on PhysioNet's bucket."""
-        return f"{self.physionet_bucket}/fhir/{resource}.ndjson.gz"
 
     def derived_split_uri(self, split: str) -> str:
         """Where a derived (degraded) split parquet lives."""

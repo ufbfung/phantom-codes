@@ -14,7 +14,7 @@ from rich.table import Table
 
 from phantom_codes.config import DataConfig, load_data_config
 from phantom_codes.data.disease_groups import load as load_scope
-from phantom_codes.data.gcs_setup import copy_resources
+from phantom_codes.data.gcs_setup import make_gcs_filesystem
 from phantom_codes.data.icd10cm.validator import load as load_validator
 from phantom_codes.data.prepare import prepare as prepare_pipeline
 from phantom_codes.eval.cost import load_pricing
@@ -239,31 +239,73 @@ def verify_keys() -> None:
         raise typer.Exit(code=1)
 
 
-@app.command("setup-data")
-def setup_data(
+@app.command("check-data")
+def check_data(
     config_path: str = typer.Option("configs/data.yaml", "--config", help="Path to data config"),
 ) -> None:
-    """One-time copy of MIMIC-IV-FHIR ndjson files from PhysioNet's bucket to your own bucket.
+    """Verify the user's GCS bucket contains the expected MIMIC-IV-FHIR files.
 
-    Idempotent — files already present at the destination with matching size are skipped.
+    PhysioNet does not host MIMIC-IV-FHIR on GCS — users must download the
+    files manually over HTTPS (wget) and upload them to their own bucket
+    with `gcloud storage cp`. See the README's "Data setup" section for the
+    full walkthrough.
+
+    This command lists the configured resources, checks each one's presence
+    and size in `gs://{derived_bucket}/mimic/raw/`, and prints download +
+    upload instructions if anything is missing.
     """
     config = load_data_config(config_path)
-    console.print(f"[bold]Source:[/] {config.physionet_bucket}")
-    console.print(f"[bold]Destination:[/] {config.derived_bucket}/mimic/raw/")
+    console.print(f"[bold]Bucket:[/] {config.derived_bucket}/mimic/raw/")
 
-    results = copy_resources(config)
+    fs = make_gcs_filesystem()
 
-    table = Table(title="setup-data results", show_header=True)
+    table = Table(title="check-data: expected files in derived bucket", show_header=True)
     table.add_column("resource")
     table.add_column("status")
-    table.add_column("bytes")
-    for r in results:
-        table.add_row(
-            r.resource,
-            "skipped (idempotent)" if r.skipped else "copied",
-            f"{r.bytes_copied:,}",
-        )
+    table.add_column("size", justify="right")
+
+    missing: list[str] = []
+    for resource in config.resources:
+        uri = config.raw_uri(resource)
+        try:
+            info = fs.info(uri)
+            size = int(info.get("size") or 0)
+            table.add_row(resource, "[green]✓ present[/]", f"{size:,} B")
+        except FileNotFoundError:
+            table.add_row(resource, "[red]✗ missing[/]", "—")
+            missing.append(resource)
+        except Exception as e:  # noqa: BLE001 — surface arbitrary GCS errors
+            table.add_row(resource, f"[red]✗ {type(e).__name__}[/]", "—")
+            missing.append(resource)
+
     console.print(table)
+
+    if not missing:
+        console.print("[green]All configured resources are present.[/]")
+        return
+
+    # Helpful next-steps walkthrough for any missing resources.
+    console.print(
+        f"\n[yellow]Missing {len(missing)} resource(s).[/] "
+        "PhysioNet doesn't mirror MIMIC-IV-FHIR to GCS — download manually and upload:\n"
+    )
+    console.print("[bold]1. Download from PhysioNet (HTTPS, requires credentialed access):[/]")
+    console.print("   mkdir -p /tmp/mimic-fhir && cd /tmp/mimic-fhir")
+    for resource in missing:
+        console.print(
+            f"   wget --user YOUR_PHYSIONET_USERNAME --ask-password "
+            f"https://physionet.org/files/mimic-iv-fhir/2.1/fhir/{resource}.ndjson.gz"
+        )
+    console.print("\n[bold]2. Upload to your GCS bucket:[/]")
+    console.print(
+        f"   gcloud storage cp *.ndjson.gz {config.derived_bucket}/mimic/raw/"
+    )
+    console.print("\n[bold]3. Re-run check-data to verify.[/]")
+    console.print(
+        "\n[dim]Full walkthrough (including AWS and local-only paths) "
+        "is in the README's 'Data setup' section.[/]"
+    )
+    raise typer.Exit(code=1)
 
 
 @app.command()
@@ -273,7 +315,9 @@ def prepare(
         "",
         help=(
             "Override source URI for ndjson(.gz) of Conditions. Defaults to the raw URI "
-            "in your derived bucket (i.e., the file copied by `setup-data`)."
+            "in your derived bucket — the file you uploaded per the README's "
+            "'Data setup' walkthrough. Use a local path here if you want to skip "
+            "the cloud round-trip during development."
         ),
     ),
     local_out: str = typer.Option(

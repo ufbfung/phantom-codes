@@ -1,8 +1,10 @@
 # Cost and deployment economics
 
-> **Status:** Draft v0 (2026-05-02). Placeholder structure — numbers in this
-> section will be filled in from the locked headline run on real MIMIC. The
-> framing, methods, and qualitative observations below are settled.
+> **Status:** Draft v0 (2026-05-02; minor update for compliance framing).
+> Placeholder structure — numbers in this section will be filled in from
+> the locked headline run on Synthea-generated FHIR Bundles (not MIMIC;
+> see Methods § "Data and policy compliance"). The framing, methods, and
+> qualitative observations below are settled.
 >
 > **Section placement:** Results subsection (not Discussion), since it's
 > empirical. Discussion engages with deployment implications separately.
@@ -160,21 +162,24 @@ degradation modes = 36 LLM invocations per condition:
 | `claude-opus-4-7:zeroshot` | $0.0476 |
 | **Sum (full 9-config matrix)** | **$0.1288 per condition** |
 
-### Real-MIMIC scale-up factor
+### Real-Synthea scale-up factor
 
-Smoke-test fixtures contain minimal FHIR Condition payloads. Real MIMIC
-records carry additional metadata (extensions, provenance references,
-encounter linkages) that inflate input tokens for D1_full and D2_no_code
-modes specifically. D3_text_only and D4_abbreviated modes are dominated
-by short text and should be unaffected. Conservative scale-up factor:
-**1.3–1.5× higher per-call cost on real MIMIC** versus our fixtures.
+Smoke-test fixtures contain minimal FHIR Condition payloads. Synthea-
+generated Conditions carry additional metadata (extensions, provenance
+references, encounter linkages) that inflate input tokens for D1_full
+and D2_no_code modes specifically. D3_text_only and D4_abbreviated modes
+are dominated by short text and should be unaffected. Conservative
+scale-up factor based on Synthea Bundle structure: **1.3–1.5× higher
+per-call cost on real Synthea Conditions** versus our hand-built
+fixtures. (Synthea is the headline-run input; MIMIC trains the trained
+models in a separate flow that doesn't touch the LLM eval matrix or its
+costs — see Methods.)
 
 ### Projected headline-run cost at three cohort sizes
 
-> **Estimates assume a 1.4× MIMIC scale-up applied to the full
-> 9-configuration matrix. Real cohort size depends on how many in-scope
-> conditions ACCESS-scope filtering yields from MIMIC-IV-FHIR; we
-> bracket plausible ranges below.**
+> **Estimates assume a 1.4× scale-up applied to the full 9-configuration
+> matrix. Synthea cohort size is a parameter we control via Synthea's
+> generation config; we bracket plausible ranges below.**
 
 | Cohort size (in-scope conditions) | Total records (×4 modes) | LLM invocations (×9 configs) | Estimated total cost |
 |----------------------------------:|--------------------------:|------------------------------:|--------------------:|
@@ -224,7 +229,9 @@ scales.
 
 ### Per-encounter cost (single LLM configuration)
 
-Assumes 1.4× MIMIC scale-up applied to per-call costs, and an average
+Production deployments would operate against real-world clinical text
+(MIMIC-like or richer EHR notes), not against Synthea. Assumes 1.4×
+real-clinical-text scale-up applied to per-call costs, and an average
 of 5 coded conditions per healthcare encounter (typical for inpatient
 discharges in cardiometabolic populations):
 

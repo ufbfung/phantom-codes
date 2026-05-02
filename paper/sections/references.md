@@ -9,6 +9,19 @@
 
 ## A. Foundational landmarks (cited for framing, not all recent)
 
+### [PhysioNet 2025]
+PhysioNet (2025). *Responsible Use of Large Language Models with PhysioNet
+Data.* PhysioNet news, effective 2025-09-24.
+[physionet.org/news/post/llm-responsible-use](https://physionet.org/news/post/llm-responsible-use/)
+
+> **Why we cite:** This policy's prohibition on sending credentialed data
+> through third-party APIs is the design constraint motivating our
+> train-on-MIMIC / evaluate-on-Synthea separation. Cited in the methods
+> section's data-flow description and the discussion's
+> compliance-by-construction framing.
+
+
+
 ### [Mullenbach 2018]
 Mullenbach, J., Wiegreffe, S., Duke, J., Sun, J., & Eisenstein, J. (2018).
 *Explainable Prediction of Medical Codes from Clinical Text* (CAML). NAACL.

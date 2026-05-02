@@ -134,17 +134,37 @@ methodological rather than architectural:
   quantifies the mechanism by which constrained decoding helps (or fails
   to help) in code prediction.
 
-We evaluate this benchmark on FHIR Conditions from MIMIC-IV-FHIR v2.1,
-restricted to ICD-10-CM codes in the CMS ACCESS Model implementation guide
-(diabetes, atherosclerotic cardiovascular disease, CKD stage 3,
-hypertension, dyslipidemia, prediabetes, obesity). Models compared include
-three families of LLMs spanning premium and economy tiers (Claude Opus 4.7,
-Sonnet 4.6, and Haiku 4.5; GPT-5.5 and a GPT-4-class economy comparator;
-Gemini 2.5 Pro and Flash) under three prompting modes (zero-shot,
-constrained, and RAG with per-record bi-encoder retrieval); a frozen
-sentence-transformer retrieval baseline; a PubMedBERT classification head;
-and three constrained-only baselines (exact match, fuzzy token-set ratio,
-TF-IDF cosine).
+We adopt a deliberate separation of training and evaluation data flows.
+Our trained models — a PubMedBERT classification head and a frozen
+sentence-transformer retrieval baseline — are trained on the train/val
+splits of MIMIC-IV-FHIR v2.1, restricted to ICD-10-CM codes in the CMS
+ACCESS Model implementation guide (diabetes, atherosclerotic
+cardiovascular disease, CKD stage 3, hypertension, dyslipidemia,
+prediabetes, obesity). MIMIC is a credentialed dataset; we run all
+training and validation entirely on our own GPU infrastructure (Vertex
+AI Workbench), and MIMIC content never leaves credentialed-access compute.
+
+The headline evaluation matrix runs against [Synthea](https://github.com/synthetichealth/synthea)-generated
+FHIR Bundles, an open synthetic patient dataset. Every model in the matrix
+— frontier LLMs (Claude Opus 4.7, Sonnet 4.6, Haiku 4.5; GPT-5.5 and a
+GPT-4-class economy comparator; Gemini 2.5 Pro and Flash) under three
+prompting modes (zero-shot, constrained, and RAG with per-record
+bi-encoder retrieval); the trained PubMedBERT classifier; the
+sentence-transformer retrieval baseline; and three constrained-only
+baselines (exact match, fuzzy token-set ratio, TF-IDF cosine) — is
+evaluated on identical Synthea-generated inputs.
+
+This separation has two intentional consequences. First, it ensures
+*compliance by construction* with PhysioNet's responsible-LLM-use policy
+[PhysioNet 2025], which prohibits sending credentialed data through
+third-party APIs: MIMIC remains on our own infrastructure throughout, and
+no patient-derived content reaches any commercial LLM endpoint. Second,
+it provides *full reproducibility*: the entire headline benchmark can be
+replicated by any researcher with Synthea (freely available, Apache-2.0)
+without going through PhysioNet credentialing. The trained models'
+evaluation on Synthea is also a stronger out-of-distribution test than
+in-distribution MIMIC test-set numbers would be, since Synthea's
+clinical text differs systematically from MIMIC's source notes.
 
 The empirical contribution we expect to surface is not a model-vs-model
 leaderboard — those exist already and are increasingly saturated. It is the

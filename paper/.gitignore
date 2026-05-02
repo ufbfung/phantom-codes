@@ -1,6 +1,11 @@
-# Generated build artifacts — markdown sources and main.tex are the
-# canonical source of truth; PDFs and intermediate .tex/.aux/.log
-# files should never be committed.
+# Build artifacts — markdown sources, main.tex, and references.bib are
+# the canonical source of truth. The build/ directory is fully derived
+# (regenerated on every `make pdf`) and should never be committed.
+#
+# Note: paper/paper.pdf is intentionally *not* gitignored — it's the
+# manually-promoted draft snapshot (via `make snapshot`) that gives
+# casual readers a one-click preview without needing a local LaTeX
+# install. Update via `make snapshot` at meaningful checkpoints.
 build/
 
 # Editor cruft that sometimes appears alongside LaTeX

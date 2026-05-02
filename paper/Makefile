@@ -3,6 +3,11 @@
 # Targets:
 #   make pdf      — convert all sections/*.md → build/sections/*.tex via
 #                   pandoc, then compile main.tex → build/paper.pdf
+#   make snapshot — promote build/paper.pdf → paper/paper.pdf so the
+#                   committed draft PDF is up to date. Run after
+#                   meaningful content changes; commit the resulting
+#                   paper/paper.pdf so casual readers can preview the
+#                   draft on GitHub without a local LaTeX install.
 #   make clean    — wipe build/
 #   make watch    — rebuild on any source change (requires `entr`:
 #                   `brew install entr`)
@@ -45,7 +50,7 @@ BIBER_OPTS := \
 	--output-directory=build
 
 # ─── Targets ───────────────────────────────────────────────────────────
-.PHONY: pdf clean watch deps
+.PHONY: pdf snapshot clean watch deps
 
 pdf: $(PDF)
 
@@ -74,6 +79,14 @@ build/sections:
 clean:
 	@rm -rf build/
 	@echo "[paper] cleaned build/"
+
+# Promote the latest build to the committed snapshot. Idempotent — safe to
+# re-run. We keep this manual rather than auto-copying on every `make pdf`
+# so the committed PDF only updates at meaningful checkpoints (per the
+# user's discretion), not on every transient rebuild.
+snapshot: $(PDF)
+	@cp $(PDF) paper.pdf
+	@echo "[paper] snapshot → paper/paper.pdf (commit when ready)"
 
 # Live-rebuild on any change. Requires `entr` (brew install entr).
 watch:

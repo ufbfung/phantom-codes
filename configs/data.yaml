@@ -1,14 +1,17 @@
 # Data ingestion + preparation config.
 #
-# `derived_bucket` is your own GCS bucket where you upload the raw MIMIC
-# FHIR ndjson files (downloaded manually from PhysioNet over HTTPS — see
-# the README's "Data setup" section), and where prepared parquet splits
-# get written. Must be a bucket your Google account has Storage Object
-# Admin on. PhysioNet does NOT mirror MIMIC-IV-FHIR to GCS, so there's no
-# upstream PhysioNet bucket to configure here.
+# Default operation is fully local:
+#   - Raw MIMIC files in data/mimic/raw/ (gitignored)
+#   - Derived parquet splits in data/derived/ (gitignored)
+# This is README "Data setup Option 1" (the recommended path) and
+# requires no cloud configuration.
+#
+# To use a GCS bucket instead (README Data setup Option 2), uncomment
+# the `derived_bucket` line below and set it to your own gs:// prefix.
+# The bucket must be one your Google account has Storage Object Admin on.
 
-# REQUIRED: replace with your own bucket prefix.
-derived_bucket: gs://phantom-codes
+# Uncomment to use GCS instead of local:
+# derived_bucket: gs://YOUR_BUCKET
 
 # Files to copy from PhysioNet's mirror to your bucket.
 #   v1 (current paper) needs MimicCondition only — the coded diagnoses we evaluate.

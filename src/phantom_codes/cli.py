@@ -243,23 +243,36 @@ def verify_keys() -> None:
 def check_data(
     config_path: str = typer.Option("configs/data.yaml", "--config", help="Path to data config"),
 ) -> None:
-    """Verify the user's GCS bucket contains the expected MIMIC-IV-FHIR files.
+    """Verify the expected MIMIC-IV-FHIR files are present in the configured location.
 
-    PhysioNet does not host MIMIC-IV-FHIR on GCS — users must download the
-    files manually over HTTPS (wget) and upload them to their own bucket
-    with `gcloud storage cp`. See the README's "Data setup" section for the
-    full walkthrough.
+    Defaults to checking local paths under `data/mimic/raw/` (README Data
+    setup Option 1, the recommended path). If `derived_bucket` is set in
+    `configs/data.yaml`, checks GCS instead (Option 2).
 
-    This command lists the configured resources, checks each one's presence
-    and size in `gs://{derived_bucket}/mimic/raw/`, and prints download +
-    upload instructions if anything is missing.
+    PhysioNet does not host MIMIC-IV-FHIR on GCS — users must download
+    the files manually over HTTPS (wget). See the README's "Data setup"
+    section for the full walkthrough; missing-file output below also
+    reproduces it inline.
     """
     config = load_data_config(config_path)
-    console.print(f"[bold]Bucket:[/] {config.derived_bucket}/mimic/raw/")
+    is_gcs = config.derived_bucket is not None
+    location_label = config.derived_bucket if is_gcs else "data/mimic/raw/ (local)"
+    console.print(f"[bold]Checking:[/] {location_label}")
 
-    fs = make_gcs_filesystem()
+    # Pick the right filesystem accessor. For GCS, use gcsfs. For local,
+    # we just check pathlib paths — no extra dependency needed.
+    if is_gcs:
+        fs = make_gcs_filesystem()
 
-    table = Table(title="check-data: expected files in derived bucket", show_header=True)
+        def stat_size(path: str) -> int:
+            return int(fs.info(path).get("size") or 0)
+    else:
+        from pathlib import Path
+
+        def stat_size(path: str) -> int:
+            return Path(path).stat().st_size
+
+    table = Table(title=f"check-data: expected files at {location_label}", show_header=True)
     table.add_column("resource")
     table.add_column("status")
     table.add_column("size", justify="right")
@@ -268,13 +281,12 @@ def check_data(
     for resource in config.resources:
         uri = config.raw_uri(resource)
         try:
-            info = fs.info(uri)
-            size = int(info.get("size") or 0)
+            size = stat_size(uri)
             table.add_row(resource, "[green]✓ present[/]", f"{size:,} B")
         except FileNotFoundError:
             table.add_row(resource, "[red]✗ missing[/]", "—")
             missing.append(resource)
-        except Exception as e:  # noqa: BLE001 — surface arbitrary GCS errors
+        except Exception as e:  # noqa: BLE001 — surface arbitrary access errors
             table.add_row(resource, f"[red]✗ {type(e).__name__}[/]", "—")
             missing.append(resource)
 
@@ -287,23 +299,26 @@ def check_data(
     # Helpful next-steps walkthrough for any missing resources.
     console.print(
         f"\n[yellow]Missing {len(missing)} resource(s).[/] "
-        "PhysioNet doesn't mirror MIMIC-IV-FHIR to GCS — download manually and upload:\n"
+        "PhysioNet doesn't mirror MIMIC-IV-FHIR to GCS — download manually:\n"
     )
     console.print("[bold]1. Download from PhysioNet (HTTPS, requires credentialed access):[/]")
-    console.print("   mkdir -p /tmp/mimic-fhir && cd /tmp/mimic-fhir")
+    if is_gcs:
+        console.print("   mkdir -p /tmp/mimic-fhir && cd /tmp/mimic-fhir")
+    else:
+        console.print("   mkdir -p data/mimic/raw && cd data/mimic/raw")
     for resource in missing:
         console.print(
             f"   wget --user YOUR_PHYSIONET_USERNAME --ask-password "
             f"https://physionet.org/files/mimic-iv-fhir/2.1/fhir/{resource}.ndjson.gz"
         )
-    console.print("\n[bold]2. Upload to your GCS bucket:[/]")
+    if is_gcs:
+        console.print("\n[bold]2. Upload to your GCS bucket:[/]")
+        console.print(f"   gcloud storage cp *.ndjson.gz {config.derived_bucket}/mimic/raw/")
+        console.print("\n[bold]3. Re-run check-data to verify.[/]")
+    else:
+        console.print("\n[bold]2. Re-run check-data to verify.[/]")
     console.print(
-        f"   gcloud storage cp *.ndjson.gz {config.derived_bucket}/mimic/raw/"
-    )
-    console.print("\n[bold]3. Re-run check-data to verify.[/]")
-    console.print(
-        "\n[dim]Full walkthrough (including AWS and local-only paths) "
-        "is in the README's 'Data setup' section.[/]"
+        "\n[dim]Full walkthrough is in the README's 'Data setup' section.[/]"
     )
     raise typer.Exit(code=1)
 

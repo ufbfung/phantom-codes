@@ -41,7 +41,7 @@ def test_bucket_must_be_gs_uri() -> None:
         DataConfig.model_validate(bad)
 
 
-def test_uri_helpers() -> None:
+def test_uri_helpers_with_gcs_bucket() -> None:
     cfg = DataConfig.model_validate(_valid_config_dict())
     assert cfg.raw_uri("MimicCondition") == (
         "gs://my-bucket/phantom-codes/mimic/raw/MimicCondition.ndjson.gz"
@@ -49,6 +49,28 @@ def test_uri_helpers() -> None:
     assert cfg.derived_split_uri("train") == (
         "gs://my-bucket/phantom-codes/derived/conditions/train.parquet"
     )
+
+
+def test_uri_helpers_default_to_local_when_bucket_unset() -> None:
+    """When derived_bucket is None, raw_uri / derived_split_uri return local paths."""
+    cfg = DataConfig.model_validate({
+        "resources": ["MimicCondition"],
+        "top_n_codes": 50,
+        "seed": 42,
+        "splits": {"train": 0.7, "val": 0.1, "test": 0.2},
+    })
+    assert cfg.derived_bucket is None
+    assert cfg.raw_uri("MimicCondition") == "data/mimic/raw/MimicCondition.ndjson.gz"
+    assert cfg.derived_split_uri("train") == "data/derived/conditions/train.parquet"
+
+
+def test_derived_bucket_is_optional() -> None:
+    """A YAML config without derived_bucket should validate cleanly."""
+    cfg = DataConfig.model_validate({
+        "resources": ["MimicCondition"],
+        "splits": {"train": 0.7, "val": 0.1, "test": 0.2},
+    })
+    assert cfg.derived_bucket is None
 
 
 def test_load_from_yaml(tmp_path: Path) -> None:

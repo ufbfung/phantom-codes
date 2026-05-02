@@ -25,21 +25,26 @@ class SplitFractions(BaseModel):
 
 
 class DataConfig(BaseModel):
-    """Configuration for the data ingestion + preparation pipeline."""
+    """Configuration for the data ingestion + preparation pipeline.
 
-    derived_bucket: str = Field(
-        ...,
+    Default operation is fully local: raw FHIR files in `data/mimic/raw/`,
+    derived parquet splits in `data/derived/`. To run against a GCS bucket
+    instead (README Data setup Option 2), set `derived_bucket` to a
+    `gs://...` prefix.
+    """
+
+    derived_bucket: str | None = Field(
+        default=None,
         description=(
-            "GCS bucket prefix (gs://...) where the user-uploaded raw FHIR "
-            "ndjson files live and where derived parquet splits will be "
-            "written. PhysioNet does not host MIMIC-IV-FHIR on GCS, so users "
-            "manually wget the files and `gcloud storage cp` them to their "
-            "own bucket — see README's 'Data setup' section."
+            "Optional GCS bucket prefix (gs://...) for cloud-resident raw + "
+            "derived data. When unset (the default), the pipeline reads from "
+            "and writes to local paths under `data/`. See README's 'Data "
+            "setup' section for when each path applies."
         ),
     )
     resources: list[str] = Field(
         default_factory=lambda: ["MimicCondition"],
-        description="FHIR resource file basenames the user has uploaded (without .ndjson.gz).",
+        description="FHIR resource file basenames available locally (without .ndjson.gz).",
     )
     top_n_codes: int = Field(default=50, ge=1, description="Vocabulary size for classifier.")
     seed: int = Field(default=42, description="RNG seed for splits and any sampling.")
@@ -47,17 +52,23 @@ class DataConfig(BaseModel):
 
     @field_validator("derived_bucket")
     @classmethod
-    def _is_gs_uri(cls, v: str) -> str:
+    def _is_gs_uri_if_set(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
         if not v.startswith("gs://"):
-            raise ValueError(f"bucket must start with gs://, got {v!r}")
+            raise ValueError(f"derived_bucket must start with gs:// when set, got {v!r}")
         return v.rstrip("/")
 
     def raw_uri(self, resource: str) -> str:
-        """Where a manually-uploaded raw ndjson lives in the user's derived bucket."""
+        """Where the raw ndjson lives — GCS path if derived_bucket is set, local otherwise."""
+        if self.derived_bucket is None:
+            return f"data/mimic/raw/{resource}.ndjson.gz"
         return f"{self.derived_bucket}/mimic/raw/{resource}.ndjson.gz"
 
     def derived_split_uri(self, split: str) -> str:
-        """Where a derived (degraded) split parquet lives."""
+        """Where derived (degraded) split parquet lives — GCS or local."""
+        if self.derived_bucket is None:
+            return f"data/derived/conditions/{split}.parquet"
         return f"{self.derived_bucket}/derived/conditions/{split}.parquet"
 
 

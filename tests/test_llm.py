@@ -17,6 +17,7 @@ from phantom_codes.models.llm import (
     LLMModel,
     LLMResponse,
     PromptMode,
+    _parse_gemini_json,
     build_system_prompt,
     build_user_message,
     make_anthropic_model,
@@ -281,3 +282,43 @@ def test_make_gemini_model_returns_llmmodel_with_google_client() -> None:
     assert type(model._client).__name__ == "GoogleClient"
     # The model_id is what the SDK will route to.
     assert model._client.model_id == "gemini-2.5-flash"
+
+
+# ---------- _parse_gemini_json defensive parsing ----------
+
+
+def test_parse_gemini_json_handles_clean_json() -> None:
+    parsed, err = _parse_gemini_json('{"predictions": [{"code": "E11.9"}]}')
+    assert err is None
+    assert parsed == {"predictions": [{"code": "E11.9"}]}
+
+
+def test_parse_gemini_json_strips_markdown_code_fences() -> None:
+    """Gemini sometimes wraps JSON in ```json ... ``` even with application/json mime."""
+    text = '```json\n{"predictions": [{"code": "E11.9"}]}\n```'
+    parsed, err = _parse_gemini_json(text)
+    assert err is None
+    assert parsed == {"predictions": [{"code": "E11.9"}]}
+
+
+def test_parse_gemini_json_strips_unlabeled_code_fences() -> None:
+    text = '```\n{"predictions": []}\n```'
+    parsed, err = _parse_gemini_json(text)
+    assert err is None
+    assert parsed == {"predictions": []}
+
+
+def test_parse_gemini_json_returns_empty_predictions_on_malformed_json() -> None:
+    """Malformed responses don't crash the run — they return empty + error."""
+    parsed, err = _parse_gemini_json('{"predictions": [{"code":\n')
+    assert parsed == {"predictions": []}
+    assert err is not None
+    assert "JSONDecodeError" in err
+
+
+def test_parse_gemini_json_rejects_non_dict_top_level() -> None:
+    """A bare array or string at the top level is invalid for our schema."""
+    parsed, err = _parse_gemini_json('["not a dict"]')
+    assert parsed == {"predictions": []}
+    assert err is not None
+    assert "list" in err

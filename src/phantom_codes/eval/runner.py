@@ -25,6 +25,9 @@ Output schema (one row per top-k prediction slot):
     cache_read_tokens       int
     cache_creation_tokens   int
     latency_ms              float | None  # measured per-call at the runner level
+    cost_usd                float | None  # rank-0 row only; None if no pricing entry
+    error_type              str | None    # rank-0 row only; e.g., "ServerError" if predict() raised
+    error_msg               str | None    # rank-0 row only; capped at 500 chars
 """
 
 from __future__ import annotations
@@ -37,6 +40,11 @@ from typing import Any
 
 import pandas as pd
 
+from phantom_codes.eval.cost import (
+    PricingTable,
+    compute_call_cost,
+    resolve_pricing_for_model,
+)
 from phantom_codes.eval.metrics import (
     IcdValidator,
     Outcome,
@@ -91,33 +99,76 @@ def evaluate_one(
     record: EvalRecord,
     validator: IcdValidator,
     top_k: int = 5,
+    pricing: PricingTable | None = None,
 ) -> list[dict[str, Any]]:
     """Run one model on one record; emit one row per top-k prediction slot.
 
     If the model returns nothing, emit a single row with null predictions and
     HALLUCINATION outcome (the empty-prediction failure mode).
 
-    Token counts and latency are attributed to the rank-0 row only (zero on
-    higher-rank rows) to avoid double-counting at aggregation time. Models
+    Fault tolerance: if `model.predict()` raises (e.g., transient API errors
+    that exhausted the SDK's internal retries), record the error in the
+    rank-0 row's `error_type` / `error_msg` columns and treat predictions as
+    empty. This prevents one transient API failure from killing the entire
+    eval matrix — the run continues, the failure is visible in the CSV, and
+    the user can decide what to do.
+
+    Token counts, latency, and cost are attributed to the rank-0 row only (zero
+    on higher-rank rows) to avoid double-counting at aggregation time. Models
     without a `last_usage` attribute (baselines, retrieval) get zero tokens
-    but still get a measured latency.
+    but still get a measured latency. `cost_usd` is computed inline using the
+    optional `pricing` table; it's None if `pricing` is absent or the model
+    isn't in the pricing table.
     """
     started_at = time.perf_counter()
-    preds: list[Prediction] = model.predict(
-        input_fhir=record.input_fhir,
-        input_text=record.input_text,
-        top_k=top_k,
-    )
+    error_type: str | None = None
+    error_msg: str | None = None
+    try:
+        preds: list[Prediction] = model.predict(
+            input_fhir=record.input_fhir,
+            input_text=record.input_text,
+            top_k=top_k,
+        )
+    except Exception as e:  # noqa: BLE001 — intentional broad catch at runner boundary
+        # Record the failure on the row; downstream sees empty predictions
+        # (which the existing path emits as a single HALLUCINATION row).
+        error_type = type(e).__name__
+        msg = str(e)
+        error_msg = msg if len(msg) <= 500 else msg[:497] + "..."
+        preds = []
     latency_ms = (time.perf_counter() - started_at) * 1000.0
 
-    # Token usage if the model exposed it (LLMModel, RAGLLMModel).
-    usage = getattr(model, "last_usage", None)
-    input_tokens = getattr(usage, "input_tokens", 0) if usage is not None else 0
-    output_tokens = getattr(usage, "output_tokens", 0) if usage is not None else 0
-    cache_read_tokens = getattr(usage, "cache_read_tokens", 0) if usage is not None else 0
-    cache_creation_tokens = (
-        getattr(usage, "cache_creation_tokens", 0) if usage is not None else 0
-    )
+    # Token usage if the model exposed it (LLMModel, RAGLLMModel). When the
+    # call errored, last_usage may be stale from a prior call OR fresh from
+    # this one if the error happened post-response — both cases mean "don't
+    # bill the user for tokens on a failed call."
+    if error_type is not None:
+        input_tokens = output_tokens = cache_read_tokens = cache_creation_tokens = 0
+    else:
+        usage = getattr(model, "last_usage", None)
+        input_tokens = getattr(usage, "input_tokens", 0) if usage is not None else 0
+        output_tokens = getattr(usage, "output_tokens", 0) if usage is not None else 0
+        cache_read_tokens = (
+            getattr(usage, "cache_read_tokens", 0) if usage is not None else 0
+        )
+        cache_creation_tokens = (
+            getattr(usage, "cache_creation_tokens", 0) if usage is not None else 0
+        )
+
+    # Per-call cost — None if pricing table absent or model not priced.
+    cost_usd: float | None = None
+    if pricing is not None and (
+        input_tokens or output_tokens or cache_read_tokens or cache_creation_tokens
+    ):
+        model_pricing = resolve_pricing_for_model(model.name, pricing)
+        if model_pricing is not None:
+            cost_usd = compute_call_cost(
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                cache_read_tokens=cache_read_tokens,
+                cache_creation_tokens=cache_creation_tokens,
+                pricing=model_pricing,
+            )
 
     best_top1 = best_outcome_in_topk(preds, record.truth, validator, k=1)
     best_top5 = best_outcome_in_topk(preds, record.truth, validator, k=5)
@@ -138,7 +189,8 @@ def evaluate_one(
         pred: Prediction | None,
         outcome: Outcome,
     ) -> dict[str, Any]:
-        # Token + latency only on the rank-0 row to avoid double-counting.
+        # Token + latency + cost + error metadata only on the rank-0 row to
+        # avoid double-counting and duplicate error reporting.
         is_first = rank == 0
         return {
             **base,
@@ -153,6 +205,9 @@ def evaluate_one(
             "cache_read_tokens": cache_read_tokens if is_first else 0,
             "cache_creation_tokens": cache_creation_tokens if is_first else 0,
             "latency_ms": latency_ms if is_first else None,
+            "cost_usd": cost_usd if is_first else None,
+            "error_type": error_type if is_first else None,
+            "error_msg": error_msg if is_first else None,
         }
 
     if not preds:
@@ -169,12 +224,15 @@ def run_eval(
     records: Sequence[EvalRecord],
     validator: IcdValidator,
     top_k: int = 5,
+    pricing: PricingTable | None = None,
 ) -> pd.DataFrame:
     """Run the full (model × record) matrix; return a long-format DataFrame."""
     rows: list[dict[str, Any]] = []
     for model in models:
         for record in records:
-            rows.extend(evaluate_one(model, record, validator, top_k=top_k))
+            rows.extend(
+                evaluate_one(model, record, validator, top_k=top_k, pricing=pricing)
+            )
     return pd.DataFrame(rows)
 
 

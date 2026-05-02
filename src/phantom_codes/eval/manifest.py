@@ -230,8 +230,14 @@ def compute_totals(df: pd.DataFrame, pricing: PricingTable | None) -> RunTotals:
     Operates on rank-0 rows only (the runner attributes per-call usage to
     rank 0 to avoid double-counting).
 
-    If `pricing` is None or no model in the run has a pricing entry,
-    `total_cost_usd` is None — the caller can still see token totals.
+    Cost resolution order:
+    1. If the CSV has a `cost_usd` column (modern runs), sum it directly —
+       cost was already computed by the runner using a snapshot pricing
+       table, so re-passing pricing here would double-derive it.
+    2. Otherwise, if `pricing` is provided, recompute per-model cost from
+       token totals × pricing — used for backward compat with older CSVs
+       that predate the cost column.
+    3. Otherwise, `total_cost_usd = None`.
     """
     if df.empty:
         return RunTotals()
@@ -248,6 +254,27 @@ def compute_totals(df: pd.DataFrame, pricing: PricingTable | None) -> RunTotals:
     total_cr = _sum("cache_read_tokens")
     total_cw = _sum("cache_creation_tokens")
 
+    # Path 1: per-row cost is already in the CSV.
+    if "cost_usd" in top1.columns:
+        cost_series = top1["cost_usd"].dropna()
+        total_cost = float(cost_series.sum()) if len(cost_series) else None
+        # Count distinct models that had at least one priced row vs. unpriced.
+        priced_models = top1[top1["cost_usd"].notna()]["model_name"].unique()
+        unpriced_models = top1[top1["cost_usd"].isna()]["model_name"].unique()
+        n_with_pricing = len(set(priced_models))
+        n_without = len(set(unpriced_models) - set(priced_models))
+        return RunTotals(
+            input_tokens=total_in,
+            output_tokens=total_out,
+            cache_read_tokens=total_cr,
+            cache_creation_tokens=total_cw,
+            total_cost_usd=total_cost,
+            n_models_with_pricing=n_with_pricing,
+            n_models_without_pricing=n_without,
+        )
+
+    # Path 2 (backward compat): older CSVs without cost_usd — recompute from
+    # tokens × pricing if a pricing table is provided.
     if pricing is None:
         return RunTotals(
             input_tokens=total_in,

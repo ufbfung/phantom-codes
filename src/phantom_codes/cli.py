@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import typer
+from dotenv import load_dotenv
 from rich.console import Console
 from rich.table import Table
 
@@ -35,13 +36,24 @@ from phantom_codes.models.baselines import (
     TfidfBaseline,
 )
 from phantom_codes.models.llm import (
+    AnthropicClient,
+    GoogleClient,
+    OpenAIClient,
     PromptMode,
+    build_system_prompt,
+    build_user_message,
     make_anthropic_model,
     make_gemini_model,
     make_openai_model,
+    parse_predictions,
 )
 from phantom_codes.models.rag_llm import make_rag_anthropic_model
 from phantom_codes.models.retrieval import RetrievalModel
+
+# Load .env (gitignored) so ANTHROPIC_API_KEY / OPENAI_API_KEY / GEMINI_API_KEY
+# are visible via os.environ before any provider client is constructed.
+# No-op if .env is absent; existing environment variables take precedence.
+load_dotenv()
 
 app = typer.Typer(
     name="phantom-codes",
@@ -49,6 +61,182 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 console = Console()
+
+
+@app.command("verify-keys")
+def verify_keys() -> None:
+    """Quick API-key sanity check — one structured call per provider.
+
+    For each provider whose key is set in `.env`, sends a single ICD-10
+    prediction request to the cheapest model in that family and confirms
+    (a) the auth works, (b) the structured-output schema returns valid
+    JSON, and (c) the response parses into our Prediction format.
+
+    Cost: pennies (~$0.001 per provider). Run this **before** the full
+    smoke test to catch auth / quota / billing issues early.
+    """
+    import time
+
+    from phantom_codes.eval.cost import (
+        compute_call_cost,
+        load_pricing,
+        resolve_pricing_for_model,
+    )
+
+    system = build_system_prompt(PromptMode.ZEROSHOT)
+    user = build_user_message(
+        input_fhir=None,
+        input_text="Type 2 diabetes mellitus without complications",
+    )
+
+    # Best-effort pricing load so we can show $ per call inline.
+    pricing_path = Path("configs/pricing.yaml")
+    pricing_table = load_pricing(pricing_path) if pricing_path.exists() else None
+
+    # One cheapest model per provider — auth is per-provider, not per-model,
+    # so verifying one model proves the key works for all models in that family.
+    providers: list[tuple[str, str, list[str], type]] = [
+        ("Anthropic", "claude-haiku-4-5", ["ANTHROPIC_API_KEY"], AnthropicClient),
+        ("OpenAI", "gpt-4o-mini", ["OPENAI_API_KEY"], OpenAIClient),
+        ("Google", "gemini-2.5-flash", ["GEMINI_API_KEY", "GOOGLE_API_KEY"], GoogleClient),
+    ]
+
+    table = Table(title="API key verification — one structured call per provider")
+    table.add_column("provider")
+    table.add_column("model_id")
+    table.add_column("status")
+    table.add_column("top prediction")
+    table.add_column("tokens in/out", justify="right")
+    table.add_column("cost", justify="right")
+    table.add_column("latency", justify="right")
+
+    import json
+
+    n_ok = 0
+    n_skipped = 0
+    n_failed = 0
+    total_cost = 0.0
+    n_priced = 0
+    failures: list[tuple[str, str, Exception]] = []  # (provider, model_id, exception)
+    suspicious_empty: list[tuple[str, str, dict]] = []  # connected but parsed 0 predictions
+    for provider_name, model_id, env_keys, client_cls in providers:
+        has_key = any(os.environ.get(k) for k in env_keys)
+        if not has_key:
+            table.add_row(
+                provider_name, model_id, "[dim]skipped (no key)[/]",
+                "—", "—", "—", "—",
+            )
+            n_skipped += 1
+            continue
+
+        client = client_cls(model_id=model_id)
+        started = time.perf_counter()
+        try:
+            response = client.predict_structured(system, user)
+            elapsed_ms = (time.perf_counter() - started) * 1000
+            preds = parse_predictions(response.tool_input)
+            if preds:
+                top = f"{preds[0].code} ({preds[0].score:.2f})"
+                status = "[green]✓ ok[/]"
+            else:
+                # API call succeeded but the response shape didn't match our
+                # schema — worth flagging since the smoke test will silently
+                # produce hallucination rows for every record otherwise.
+                top = "[yellow](empty — schema mismatch?)[/]"
+                status = "[yellow]⚠ ok (no preds)[/]"
+                suspicious_empty.append((provider_name, model_id, response.tool_input))
+
+            # Compute per-call cost from token counts × pricing.
+            cost_str = "—"
+            if pricing_table is not None:
+                model_pricing = resolve_pricing_for_model(model_id, pricing_table)
+                if model_pricing is not None:
+                    call_cost = compute_call_cost(
+                        input_tokens=response.input_tokens,
+                        output_tokens=response.output_tokens,
+                        cache_read_tokens=response.cache_read_tokens,
+                        cache_creation_tokens=response.cache_creation_tokens,
+                        pricing=model_pricing,
+                    )
+                    total_cost += call_cost
+                    n_priced += 1
+                    cost_str = f"${call_cost:.6f}"
+
+            table.add_row(
+                provider_name,
+                model_id,
+                status,
+                top,
+                f"{response.input_tokens} / {response.output_tokens}",
+                cost_str,
+                f"{elapsed_ms:.0f} ms",
+            )
+            n_ok += 1
+        except Exception as e:
+            elapsed_ms = (time.perf_counter() - started) * 1000
+            err_short = f"{type(e).__name__}: {e}"
+            if len(err_short) > 60:
+                err_short = err_short[:57] + "..."
+            table.add_row(
+                provider_name, model_id, "[red]✗ failed[/]",
+                err_short, "—", "—", f"{elapsed_ms:.0f} ms",
+            )
+            n_failed += 1
+            failures.append((provider_name, model_id, e))
+
+    console.print(table)
+    summary_line = f"[bold]Summary:[/] {n_ok} ok, {n_skipped} skipped, {n_failed} failed"
+    if n_priced > 0:
+        summary_line += f"  [dim]·  total cost: ${total_cost:.6f} ({n_priced} priced)[/]"
+    console.print(summary_line)
+    if pricing_table is None:
+        console.print(
+            "[dim]Note: configs/pricing.yaml not found; per-call cost not computed.[/]"
+        )
+
+    if suspicious_empty:
+        console.print()
+        console.print(
+            "[yellow bold]Suspicious empty-prediction responses "
+            "(API call succeeded but parsed 0 predictions):[/]"
+        )
+        for provider_name, model_id, raw in suspicious_empty:
+            console.print(f"\n[bold]{provider_name} ({model_id}) raw response:[/]")
+            dump = json.dumps(raw, indent=2)
+            # Cap the dump to keep terminal output readable.
+            if len(dump) > 1500:
+                dump = dump[:1500] + "\n  ... (truncated)"
+            for line in dump.splitlines():
+                console.print(f"  {line}")
+        console.print(
+            "\n[yellow]This usually means the response shape didn't match our "
+            "predictions schema. Common cause: the model wrapped the response "
+            "under a different key.[/]"
+        )
+
+    if failures:
+        console.print()
+        console.print("[red bold]Full error details:[/]")
+        for provider_name, model_id, e in failures:
+            console.print(
+                f"\n[bold]{provider_name} ({model_id}):[/] {type(e).__name__}"
+            )
+            # Indent each line for readability.
+            for line in str(e).splitlines():
+                console.print(f"  {line}")
+        console.print(
+            "\n[red]Common causes: invalid key, no billing credit, "
+            "model_id not enabled for the account, or rate limit.[/]"
+        )
+        raise typer.Exit(code=1)
+    if suspicious_empty:
+        # Connected but useless — exit non-zero so CI / scripts catch it.
+        raise typer.Exit(code=1)
+    if n_ok == 0:
+        console.print(
+            "[yellow]No keys were set. Add at least ANTHROPIC_API_KEY to your .env file.[/]"
+        )
+        raise typer.Exit(code=1)
 
 
 @app.command("setup-data")
@@ -282,8 +470,13 @@ def smoke_test(
 
     console.print(f"[bold]Models:[/] {', '.join(m.name for m in models)}")
 
+    # Best-effort load of pricing so cost_usd gets populated per row at
+    # runner time. If pricing.yaml is missing, cost columns will be None.
+    pricing_path = Path("configs/pricing.yaml")
+    pricing_table = load_pricing(pricing_path) if pricing_path.exists() else None
+
     started_at = datetime.now(UTC)
-    df = run_eval(models, records, validator, top_k=5)
+    df = run_eval(models, records, validator, top_k=5, pricing=pricing_table)
     finished_at = datetime.now(UTC)
 
     # Resolve the CSV output path. In infra-only mode, auto-default to a
@@ -298,10 +491,6 @@ def smoke_test(
         out_path.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(out_path, index=False)
         console.print(f"[green]Wrote per-prediction rows to {out_path}[/]")
-
-        # Best-effort load of pricing for cost computation in the manifest.
-        pricing_path = Path("configs/pricing.yaml")
-        pricing_table = load_pricing(pricing_path) if pricing_path.exists() else None
 
         manifest = build_manifest(
             run_id=started_at.strftime("%Y%m%dT%H%M%SZ"),
@@ -355,23 +544,61 @@ def _print_infra_assertions(assertions: InfraAssertions) -> None:
     table = Table(title="Smoke test wiring assertions (infra-only — no performance reveal)")
     table.add_column("model")
     table.add_column("calls", justify="right")
+    table.add_column("errors", justify="right")
     table.add_column("tokens_in", justify="right")
     table.add_column("tokens_out", justify="right")
     table.add_column("cache_read", justify="right")
+    table.add_column("cost", justify="right")
     table.add_column("p50 ms", justify="right")
     table.add_column("p95 ms", justify="right")
 
+    total_cost = 0.0
+    has_any_cost = False
+    total_errors = 0
+    failing_models: list[tuple[str, int, str | None]] = []
     for m in assertions.per_model:
+        if m.cost_usd is not None:
+            cost_str = f"${m.cost_usd:.6f}"
+            total_cost += m.cost_usd
+            has_any_cost = True
+        else:
+            cost_str = "—"
+        # Highlight error counts so they stand out at a glance.
+        if m.n_errors > 0:
+            err_str = f"[red]{m.n_errors}[/]"
+            total_errors += m.n_errors
+            failing_models.append((m.model_name, m.n_errors, m.dominant_error_type))
+        else:
+            err_str = "0"
         table.add_row(
             m.model_name,
             f"{m.n_calls:,}",
+            err_str,
             f"{m.tokens_in:,}",
             f"{m.tokens_out:,}",
             f"{m.cache_read_tokens:,}",
+            cost_str,
             f"{m.latency_p50_ms:.0f}" if m.latency_p50_ms is not None else "—",
             f"{m.latency_p95_ms:.0f}" if m.latency_p95_ms is not None else "—",
         )
     console.print(table)
+
+    if has_any_cost:
+        console.print(f"[bold]Total run cost:[/] ${total_cost:.6f}")
+
+    if failing_models:
+        console.print()
+        console.print(
+            f"[yellow bold]⚠ {total_errors} call(s) failed across "
+            f"{len(failing_models)} model(s) — run completed via fault tolerance:[/]"
+        )
+        for name, n, dom in failing_models:
+            dom_str = f" (dominant: {dom})" if dom else ""
+            console.print(f"  • [yellow]{name}[/]: {n} errors{dom_str}")
+        console.print(
+            "[dim]Failed-call detail (error_type, error_msg) is in the CSV's rank-0 rows. "
+            "Filter with `pandas.read_csv(...).query('error_type.notna()')`.[/]"
+        )
 
     if assertions.all_buckets_reached:
         console.print(

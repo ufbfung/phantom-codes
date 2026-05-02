@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from phantom_codes.config import DataConfig
 from phantom_codes.data.degrade import ICD10_SYSTEM
 from phantom_codes.data.icd10cm.validator import load as load_validator
@@ -232,3 +234,128 @@ def test_evaluate_one_token_columns_are_zero_for_models_without_last_usage(tmp_p
     assert rows[0]["output_tokens"] == 0
     # latency_ms is still measured (runner-level), so it's a float, not None.
     assert isinstance(rows[0]["latency_ms"], float)
+    # No pricing was passed → cost_usd is None.
+    assert rows[0]["cost_usd"] is None
+
+
+def test_evaluate_one_persists_cost_usd_when_pricing_provided(tmp_path: Path) -> None:
+    """When a pricing table is passed, runner computes cost_usd on the rank-0 row."""
+    from phantom_codes.eval.cost import ModelPricing, PricingTable
+    from phantom_codes.models.llm import LLMResponse
+
+    class _UsageModel(ConceptNormalizer):
+        name = "haiku:zeroshot"
+
+        def predict(self, *, input_fhir=None, input_text=None, top_k=5):
+            self.last_usage = LLMResponse(
+                tool_input={},
+                input_tokens=1_000_000,
+                output_tokens=200_000,
+                cache_read_tokens=0,
+                cache_creation_tokens=0,
+            )
+            return [Prediction(system=ICD10_SYSTEM, code="E11.9", display=None, score=0.9)]
+
+    pricing = PricingTable(
+        snapshot_date="test",
+        models={"haiku": ModelPricing(input=1.00, output=5.00)},
+    )
+    records = _build_records(tmp_path)
+    rec = next(r for r in records if r.mode == "D2_no_code")
+    rows = evaluate_one(_UsageModel(), rec, load_validator(), top_k=5, pricing=pricing)
+    # 1M input × $1/M + 200k output × $5/M = $1 + $1 = $2
+    assert rows[0]["cost_usd"] == pytest.approx(2.0)
+
+
+def test_evaluate_one_cost_usd_none_when_pricing_missing_for_model(tmp_path: Path) -> None:
+    """Pricing table provided but no entry for this model → cost_usd is None, not 0."""
+    from phantom_codes.eval.cost import PricingTable
+    from phantom_codes.models.llm import LLMResponse
+
+    class _UsageModel(ConceptNormalizer):
+        name = "unknown-model"
+
+        def predict(self, *, input_fhir=None, input_text=None, top_k=5):
+            self.last_usage = LLMResponse(
+                tool_input={}, input_tokens=100, output_tokens=50,
+            )
+            return [Prediction(system=ICD10_SYSTEM, code="E11.9", display=None, score=0.9)]
+
+    pricing = PricingTable(snapshot_date="test", models={})
+    records = _build_records(tmp_path)
+    rec = next(r for r in records if r.mode == "D2_no_code")
+    rows = evaluate_one(_UsageModel(), rec, load_validator(), top_k=5, pricing=pricing)
+    assert rows[0]["cost_usd"] is None
+
+
+# ---------- fault tolerance ----------
+
+
+class _RaisingModel(ConceptNormalizer):
+    """Model whose predict() always raises a specific exception type."""
+
+    name = "raising-model"
+
+    def __init__(self, exc: Exception) -> None:
+        self._exc = exc
+
+    def predict(self, *, input_fhir=None, input_text=None, top_k=5):
+        raise self._exc
+
+
+def test_evaluate_one_records_error_when_predict_raises(tmp_path: Path) -> None:
+    """A raised exception becomes error_type/error_msg on rank-0 row, no crash."""
+    records = _build_records(tmp_path)
+    rec = next(r for r in records if r.mode == "D2_no_code")
+    model = _RaisingModel(RuntimeError("boom"))
+    rows = evaluate_one(model, rec, load_validator(), top_k=5)
+    assert len(rows) == 1
+    assert rows[0]["error_type"] == "RuntimeError"
+    assert rows[0]["error_msg"] == "boom"
+    # Empty preds → existing path emits a single HALLUCINATION row.
+    assert rows[0]["pred_code"] is None
+    assert rows[0]["outcome"] == Outcome.HALLUCINATION.value
+    # Token + cost columns are zero/None on a failed call.
+    assert rows[0]["input_tokens"] == 0
+    assert rows[0]["output_tokens"] == 0
+    assert rows[0]["cost_usd"] is None
+
+
+def test_evaluate_one_truncates_long_error_messages(tmp_path: Path) -> None:
+    """Error messages cap at ~500 chars so a verbose API exception doesn't bloat the CSV."""
+    records = _build_records(tmp_path)
+    rec = next(r for r in records if r.mode == "D2_no_code")
+    long_msg = "x" * 5000
+    model = _RaisingModel(ValueError(long_msg))
+    rows = evaluate_one(model, rec, load_validator(), top_k=5)
+    assert rows[0]["error_type"] == "ValueError"
+    assert len(rows[0]["error_msg"]) <= 500
+    assert rows[0]["error_msg"].endswith("...")
+
+
+def test_run_eval_continues_after_one_model_raises(tmp_path: Path) -> None:
+    """Critical fault-tolerance check: one bad model doesn't kill the whole matrix."""
+    records = _build_records(tmp_path)
+    bad_model = _RaisingModel(RuntimeError("simulated 503"))
+    good_model = _OracleModel(name="oracle")
+    df = run_eval([bad_model, good_model], records, load_validator(), top_k=5)
+    # Both models have rows for every record (24).
+    assert (df["model_name"] == "raising-model").sum() == len(records)
+    assert (df["model_name"] == "oracle").sum() >= len(records)
+    # Bad model's rank-0 rows all have error_type set.
+    bad_rank0 = df[(df["model_name"] == "raising-model") & (df["pred_rank"] == 0)]
+    assert bad_rank0["error_type"].notna().all()
+    assert (bad_rank0["error_type"] == "RuntimeError").all()
+    # Good model's rows have no errors.
+    good_rank0 = df[(df["model_name"] == "oracle") & (df["pred_rank"] == 0)]
+    assert good_rank0["error_type"].isna().all()
+
+
+def test_evaluate_one_no_error_columns_set_on_success(tmp_path: Path) -> None:
+    """When predict() succeeds, error_type and error_msg are None on every row."""
+    records = _build_records(tmp_path)
+    rec = next(r for r in records if r.mode == "D1_full")
+    rows = evaluate_one(_OracleModel(), rec, load_validator(), top_k=5)
+    for row in rows:
+        assert row["error_type"] is None
+        assert row["error_msg"] is None

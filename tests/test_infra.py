@@ -8,6 +8,7 @@ signals (accuracy, bucket distribution).
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from phantom_codes.eval.infra import (
     InfraAssertions,
@@ -94,6 +95,64 @@ def test_infra_assertions_handles_models_without_latency() -> None:
     assert baseline.latency_p95_ms is None
 
 
+def test_infra_assertions_sums_cost_usd_when_column_present() -> None:
+    """When the per-prediction CSV includes cost_usd (modern runs), sum it per model."""
+    df = pd.DataFrame([
+        {**_row("haiku"), "cost_usd": 0.001},
+        {**_row("haiku"), "cost_usd": 0.002},
+        {**_row("opus"), "cost_usd": 0.05},
+    ])
+    a = infra_assertions(df)
+    by_name = {m.model_name: m for m in a.per_model}
+    assert by_name["haiku"].cost_usd == pytest.approx(0.003)
+    assert by_name["opus"].cost_usd == pytest.approx(0.05)
+
+
+def test_infra_assertions_cost_is_none_when_column_missing() -> None:
+    """Older CSVs (pre-cost-tracking) just lack the column — cost_usd should be None."""
+    df = pd.DataFrame([_row("baseline")])  # _row helper doesn't include cost_usd
+    a = infra_assertions(df)
+    assert a.per_model[0].cost_usd is None
+
+
+def test_infra_assertions_cost_is_none_when_all_rows_unpriced() -> None:
+    """Model with cost_usd column but all NaN values (unpriced model) reports None."""
+    import math
+
+    df = pd.DataFrame([
+        {**_row("unpriced-model"), "cost_usd": math.nan},
+        {**_row("unpriced-model"), "cost_usd": math.nan},
+    ])
+    a = infra_assertions(df)
+    assert a.per_model[0].cost_usd is None
+
+
+def test_infra_assertions_counts_errors_per_model() -> None:
+    """When error_type column has values for some rows, count and surface them."""
+    df = pd.DataFrame([
+        {**_row("haiku"), "error_type": None},
+        {**_row("haiku"), "error_type": None},
+        {**_row("opus"), "error_type": "ServerError"},
+        {**_row("opus"), "error_type": "ServerError"},
+        {**_row("opus"), "error_type": "TimeoutException"},
+    ])
+    a = infra_assertions(df)
+    by_name = {m.model_name: m for m in a.per_model}
+    assert by_name["haiku"].n_errors == 0
+    assert by_name["haiku"].dominant_error_type is None
+    assert by_name["opus"].n_errors == 3
+    # ServerError appears 2× vs TimeoutException 1×, so it dominates.
+    assert by_name["opus"].dominant_error_type == "ServerError"
+
+
+def test_infra_assertions_error_columns_default_when_csv_lacks_them() -> None:
+    """Older CSVs (pre-fault-tolerance) have no error_type column → 0 errors, None dominant."""
+    df = pd.DataFrame([_row("baseline")])  # _row helper doesn't include error_type
+    a = infra_assertions(df)
+    assert a.per_model[0].n_errors == 0
+    assert a.per_model[0].dominant_error_type is None
+
+
 def test_infra_assertions_reports_all_buckets_reached_when_5_seen() -> None:
     df = pd.DataFrame([
         _row("m", outcome=Outcome.EXACT_MATCH.value),
@@ -138,6 +197,9 @@ def test_infra_assertions_does_not_expose_per_model_outcome_distribution() -> No
     or accuracy. Performance signals are forbidden in infra-only output.
     """
     # The ModelAssertions dataclass exposes these fields and *no others*.
+    # Cost / tokens / latency / error counts are infrastructure metrics
+    # (deployment economics + reliability), not performance metrics
+    # (accuracy / hallucination rate / bucket distribution).
     fields = set(ModelAssertions.__dataclass_fields__)
     assert fields == {
         "model_name",
@@ -146,8 +208,11 @@ def test_infra_assertions_does_not_expose_per_model_outcome_distribution() -> No
         "tokens_out",
         "cache_read_tokens",
         "cache_creation_tokens",
+        "cost_usd",
         "latency_p50_ms",
         "latency_p95_ms",
+        "n_errors",
+        "dominant_error_type",
     }
     # No exact_match, hallucination, accuracy, or bucket-count fields.
     forbidden = {"exact_match", "hallucination", "accuracy", "bucket_counts"}

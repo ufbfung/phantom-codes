@@ -1,9 +1,9 @@
 # Introduction
 
 > **Status:** Draft v0 (2026-05-01; updated 2026-05-02 to align training-
-> infrastructure description with §01_methodology). Markdown for now; convert
-> to LaTeX once structure stabilizes. Citations use `[Author Year]` keys
-> that map to `paper/sections/references.md`.
+> infrastructure description with §01_methodology and to switch to BibTeX
+> citations). Markdown stays canonical for prose; pandoc + biblatex resolve
+> `[@Key2024]` callouts against `paper/references.bib`.
 
 ---
 
@@ -20,9 +20,9 @@ cohort, or quietly corrupt the training data of the next generation of models.
 For most of the last decade, the state of the art for automated coding came
 from supervised neural classifiers trained on labeled clinical text — most
 prominently CAML's hierarchical attention mechanism over MIMIC-III discharge
-summaries [Mullenbach 2018], and more recent transformer-based extensions
+summaries [@Mullenbach2018], and more recent transformer-based extensions
 that adapt domain-pretrained encoders such as PubMedBERT and RoBERTa-PM to
-the multi-label classification setting [Huang 2022]. These systems achieve
+the multi-label classification setting [@Huang2022]. These systems achieve
 strong micro-F1 on common codes but require large, labeled training corpora
 and degrade sharply on the long tail of rare diagnoses.
 
@@ -46,8 +46,8 @@ mechanically-checkable instance of the broader phenomenon of medical
 hallucination — defined by Kim et al. as model-generated output that is
 "factually incorrect, logically inconsistent, or unsupported by authoritative
 clinical evidence in ways that could alter clinical decisions"
-[Kim 2025]. Survey work documents that hallucination is a pervasive and
-under-measured failure mode across clinical NLP tasks [Ji 2023].
+[@Kim2025]. Survey work documents that hallucination is a pervasive and
+under-measured failure mode across clinical NLP tasks [@Ji2023].
 
 Empirical evidence on how often this happens for code prediction
 specifically is sparse but uniformly cautionary. Soroush et al. benchmarked
@@ -55,34 +55,34 @@ GPT-3.5, GPT-4, Gemini Pro, and Llama-2-70B on direct querying of medical
 codes and reported that the best model (GPT-4) achieved only 46% exact match
 on ICD-9, 34% on ICD-10, and 50% on CPT — with a substantial fraction of
 errors being non-existent codes rather than real-but-wrong assignments
-[Soroush 2024]. Goel et al. found that LLMs systematically struggle to
+[@Soroush2024]. Goel et al. found that LLMs systematically struggle to
 distinguish real medical codes from plausibly-formatted fakes
-[Goel 2024]. Adversarial-prompt studies push these numbers higher: LLMs
+[@Goel2024]. Adversarial-prompt studies push these numbers higher: LLMs
 elaborate on planted fabrications in 50–82% of cases, with simple mitigation
-prompts only halving the rate [Omiye 2025]. A growing literature now treats
+prompts only halving the rate [@Omiye2025]. A growing literature now treats
 LLM hallucination in clinical settings as a primary safety concern, not a
-peripheral one [Kim 2025; Hatem 2025].
+peripheral one [@Kim2025; @Hatem2025].
 
 ## Existing benchmarks and their gaps
 
 The response from the field has largely been to constrain the LLM rather
 than to characterize its unconstrained behavior. Two-stage architectures
-combine an LLM proposer with a discriminative verifier [Yang 2023];
+combine an LLM proposer with a discriminative verifier [@Yang2023];
 extract-retrieve-rerank pipelines (MedCodER) ground predictions in retrieved
-candidates [Sahaj 2024]; generation-assisted vector search (GAVS) inverts
+candidates [@Sahaj2024]; generation-assisted vector search (GAVS) inverts
 the standard RAG flow by generating clinical entities first and then
-matching them against the coding ontology [Mahmoud 2025]; agentic systems
+matching them against the coding ontology [@Mahmoud2025]; agentic systems
 walk the ICD index sequentially in imitation of human coders
-[Motzfeldt 2025]; and neuro-symbolic verifiers report driving Type-I
+[@Motzfeldt2025]; and neuro-symbolic verifiers report driving Type-I
 hallucination rates to zero by refusing to emit codes that fail an existence
-check [Hybrid-Code v2 2025]. Recent benchmarks expand coverage across
+check [@HybridCode2025]. Recent benchmarks expand coverage across
 vocabularies and clinical sub-domains: ICPC-2 in Brazilian Portuguese
-primary care [Almeida 2025], full-spectrum ICD-11 mapped from MIMIC-III
-[Bhatti 2025], and rationale-annotated MIMIC-IV/ICD-10 datasets for
-explainability evaluation [Li 2025]. A recent systematic review of 35
+primary care [@Almeida2025], full-spectrum ICD-11 mapped from MIMIC-III
+[@Bhatti2025], and rationale-annotated MIMIC-IV/ICD-10 datasets for
+explainability evaluation [@Li2025]. A recent systematic review of 35
 LLM-ICD-coding studies through January 2025 finds that LLMs reliably handle
 common codes but degrade on rare diagnoses and lack external validation
-[Gershon 2025].
+[@Gershon2025].
 
 What is conspicuously missing across this body of work:
 
@@ -162,7 +162,7 @@ evaluated on identical Synthea-generated inputs.
 
 This separation has two intentional consequences. First, it ensures
 *compliance by construction* with PhysioNet's responsible-LLM-use policy
-[PhysioNet 2025], which prohibits sending credentialed data through
+[@PhysioNet2025], which prohibits sending credentialed data through
 third-party APIs: MIMIC remains on our own infrastructure throughout, and
 no patient-derived content reaches any commercial LLM endpoint. Second,
 it provides *full reproducibility*: the entire headline benchmark can be

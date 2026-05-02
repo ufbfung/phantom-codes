@@ -9,9 +9,9 @@
 > **Section placement:** Results subsection (not Discussion), since it's
 > empirical. Discussion engages with deployment implications separately.
 >
-> **Citations:** Almeida et al. 2025 [Almeida 2025] is the strongest precedent
-> for this multi-axis evaluation framing. MAX-EVAL-11 [Bhatti 2025] reports
-> weighted-relevance scoring but no cost. Soroush et al. 2024 [Soroush 2024]
+> **Citations:** Almeida et al. 2025 [@Almeida2025] is the strongest precedent
+> for this multi-axis evaluation framing. MAX-EVAL-11 [@Bhatti2025] reports
+> weighted-relevance scoring but no cost. Soroush et al. 2024 [@Soroush2024]
 > doesn't address cost at all. Position our contribution as the first
 > benchmark to operationalize *cost-per-correct-prediction* and a
 > *hallucination-aware break-even analysis* for clinical concept

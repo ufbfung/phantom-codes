@@ -1,0 +1,238 @@
+% Phantom Codes — paper master file.
+%
+% This is a thin LaTeX skeleton; the actual prose lives in markdown
+% files under sections/ and is converted to .tex via pandoc at build
+% time (see Makefile). To rebuild the PDF after editing any section:
+%
+%     cd paper && make pdf
+%
+% Output: paper/build/paper.pdf
+%
+% Editing model:
+%   - All prose edits happen in sections/*.md (the markdown is canonical)
+%   - This main.tex only changes when you add/remove/reorder sections,
+%     change document class, add/remove packages, or restyle the title.
+%
+% When the paper is closer to submission and structure has stabilized,
+% the right move is to drop pandoc, convert each section to .tex
+% manually (or commit the generated .tex), and switch to a venue-
+% specific style file (acl_natbib.sty, neurips.sty, etc.). For now,
+% the article class is enough to preview drafts.
+
+\documentclass[11pt]{article}
+
+% ─── Layout & typography ───────────────────────────────────────────────
+\usepackage[margin=1in]{geometry}
+\usepackage{microtype}                  % subtle kerning improvements
+\usepackage{parskip}                    % paragraphs separated by blank lines
+                                        % (matches markdown source rhythm)
+
+% ─── Tables, figures, lists ────────────────────────────────────────────
+\usepackage{graphicx}
+\usepackage{booktabs}                   % \toprule/\midrule/\bottomrule
+\usepackage{longtable}                  % multi-page tables (pandoc default)
+\usepackage{array}
+\usepackage{caption}
+\usepackage{calc}                       % needed for pandoc's column-width
+                                        % expressions: p{(\columnwidth - X)
+                                        % * \real{0.5}}
+
+% ─── Math ──────────────────────────────────────────────────────────────
+% amsmath provides \text{}, \frac{}{}, align/equation environments —
+% all of which appear in 02_cost_economics.md's metric definitions.
+\usepackage{amsmath}
+\usepackage{amssymb}                    % \mathbb, \leq, \geq, etc.
+
+% ─── Bibliography ──────────────────────────────────────────────────────
+% biblatex with biber backend — modern Unicode-friendly citation engine.
+% Pandoc converts [@Key] callouts in markdown sources into \autocite{Key}
+% in the generated .tex; biblatex resolves these at build time using
+% references.bib and the style configured below.
+%
+% Citation style options (one-line swap between venues):
+%   - vancouver:    superscripted   — biomedical (NEJM AI, JAMIA, BMJ) ← active
+%   - numeric-comp: [1, 2]          — IEEE, Nature, NeurIPS
+%   - authoryear:   (Devlin, 2019)  — skim-friendly drafting style
+%
+% Active style: vancouver (AMA-family, superscripted numeric refs).
+% NEJM AI's manuscript guidance follows the AMA Manual of Style — this
+% setting matches that convention. Switch by changing `style=` only;
+% .bib + markdown prose are style-agnostic.
+\usepackage[backend=biber, style=vancouver, sortlocale=en_US]{biblatex}
+\addbibresource{references.bib}
+
+% ─── Links & references ────────────────────────────────────────────────
+\usepackage[colorlinks=true,
+            linkcolor=blue!60!black,
+            citecolor=blue!60!black,
+            urlcolor=blue!60!black]{hyperref}
+\usepackage{xurl}                       % wrap long URLs
+
+% ─── Code & quotes ─────────────────────────────────────────────────────
+\usepackage{xcolor}
+\usepackage{fancyvrb}                   % code blocks
+\usepackage{framed}                     % blockquote backgrounds
+\usepackage{csquotes}
+
+% ─── Review-mode niceties (commented; uncomment for NEJM AI submission) ─
+% Line numbers throughout the body — most biomedical journals (NEJM AI
+% included) want these on the submitted PDF so reviewers can reference
+% specific lines. Comment-out for read-throughs; uncomment for submission.
+% \usepackage{lineno}
+% \linenumbers
+% Double-spacing — also a near-universal submission convention.
+% \usepackage{setspace}
+% \doublespacing
+
+% ─── Pandoc compatibility shims ────────────────────────────────────────
+% Pandoc emits these commands in generated .tex; define them so the
+% document compiles whether or not pandoc has injected its own preamble.
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\providecommand{\pandocbounded}[1]{#1}
+
+% ─── Title block ───────────────────────────────────────────────────────
+\title{%
+  Phantom Codes: \\
+  \large Hallucination in LLM-Based Clinical Concept Normalization}
+% Author block — NEJM AI manuscript convention is name → affiliation → email.
+% Update affiliation when institutional placement is finalized; "Independent
+% Researcher" is the honest current state. ORCID can be added inline once
+% registered.
+\author{%
+  Brian K. Fung \\[2pt]
+  \small Independent Researcher \\[2pt]
+  \small\href{mailto:brian@briankfung.com}{\texttt{brian@briankfung.com}}}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+% Structured abstract — NEJM AI / AMA convention.
+% Target word count: 250-300 words across all four sections combined.
+% Numbers in *Results* stay TBD until the headline run completes; rest
+% of the abstract is settled (matches the introduction + methods).
+\begin{abstract}
+\noindent\textbf{Background.} Large language models can perform
+clinical concept normalization (mapping unstructured clinical text to
+controlled-vocabulary identifiers such as ICD-10-CM) without
+task-specific fine-tuning, but they may fabricate codes that do not
+exist in the target vocabulary. Existing benchmarks treat such
+fabrications as ordinary errors, conflating two distinct failure
+modes (real-but-wrong code vs.\ non-existent code) and obscuring the
+mechanism by which constrained-decoding mitigations help.
+
+\noindent\textbf{Methods.} We introduce \emph{Phantom Codes}, a
+reproducible benchmark that evaluates frontier LLMs (Claude Opus 4.7,
+Sonnet 4.6, Haiku 4.5; GPT-5.5 and a GPT-4-class economy comparator;
+Gemini 2.5 Pro and Flash) under three prompting modes (zero-shot,
+constrained, retrieval-augmented) against a fine-tuned PubMedBERT
+classifier head, a sentence-transformer retrieval baseline, and three
+constrained-only string-matching baselines. Inputs span four
+degradation modes ranging from full FHIR Conditions to
+abbreviation-only one-sentence summaries. Every prediction is
+assigned to one of five mutually exclusive outcome buckets:
+\emph{exact match}, \emph{category match}, \emph{chapter match},
+\emph{out of domain}, and \emph{hallucination} (predicted code does
+not exist in CMS-published ICD-10-CM). Trained models are fine-tuned
+locally on credentialed MIMIC-IV-FHIR data; the evaluation matrix
+runs entirely against Synthea-generated synthetic FHIR Bundles,
+ensuring full compliance with PhysioNet's responsible-LLM-use policy
+and full reproducibility without credentialed-data access.
+
+\noindent\textbf{Results.} [TBD — populated from headline run on
+Synthea cohort. Will report per-model and per-mode outcome
+distributions across all five buckets, with hallucination rates as
+the primary outcome and cost-per-correct-prediction as a secondary
+deployment-relevance metric.]
+
+\noindent\textbf{Conclusions.} [TBD — three sentences once results
+are in; current expectation is that hallucination rates differ
+substantially across prompting modes within the same model, that
+constrained decoding reduces but does not eliminate hallucination,
+and that the trained classifier head sets a clean comparison floor
+on a closed vocabulary.]
+\end{abstract}
+
+\tableofcontents
+\bigskip
+
+% ─── Body ──────────────────────────────────────────────────────────────
+% Each section is generated from sections/*.md via pandoc; see Makefile.
+% Add new sections by: (1) creating sections/NN_name.md and
+% (2) appending an \input{build/sections/NN_name} line below.
+
+\input{build/sections/00_introduction}
+\input{build/sections/01_methodology}
+\input{build/sections/02_cost_economics}
+\input{build/sections/03_results}
+\input{build/sections/04_discussion}
+\input{build/sections/05_conclusion}
+
+\bigskip
+\hrule
+\bigskip
+
+% ─── NEJM AI back-matter ───────────────────────────────────────────────
+% Required submission elements per NEJM AI manuscript guidance. Each
+% block is a placeholder; fill in before submission. Order follows the
+% journal's preferred sequence.
+
+\section*{Funding}
+\addcontentsline{toc}{section}{Funding}
+This work received no external funding. Compute resources for trained-
+model fine-tuning were supplied by the corresponding author's personal
+hardware (Apple M1 MacBook Pro). LLM API access (Anthropic, OpenAI,
+Google) for the evaluation matrix was funded out of pocket; per-call
+costs are itemized in §Cost economics.
+
+\section*{Data availability}
+\addcontentsline{toc}{section}{Data availability}
+\textbf{MIMIC-IV-FHIR v2.1} is a credentialed dataset distributed by
+PhysioNet under their Credentialed Health Data License; access requires
+PhysioNet credentialing and CITI training. We do not redistribute MIMIC
+data, MIMIC-derivative parquet splits, or model weights fine-tuned on
+MIMIC. \textbf{Synthea-generated FHIR Bundles} used for the headline
+evaluation are freely redistributable and will be released as
+\texttt{benchmarks/synthetic\_v1/} alongside the paper. \textbf{Source
+code} (data-preparation pipeline, degradation logic, ICD-10-CM
+validator, eval runner, prompts, baselines, trained-model architecture
+and training script) is publicly available at the project repository
+under the MIT License. Aggregate per-epoch training metrics
+(\texttt{models/metrics/*.json}) are available on request; per-record
+predictions are not, in keeping with PhysioNet's responsible-LLM-use
+policy.
+
+\section*{Code availability}
+\addcontentsline{toc}{section}{Code availability}
+All source code, configuration files, synthetic test fixtures, and the
+manuscript source are publicly available at the project's GitHub
+repository under the MIT License. The repository includes the full
+evaluation pipeline, allowing any researcher (with or without
+PhysioNet credentialing) to reproduce the LLM-evaluation arm against
+Synthea-generated inputs.
+
+\section*{Author contributions}
+\addcontentsline{toc}{section}{Author contributions}
+B.K.F.\ designed the benchmark, implemented the codebase, conducted
+the experiments, and wrote the manuscript.
+
+\section*{Competing interests}
+\addcontentsline{toc}{section}{Competing interests}
+The author declares no competing interests.
+
+\section*{Acknowledgments}
+\addcontentsline{toc}{section}{Acknowledgments}
+[Optional — populate before submission if appropriate.]
+
+\bigskip
+\hrule
+\bigskip
+
+% Auto-generated bibliography — biblatex pulls cited entries from
+% references.bib, formats per the style configured in the preamble,
+% and adds the section to the table of contents via heading=bibintoc.
+\printbibliography[heading=bibintoc, title={References}]
+
+\end{document}

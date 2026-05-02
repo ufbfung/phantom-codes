@@ -1,0 +1,19 @@
+# Generated build artifacts — markdown sources and main.tex are the
+# canonical source of truth; PDFs and intermediate .tex/.aux/.log
+# files should never be committed.
+build/
+
+# Editor cruft that sometimes appears alongside LaTeX
+*.synctex.gz
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+
+# biblatex/biber intermediates
+*.bcf
+*.run.xml

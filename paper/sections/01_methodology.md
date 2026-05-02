@@ -10,9 +10,9 @@
 
 ## Data and policy compliance
 
-Our trained models are fine-tuned on MIMIC-IV-FHIR v2.1 [Johnson 2023]
+Our trained models are fine-tuned on MIMIC-IV-FHIR v2.1 [@Johnson2023]
 under PhysioNet credentialed access. To remain compliant with PhysioNet's
-responsible-LLM-use policy [PhysioNet 2025], which prohibits sending
+responsible-LLM-use policy [@PhysioNet2025], which prohibits sending
 credentialed data through third-party APIs, all training and validation
 runs execute entirely on the corresponding author's own hardware (Apple
 M1 MacBook Pro, see § Hardware). MIMIC content does not traverse any
@@ -22,7 +22,7 @@ including telemetry libraries (wandb, mlflow, comet) which the training
 module disables defensively at import time via environment variables.
 
 The headline evaluation against frontier LLMs runs against
-Synthea-generated FHIR Bundles [Walonoski 2018], a freely-redistributable
+Synthea-generated FHIR Bundles [@Walonoski2018], a freely-redistributable
 synthetic patient dataset with no real patient information. The
 trained classifier is evaluated on the same Synthea inputs as the LLMs,
 providing both compliance-by-construction and an out-of-distribution
@@ -32,7 +32,7 @@ from MIMIC's source notes).
 ## Cohort and label space
 
 We restrict the cohort to ICD-10-CM codes in the CMS ACCESS Model FHIR
-Implementation Guide v0.9.6 [CMS 2026], comprising two disease groups:
+Implementation Guide v0.9.6 [@CMS2026], comprising two disease groups:
 
 - **CKM** (cardiometabolic): diabetes (E08/E09/E11/E13), atherosclerotic
   cardiovascular disease, chronic kidney disease stage 3
@@ -68,7 +68,7 @@ densest.
 We fine-tune a single transformer encoder with a randomly-initialized
 linear classification head over the [CLS] token's final-layer
 hidden state. This is the canonical BERT-style classification setup
-[Devlin 2019]; we make three deliberate choices on top of it.
+[@Devlin2019]; we make three deliberate choices on top of it.
 
 **Multi-label rather than single-label.** The classification head emits
 one logit per code (50 logits total), trained with binary cross-entropy
@@ -85,7 +85,7 @@ classifier signal density. The long tail of rare codes (≤10 instances
 in the train split) cannot be reliably learned regardless of model
 choice; including them would dilute the gradient signal on the
 high-frequency codes that drive most clinical decisions. This is a
-standard trade-off in extreme classification [Chalkidis 2020]; we
+standard trade-off in extreme classification [@Chalkidis2020]; we
 err toward the well-supported subset for v1.
 
 **Single linear head, no MLP.** A two-layer MLP head with non-linearity
@@ -98,10 +98,10 @@ training-set memorization risk; the cleaner head minimizes confound.
 
 ## Choice of base encoder: PubMedBERT
 
-We use **PubMedBERT-base-uncased-abstract-fulltext** [Gu 2021] as
+We use **PubMedBERT-base-uncased-abstract-fulltext** [@Gu2021] as
 the pre-trained encoder. The choice is motivated by three properties.
 
-**Domain-adaptive pre-training.** Standard BERT [Devlin 2019] is
+**Domain-adaptive pre-training.** Standard BERT [@Devlin2019] is
 pre-trained on Wikipedia and BookCorpus — corpora that contain little
 biomedical text. The "Don't Stop Pretraining" line of work [Gururangan
 2020] established that continued pre-training on in-domain text
@@ -115,7 +115,7 @@ rather than general English.
 
 **Empirical performance on the BLURB benchmark.** On the BLURB suite
 of 13 biomedical NLP tasks, PubMedBERT outperforms BioBERT,
-SciBERT, and BlueBERT on the majority of tasks [Gu 2021], including
+SciBERT, and BlueBERT on the majority of tasks [@Gu2021], including
 sentence-level classification tasks structurally similar to ours.
 
 **Computational footprint compatible with local hardware.** At ~110M
@@ -128,7 +128,7 @@ data-residency review for credentialed data.
 
 ### Alternatives considered and rejected
 
-**ClinicalBERT** [Alsentzer 2019] is an obvious candidate — the model
+**ClinicalBERT** [@Alsentzer2019] is an obvious candidate — the model
 is pre-trained on MIMIC-III clinical notes and would be expected to
 transfer well to MIMIC-IV. We rule it out for **data contamination**:
 MIMIC-III's patient cohort partially overlaps with MIMIC-IV's, and
@@ -137,12 +137,12 @@ classify MIMIC-IV conditions would produce optimistic numbers that
 do not generalize to the Synthea evaluation. PubMedBERT, pre-trained
 exclusively on PubMed, has no such overlap.
 
-**BioBERT** [Lee 2020] is a defensible alternative — also pre-trained
+**BioBERT** [@Lee2020] is a defensible alternative — also pre-trained
 on PubMed (abstracts only, not full text). It is older than PubMedBERT
 and underperforms it on BLURB; we list it as a sensitivity-analysis
 candidate for v2 but do not include it in v1's headline run.
 
-**BioLinkBERT** [Yasunaga 2022] is pre-trained on linked documents
+**BioLinkBERT** [@Yasunaga2022] is pre-trained on linked documents
 (citation graphs from PubMed) and shows gains on multi-hop reasoning
 tasks. Our task is single-hop (one input → one or more output codes);
 the additional pre-training signal is not obviously relevant. Worth
@@ -152,8 +152,7 @@ the limiting factor.
 **Larger biomedical models** — BiomedLM (2.7 B parameters), GatorTron
 (8.9 B), Med-PaLM (540 B), BioMistral (7 B) — would likely outperform
 PubMedBERT-base but cannot be fine-tuned end-to-end on our hardware.
-Parameter-efficient fine-tuning (LoRA [Hu 2022], QLoRA [Dettmers
-2023]) would close the hardware gap and is on the v2 roadmap, both
+Parameter-efficient fine-tuning (LoRA [@Hu2022], QLoRA [@Dettmers2023]) would close the hardware gap and is on the v2 roadmap, both
 as a stronger trained-model baseline and as a "fine-tuned LLM" rung
 on the spectrum between zero-shot frontier LLMs and a fully-trained
 classifier head.
@@ -238,15 +237,15 @@ zero marginal cost, with the full data-residency guarantee preserved.
 
 ## Optimization
 
-We use **AdamW** [Loshchilov 2019] with decoupled weight decay (0.01)
+We use **AdamW** [@Loshchilov2019] with decoupled weight decay (0.01)
 and a peak learning rate of 2.0×10⁻⁵, the canonical fine-tuning rate
-for BERT-family models [Devlin 2019]. The learning rate follows a
+for BERT-family models [@Devlin2019]. The learning rate follows a
 **linear-warmup, linear-decay** schedule: ramped from zero to peak
 over 500 steps (~0.4% of total training), then linearly decayed to
 zero over the remaining ~128,400 steps. Warmup is essential — without
 it, the gradient signal from the randomly-initialized classification
 head can destabilize the pre-trained encoder in the first few
-hundred steps and cause divergence [Liu 2020].
+hundred steps and cause divergence [@Liu2020].
 
 Training runs for up to **3 epochs** with **early stopping** on
 validation loss (patience 2 epochs). The best checkpoint by

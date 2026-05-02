@@ -213,7 +213,31 @@ class LLMClient(Protocol):
 
 @dataclass
 class AnthropicClient:
-    """Anthropic Claude with prompt caching on the system block + forced tool use."""
+    """Anthropic Claude with prompt caching on the system block + forced tool use.
+
+    Caching threshold caveat (real-world consideration):
+        Anthropic's prompt caching has model-specific minimum cacheable block sizes.
+        For the 4.x generation these are ~4,096 tokens for Opus 4.7 and Haiku 4.5,
+        and ~2,048 for Sonnet 4.6. **Cache writes silently fail when the cacheable
+        prefix is below the minimum** — no error, no warning, just no cache hit
+        on subsequent calls.
+
+        Our `cache_control: ephemeral` on the system block is correct, but for the
+        v1 ACCESS-scope candidate list (~85 codes ≈ ~1.5–3k tokens of cacheable
+        content), most configurations sit below the threshold. We ship this code
+        anyway because: (a) it's harmless when sub-threshold (silent no-op); (b)
+        when prompts grow above threshold (e.g., expanded candidate lists in v2,
+        or longer system instructions), caching activates automatically with no
+        code change.
+
+        Verify caching is firing by checking that `cache_read_input_tokens > 0`
+        on the response after the first call to a fresh model+prompt combination.
+        If both `cache_creation_input_tokens` and `cache_read_input_tokens` stay
+        at 0, the prefix is below the threshold for that model.
+
+        See `paper/sections/02_cost_economics.md` for the deployment-cost
+        implications discussion.
+    """
 
     model_id: str  # e.g. "claude-sonnet-4-6", "claude-haiku-4-5"
     api_key: str | None = None
@@ -272,15 +296,41 @@ class OpenAIClient:
     def predict_structured(self, system_prompt: str, user_message: str) -> LLMResponse:
         import openai
 
+        # OpenAI's `response_format=json_schema` strict mode (Structured
+        # Outputs) guarantees the response matches our schema exactly — both
+        # the wrapper key (`predictions`, not the model's creative invention
+        # of `record_predictions`) and the property names (`display`, not
+        # `display_text`). This is more reliable than the looser `json_object`
+        # mode, which only enforces "valid JSON" without schema constraints.
+        strict_schema = _strip_for_openai_strict(PREDICTION_TOOL_SCHEMA)
+
+        # GPT-5+ and the reasoning families (o1, o3, o4, ...) require
+        # `max_completion_tokens` and reject the legacy `max_tokens`. Older
+        # chat models (gpt-4o, gpt-4o-mini, gpt-3.5-turbo) still accept
+        # `max_tokens`. Pick based on model ID prefix.
+        new_token_param_prefixes = ("gpt-5", "o1", "o3", "o4")
+        token_kwarg = (
+            "max_completion_tokens"
+            if self.model_id.startswith(new_token_param_prefixes)
+            else "max_tokens"
+        )
+
         client = openai.OpenAI(api_key=self.api_key or os.environ["OPENAI_API_KEY"])
         resp = client.chat.completions.create(
             model=self.model_id,
-            max_tokens=self.max_tokens,
-            response_format={"type": "json_object"},
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "icd10_predictions",
+                    "strict": True,
+                    "schema": strict_schema,
+                },
+            },
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message},
             ],
+            **{token_kwarg: self.max_tokens},
         )
         content = resp.choices[0].message.content or "{}"
         tool_input = json.loads(content)
@@ -304,6 +354,48 @@ class OpenAIClient:
         )
 
 
+def _strip_for_gemini(schema: Any) -> Any:
+    """Gemini's `response_schema` is an OpenAPI 3.0 subset and rejects fields
+    that the JSON Schema spec includes — most notably `additionalProperties`.
+
+    Return a deep copy of `schema` with the unsupported fields removed at every
+    nesting level. Anthropic accepts the original schema unchanged.
+    """
+    unsupported = {"additionalProperties", "$schema"}
+    if isinstance(schema, dict):
+        return {
+            k: _strip_for_gemini(v)
+            for k, v in schema.items()
+            if k not in unsupported
+        }
+    if isinstance(schema, list):
+        return [_strip_for_gemini(item) for item in schema]
+    return schema
+
+
+def _strip_for_openai_strict(schema: Any) -> Any:
+    """OpenAI's `json_schema` strict mode requires a strict subset of JSON Schema.
+
+    Strip fields the strict-mode validator rejects:
+    - `minItems` / `maxItems` on arrays
+    - `minimum` / `maximum` on numbers
+    - `pattern` / `format` on strings (not in our schema, but defensive)
+
+    The schema must also have `additionalProperties: false` and list every
+    property in `required` — our base schema already satisfies both.
+    """
+    unsupported = {"minItems", "maxItems", "minimum", "maximum", "pattern", "format"}
+    if isinstance(schema, dict):
+        return {
+            k: _strip_for_openai_strict(v)
+            for k, v in schema.items()
+            if k not in unsupported
+        }
+    if isinstance(schema, list):
+        return [_strip_for_openai_strict(item) for item in schema]
+    return schema
+
+
 @dataclass
 class GoogleClient:
     """Google Gemini with `response_schema` structured output.
@@ -318,7 +410,10 @@ class GoogleClient:
     max_tokens: int = 1024
 
     def predict_structured(self, system_prompt: str, user_message: str) -> LLMResponse:
+        import time
+
         from google import genai
+        from google.genai import errors as genai_errors
         from google.genai import types
 
         key = (
@@ -327,30 +422,131 @@ class GoogleClient:
             or os.environ["GOOGLE_API_KEY"]
         )
         client = genai.Client(api_key=key)
-        resp = client.models.generate_content(
-            model=self.model_id,
-            contents=user_message,
-            config=types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                max_output_tokens=self.max_tokens,
-                response_mime_type="application/json",
-                response_schema=PREDICTION_TOOL_SCHEMA,
-            ),
+        config = types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            max_output_tokens=self.max_tokens,
+            response_mime_type="application/json",
+            response_schema=_strip_for_gemini(PREDICTION_TOOL_SCHEMA),
         )
+
+        # Retry only on 429 (rate limit / quota) — the server provides a
+        # `retryDelay` hint in the response that's typically much longer than
+        # the SDK's own exponential backoff (40s+ vs. 16s max). For 429, we
+        # respect that hint with one outer retry attempt.
+        #
+        # We do NOT retry 5xx outside the SDK: the SDK already retries
+        # 408/429/500/502/503/504 internally (5 attempts, exponential backoff
+        # 1→16s with jitter — see `google.genai._api_client._RETRY_*`). If a
+        # 5xx propagates past the SDK's retries, the model is genuinely down
+        # and additional waiting won't help. The runner's fault tolerance
+        # handles persistent failures gracefully without crashing the matrix.
+        max_attempts = 2  # 1 retry after the initial attempt
+        for attempt in range(max_attempts):
+            try:
+                resp = client.models.generate_content(
+                    model=self.model_id,
+                    contents=user_message,
+                    config=config,
+                )
+                break
+            except genai_errors.ClientError as e:
+                # Only retry rate limits; other 4xx errors (400 schema bugs,
+                # 401 auth) are caller errors and shouldn't be retried.
+                if getattr(e, "code", None) != 429 or attempt == max_attempts - 1:
+                    raise
+                delay = _gemini_retry_delay_seconds(e, fallback=45.0)
+                delay = min(delay, 90.0)
+                time.sleep(delay + 1.0)  # small buffer
+        else:  # pragma: no cover — defensive; loop always returns or raises
+            raise RuntimeError("Unreachable: retry loop exited without success or raise")
+
         text = resp.text or "{}"
-        tool_input = json.loads(text)
+        tool_input, parse_error = _parse_gemini_json(text)
         meta = getattr(resp, "usage_metadata", None)
         prompt_tokens = getattr(meta, "prompt_token_count", 0) or 0 if meta else 0
         completion_tokens = getattr(meta, "candidates_token_count", 0) or 0 if meta else 0
         cached = getattr(meta, "cached_content_token_count", 0) or 0 if meta else 0
+        provider_metadata: dict[str, Any] = {"model": self.model_id}
+        if parse_error is not None:
+            # Don't blow up the whole run on one malformed response. Save the
+            # raw text + parse error so post-hoc debugging is possible from
+            # the per-prediction CSV / manifest.
+            provider_metadata["raw_text"] = text[:1000]
+            provider_metadata["parse_error"] = parse_error
         return LLMResponse(
             tool_input=tool_input,
             input_tokens=max(prompt_tokens - cached, 0),
             output_tokens=completion_tokens,
             cache_read_tokens=cached,
             cache_creation_tokens=0,  # Gemini explicit caching uses separate cachedContent resources
-            raw_provider_metadata={"model": self.model_id},
+            raw_provider_metadata=provider_metadata,
         )
+
+
+def _parse_gemini_json(text: str) -> tuple[dict[str, Any], str | None]:
+    """Parse Gemini response text as JSON, defensively.
+
+    Returns `(parsed_dict, error_message)`. On parse success, error_message
+    is None and parsed_dict has the response content. On failure, returns
+    `({"predictions": []}, "<error description>")` so the caller can record
+    the failure without crashing the whole run.
+
+    Defensive transforms applied before parsing:
+    - Strip surrounding whitespace
+    - Strip markdown code fences (```json ... ``` or ``` ... ```) — Gemini
+      occasionally adds these even when `response_mime_type=application/json`
+    """
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        # Drop opening fence (```json on its own line, or just ```)
+        first_newline = cleaned.find("\n")
+        if first_newline != -1:
+            cleaned = cleaned[first_newline + 1 :]
+        # Drop closing fence
+        cleaned = cleaned.rstrip()
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3].rstrip()
+    try:
+        parsed = json.loads(cleaned)
+        if not isinstance(parsed, dict):
+            return {"predictions": []}, f"Top-level JSON value is {type(parsed).__name__}, not dict"
+        return parsed, None
+    except json.JSONDecodeError as e:
+        return {"predictions": []}, f"JSONDecodeError: {e.msg} at line {e.lineno} col {e.colno}"
+
+
+def _gemini_retry_delay_seconds(error: Any, fallback: float = 45.0) -> float:
+    """Extract the server-suggested retry delay (in seconds) from a Gemini 429.
+
+    The Gemini 429 response embeds a `RetryInfo` detail entry like
+    `{"@type": ".../RetryInfo", "retryDelay": "40s"}`. Returns `fallback`
+    when the field can't be parsed.
+    """
+    try:
+        details_payload = getattr(error, "details", None)
+        if isinstance(details_payload, dict):
+            details_list = (
+                details_payload.get("error", {}).get("details", [])
+                or details_payload.get("details", [])
+                or []
+            )
+        elif isinstance(details_payload, list):
+            details_list = details_payload
+        else:
+            details_list = []
+        for entry in details_list:
+            if not isinstance(entry, dict):
+                continue
+            if "RetryInfo" not in str(entry.get("@type", "")):
+                continue
+            raw = entry.get("retryDelay") or "0s"
+            if isinstance(raw, str) and raw.endswith("s"):
+                return float(raw[:-1])
+            if isinstance(raw, int | float):
+                return float(raw)
+        return fallback
+    except (TypeError, ValueError, AttributeError):
+        return fallback
 
 
 # ---------------------------------------------------------------------------

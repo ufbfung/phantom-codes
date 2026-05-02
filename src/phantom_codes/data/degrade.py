@@ -22,10 +22,44 @@ from typing import Any
 
 from phantom_codes.data.abbreviate import abbreviate
 
-# FHIR system URIs for ICD coding
+# Canonical (HL7-standard) FHIR system URIs for ICD coding. These are
+# what the rest of the codebase — scope filter, validator, eval matrix —
+# uses internally. We normalize source-specific URIs to these at the
+# extraction boundary (`extract_ground_truth`).
 ICD10_SYSTEM = "http://hl7.org/fhir/sid/icd-10-cm"
 ICD9_SYSTEM = "http://hl7.org/fhir/sid/icd-9-cm"
 ICD_SYSTEMS = frozenset({ICD10_SYSTEM, ICD9_SYSTEM})
+
+# MIMIC-FHIR uses its own namespaced CodeSystems instead of the canonical
+# HL7 URIs. We treat them as equivalent and normalize on extraction so
+# downstream code only ever sees the canonical URI. Source:
+# https://kind-lab.github.io/mimic-fhir/CodeSystem-mimic-diagnosis-icd10.html
+_MIMIC_ICD10_SYSTEM = "http://mimic.mit.edu/fhir/mimic/CodeSystem/mimic-diagnosis-icd10"
+_MIMIC_ICD9_SYSTEM = "http://mimic.mit.edu/fhir/mimic/CodeSystem/mimic-diagnosis-icd9"
+
+# Lookup: any URI in the keys is recognized; the value is the canonical URI it normalizes to.
+_SYSTEM_ALIASES: dict[str, str] = {
+    ICD10_SYSTEM: ICD10_SYSTEM,
+    ICD9_SYSTEM: ICD9_SYSTEM,
+    _MIMIC_ICD10_SYSTEM: ICD10_SYSTEM,
+    _MIMIC_ICD9_SYSTEM: ICD9_SYSTEM,
+}
+
+
+def _normalize_icd_code(code: str) -> str:
+    """Canonicalize an ICD-9/ICD-10 code to the dotted representation.
+
+    MIMIC stores codes without the conventional decimal point (e.g.,
+    ``E1110`` instead of ``E11.10``). The convention for both ICD-9 and
+    ICD-10 is a dot after the first three characters when the code is
+    longer than three characters; 3-character chapter-level codes
+    (``E11``, ``I10``) are unchanged. Already-dotted codes pass through
+    unchanged so the function is idempotent and safe for canonical-form
+    inputs (Synthea, hand-built fixtures).
+    """
+    if not code or "." in code or len(code) <= 3:
+        return code
+    return f"{code[:3]}.{code[3:]}"
 
 
 class DegradationMode(StrEnum):
@@ -58,19 +92,24 @@ class DegradedRecord:
 def extract_ground_truth(condition: dict[str, Any]) -> GroundTruth:
     """Pull the ICD coding out of a Condition resource as ground truth.
 
-    Picks the first coding[] entry whose system is ICD-10 or ICD-9. Falls back to
-    the first coding[] entry if no ICD coding is found (shouldn't happen for
-    MimicCondition, but keeps the function total).
+    Picks the first coding[] entry whose system is recognized as ICD-9 or
+    ICD-10 (canonical HL7 URIs *or* MIMIC-namespaced URIs — both
+    normalize to the canonical URI on output). Codes are canonicalized
+    to the conventional dotted form (``E1110`` → ``E11.10``).
+
+    Falls back to the first coding[] entry if no ICD coding is found
+    (shouldn't happen for MimicCondition, but keeps the function total).
     """
     coding_list = _coding_list(condition)
     if not coding_list:
         raise ValueError(f"Condition {condition.get('id')!r} has no code.coding[]")
 
     for coding in coding_list:
-        if coding.get("system") in ICD_SYSTEMS:
+        canonical = _SYSTEM_ALIASES.get(coding.get("system", ""))
+        if canonical is not None:
             return GroundTruth(
-                system=coding["system"],
-                code=coding["code"],
+                system=canonical,
+                code=_normalize_icd_code(coding.get("code", "")),
                 display=coding.get("display"),
             )
 

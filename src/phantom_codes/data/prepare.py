@@ -156,6 +156,10 @@ def write_splits(
             written[split] = str(path)
         else:
             uri = config.derived_split_uri(split)
+            # Local paths need their parent dir to exist; gs:// URIs handle
+            # this server-side. pd.to_parquet does not auto-create dirs.
+            if not uri.startswith("gs://"):
+                Path(uri).parent.mkdir(parents=True, exist_ok=True)
             df.to_parquet(uri, index=False)
             written[split] = uri
     return written

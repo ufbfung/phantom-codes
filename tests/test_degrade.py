@@ -36,6 +36,74 @@ def test_extract_ground_truth_missing_coding_raises() -> None:
         extract_ground_truth(bad)
 
 
+def test_extract_ground_truth_normalizes_mimic_icd10_system_and_dots_code() -> None:
+    """MIMIC-FHIR uses its own CodeSystem URI and undotted codes; both normalize."""
+    cond = {
+        "resourceType": "Condition",
+        "id": "mimic-x",
+        "code": {
+            "coding": [
+                {
+                    "system": "http://mimic.mit.edu/fhir/mimic/CodeSystem/mimic-diagnosis-icd10",
+                    "code": "E1110",
+                    "display": "Type 2 diabetes mellitus with hyperosmolarity",
+                }
+            ]
+        },
+    }
+    gt = extract_ground_truth(cond)
+    assert gt.system == ICD10_SYSTEM  # normalized away from MIMIC URI
+    assert gt.code == "E11.10"        # dot inserted after position 3
+
+
+def test_extract_ground_truth_normalizes_mimic_icd9_system() -> None:
+    cond = {
+        "resourceType": "Condition",
+        "id": "mimic-y",
+        "code": {
+            "coding": [
+                {
+                    "system": "http://mimic.mit.edu/fhir/mimic/CodeSystem/mimic-diagnosis-icd9",
+                    "code": "25000",
+                    "display": "Diabetes mellitus without complication",
+                }
+            ]
+        },
+    }
+    gt = extract_ground_truth(cond)
+    assert gt.system == ICD9_SYSTEM
+    assert gt.code == "250.00"
+
+
+def test_extract_ground_truth_short_codes_unchanged() -> None:
+    """3-character chapter-level codes (E11, I10) stay undotted."""
+    cond = {
+        "resourceType": "Condition",
+        "id": "x",
+        "code": {
+            "coding": [
+                {
+                    "system": "http://mimic.mit.edu/fhir/mimic/CodeSystem/mimic-diagnosis-icd10",
+                    "code": "I10",
+                }
+            ]
+        },
+    }
+    assert extract_ground_truth(cond).code == "I10"
+
+
+def test_extract_ground_truth_already_dotted_codes_pass_through() -> None:
+    """Idempotent: Synthea-style dotted codes don't get a second dot."""
+    cond = {
+        "resourceType": "Condition",
+        "id": "x",
+        "code": {
+            "coding": [{"system": ICD10_SYSTEM, "code": "E11.9", "display": "T2DM"}]
+        },
+    }
+    assert extract_ground_truth(cond).code == "E11.9"
+
+
 def test_d1_full_preserves_resource(fixture_by_id: dict[str, dict[str, Any]]) -> None:
     cond = fixture_by_id["fixture-001"]
     rec = degrade(cond, DegradationMode.D1_FULL)

@@ -6,7 +6,7 @@ A reproducible benchmark for evaluating how well LLMs and trained models map deg
 
 **Clinical concept normalization** is the task of mapping mentions of clinical entities (diagnoses, labs, medications) to identifiers in controlled vocabularies (ICD-10-CM, LOINC, RxNorm, etc.). It's a foundational task for healthcare data integration, billing, research cohort construction, and AI-assisted documentation.
 
-**Status:** Phase 0 complete for diagnoses. Degradation pipeline, 5-way outcome taxonomy, ICD-10-CM validator, LLM module (Claude + GPT + Gemini in zero-shot + constrained + RAG modes), bi-encoder retrieval baseline, constrained-only baselines (exact / fuzzy / TF-IDF), token + cost tracking, run-manifest sidecars for reproducibility, blinded `--infra-only` smoke-test mode, and end-to-end eval runner are implemented and tested. Real MIMIC ingestion + trained classifier head forthcoming.
+**Status:** Phase 0 complete for diagnoses. Degradation pipeline, 5-way outcome taxonomy, ICD-10-CM validator, LLM module (Claude + GPT + Gemini in zero-shot + constrained + RAG modes), bi-encoder retrieval baseline, constrained-only baselines (exact / fuzzy / TF-IDF), token + cost tracking, run-manifest sidecars for reproducibility, blinded `--infra-only` smoke-test mode, and end-to-end eval runner are implemented and tested. Real MIMIC ingestion is wired (with MIMIC-FHIR URI/code normalization) and the PubMedBERT classifier head + local PyTorch MPS training loop are implemented; the first headline training run is in progress on M1 hardware.
 
 **v1 scope:** diagnoses (ICD-10-CM). v2+ extends to labs (LOINC) and medications (RxNorm) using the same framework.
 
@@ -155,12 +155,16 @@ src/phantom_codes/
                 # access_valuesets/  (CMS ACCESS Model FHIR ValueSets)
   models/       # base ABC; llm (Anthropic, OpenAI, Google); rag_llm;
                 #   retrieval (sentence-transformer + cosine); baselines;
-                #   (classifier head — TBD)
+                #   classifier (PubMedBERT inference wrapper)
+  training/     # PyTorch fine-tuning: dataset, trainer, devices, seeding;
+                #   MPS-native, telemetry-disabled by default
   eval/         # metrics (5-way taxonomy), runner, infra (blinded
                 #   smoke-test), cost (pricing → $), manifest (run sidecars)
   cli.py
-configs/        # YAML configs (data.yaml, pricing.yaml)
-tests/          # unit tests + synthetic fixtures (167 tests, ruff clean)
+configs/        # YAML configs (data.yaml, pricing.yaml, training.yaml)
+docs/learning/  # PyTorch primers (foundations → data → models → loop → practical)
+scripts/        # demo_minimal_training.py (synthetic-fixture end-to-end demo)
+tests/          # unit tests + synthetic fixtures (205 tests, ruff clean)
 benchmarks/     # released open benchmark (Synthea — TBD)
 paper/
   sections/     # markdown drafts: 00_introduction.md, references.md;

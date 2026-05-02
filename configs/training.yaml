@@ -33,7 +33,7 @@ test_path:  data/derived/conditions/test.parquet
 # short (D3/D4 modes are typically 20-50 tokens, D1/D2 with full FHIR
 # payloads rarely exceed 300). 256 covers our 99th percentile and
 # saves ~2× compute vs 512.
-max_seq_length: 256
+max_seq_length: 128
 
 # ─────────────────────────────────────────────────────────────────────────
 # Training loop
@@ -41,23 +41,23 @@ max_seq_length: 256
 
 # Per-device batch size. M1 unified memory (16 GB) handles batch=8 at
 # seq=256 with mixed precision. Bump if you have more memory.
-batch_size: 8
+batch_size: 16
 
 # Number of full passes through the training set. 5 is a reasonable
 # starting point for fine-tuning; bump to 10 if val loss is still
 # decreasing at epoch 5.
-num_epochs: 5
+num_epochs: 3
 
 # Peak learning rate. Fine-tuning uses ~10-100× smaller LR than
 # from-scratch training because we don't want to "forget" what
 # PubMedBERT already knows about biomedical language. 2e-5 is the
 # canonical value from the BERT paper and rarely needs tuning.
-learning_rate: 2e-5
+learning_rate: 2.0e-5
 
 # Linear warmup steps. The optimizer ramps LR from 0 to peak over this
 # many steps, then linearly decays to 0 over the rest of training.
 # Stabilizes early training; standard pattern.
-warmup_steps: 100
+warmup_steps: 500
 
 # Weight decay (AdamW). Mild L2 regularization; 0.01 is the BERT default.
 weight_decay: 0.01

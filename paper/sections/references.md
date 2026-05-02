@@ -239,6 +239,151 @@ ICD coding using LLMs: a systematic review.* medRxiv.
 
 ---
 
+## E. Trained-model methodology references (added 2026-05-02 with §01_methodology)
+
+### [Johnson 2023]
+Johnson, A. E. W., Bulgarelli, L., Shen, L., Gayles, A., Shammout, A.,
+Horng, S., Pollard, T. J., Hao, S., Moody, B., Gow, B., Lehman, L. H.,
+Celi, L. A., & Mark, R. G. (2023). *MIMIC-IV, a freely accessible
+electronic health record dataset.* Scientific Data, 10(1), 1.
+[doi:10.1038/s41597-022-01899-x](https://www.nature.com/articles/s41597-022-01899-x)
+
+> **Why we cite:** Canonical citation for the MIMIC-IV dataset. The
+> FHIR-formatted v2.1 release (which we use) wraps this same source data.
+
+### [Walonoski 2018]
+Walonoski, J., Kramer, M., Nichols, J., Quina, A., Moesel, C., Hall, D.,
+Duffett, C., Dube, K., Gallagher, T., & McLachlan, S. (2018). *Synthea:
+An approach, method, and software mechanism for generating synthetic
+patients and the synthetic electronic health care record.* Journal of
+the American Medical Informatics Association, 25(3), 230–238.
+[doi:10.1093/jamia/ocx079](https://academic.oup.com/jamia/article/25/3/230/4098271)
+
+> **Why we cite:** Source citation for Synthea, the synthetic FHIR
+> generator that produces our headline-evaluation cohort. Synthea data
+> is freely redistributable and contains no real patient information,
+> which is what enables the LLM-evaluation arm of the comparison.
+
+### [CMS 2026]
+Centers for Medicare & Medicaid Services. (2026). *ACCESS Model FHIR
+Implementation Guide v0.9.6.*
+[dsacms.github.io/cmmi-access-model](https://dsacms.github.io/cmmi-access-model/)
+
+> **Why we cite:** Defines the CKM and eCKM disease-group scope (diabetes,
+> ASCVD, CKD-3, hypertension, dyslipidemia, prediabetes, obesity) we
+> use to restrict the cohort. The IG bundles ValueSets we consume
+> directly (`ACCESSCKMDiagnosisVS`, `ACCESSeCKMDiagnosisVS`).
+
+### [Devlin 2019]
+Devlin, J., Chang, M.-W., Lee, K., & Toutanova, K. (2019). *BERT:
+Pre-training of Deep Bidirectional Transformers for Language
+Understanding.* NAACL. [arXiv:1810.04805](https://arxiv.org/abs/1810.04805)
+
+> **Why we cite:** The architecture and the pre-training-then-fine-tuning
+> paradigm we follow. Establishes the canonical [CLS]-token classification
+> head and the 2e-5 fine-tuning learning rate.
+
+### [Gu 2021]
+Gu, Y., Tinn, R., Cheng, H., Lucas, M., Usuyama, N., Liu, X., Naumann,
+T., Gao, J., & Poon, H. (2021). *Domain-Specific Language Model
+Pretraining for Biomedical Natural Language Processing.* ACM Transactions
+on Computing for Healthcare, 3(1), 1–23.
+[doi:10.1145/3458754](https://dl.acm.org/doi/10.1145/3458754)
+
+> **Why we cite:** Introduces PubMedBERT (our chosen base encoder) and
+> the BLURB benchmark. Establishes that pre-training from scratch on
+> biomedical text outperforms continued pre-training of general BERT.
+
+### [Gururangan 2020]
+Gururangan, S., Marasović, A., Swayamdipta, S., Lo, K., Beltagy, I.,
+Downey, D., & Smith, N. A. (2020). *Don't Stop Pretraining: Adapt
+Language Models to Domains and Tasks.* ACL.
+[arXiv:2004.10964](https://arxiv.org/abs/2004.10964)
+
+> **Why we cite:** The general principle that domain-adaptive pre-training
+> beats general pre-training for in-domain downstream tasks. Frames why
+> PubMedBERT (biomedical pre-train) wins over standard BERT for our task.
+
+### [Alsentzer 2019]
+Alsentzer, E., Murphy, J. R., Boag, W., Weng, W.-H., Jin, D., Naumann,
+T., & McDermott, M. (2019). *Publicly Available Clinical BERT
+Embeddings.* Proceedings of the 2nd Clinical NLP Workshop (NAACL).
+[arXiv:1904.03323](https://arxiv.org/abs/1904.03323)
+
+> **Why we cite:** ClinicalBERT — pre-trained on MIMIC-III clinical notes.
+> Cited as the alternative we explicitly *reject* due to data
+> contamination: using a model that has seen MIMIC-III text to classify
+> MIMIC-IV conditions would produce optimistic numbers.
+
+### [Lee 2020]
+Lee, J., Yoon, W., Kim, S., Kim, D., Kim, S., So, C. H., & Kang, J.
+(2020). *BioBERT: a pre-trained biomedical language representation model
+for biomedical text mining.* Bioinformatics, 36(4), 1234–1240.
+[doi:10.1093/bioinformatics/btz682](https://academic.oup.com/bioinformatics/article/36/4/1234/5566506)
+
+> **Why we cite:** BioBERT — alternative biomedical encoder, pre-trained
+> on PubMed abstracts only (vs. PubMedBERT's abstracts + full-text).
+> Listed as a defensible alternative for v2 sensitivity analysis.
+
+### [Yasunaga 2022]
+Yasunaga, M., Leskovec, J., & Liang, P. (2022). *LinkBERT: Pretraining
+Language Models with Document Links.* ACL.
+[arXiv:2203.15827](https://arxiv.org/abs/2203.15827)
+
+> **Why we cite:** BioLinkBERT — biomedical encoder pre-trained on linked
+> documents (PubMed citation graph). Strong on multi-hop reasoning;
+> unclear gain for single-hop classification. Listed as v2 ablation
+> candidate.
+
+### [Chalkidis 2020]
+Chalkidis, I., Fergadiotis, M., Kotitsas, S., Malakasiotis, P., Aletras,
+N., & Androutsopoulos, I. (2020). *An Empirical Study on Large-Scale
+Multi-Label Text Classification Including Few and Zero-Shot Labels.*
+EMNLP. [arXiv:2010.01653](https://arxiv.org/abs/2010.01653)
+
+> **Why we cite:** Establishes the standard trade-off between vocabulary
+> coverage and gradient signal density in extreme multi-label
+> classification. Justifies our top-50 vocabulary cap for v1.
+
+### [Hu 2022]
+Hu, E. J., Shen, Y., Wallis, P., Allen-Zhu, Z., Li, Y., Wang, S., Wang,
+L., & Chen, W. (2022). *LoRA: Low-Rank Adaptation of Large Language
+Models.* ICLR. [arXiv:2106.09685](https://arxiv.org/abs/2106.09685)
+
+> **Why we cite:** Parameter-efficient fine-tuning method. Cited in v2
+> roadmap as the path to fine-tuning larger biomedical encoders on
+> hardware similar to ours.
+
+### [Dettmers 2023]
+Dettmers, T., Pagnoni, A., Holtzman, A., & Zettlemoyer, L. (2023).
+*QLoRA: Efficient Finetuning of Quantized LLMs.* NeurIPS.
+[arXiv:2305.14314](https://arxiv.org/abs/2305.14314)
+
+> **Why we cite:** 4-bit quantized LoRA — the practical extension of LoRA
+> that enables fine-tuning 7B+ parameter biomedical LLMs on a single
+> consumer GPU. v2 roadmap reference.
+
+### [Loshchilov 2019]
+Loshchilov, I., & Hutter, F. (2019). *Decoupled Weight Decay
+Regularization.* ICLR. [arXiv:1711.05101](https://arxiv.org/abs/1711.05101)
+
+> **Why we cite:** Introduces AdamW — the optimizer we use. Establishes
+> why decoupled weight decay matters for transformer fine-tuning
+> (Adam's L2 regularization interacts poorly with adaptive learning
+> rates).
+
+### [Liu 2020]
+Liu, L., Jiang, H., He, P., Chen, W., Liu, X., Gao, J., & Han, J.
+(2020). *On the Variance of the Adaptive Learning Rate and Beyond.*
+ICLR. [arXiv:1908.03265](https://arxiv.org/abs/1908.03265)
+
+> **Why we cite:** Theoretical analysis of why warmup is necessary when
+> fine-tuning transformers — without it, adaptive optimizers produce
+> high-variance updates in early training that destabilize the
+> pre-trained representations.
+
+---
+
 ## Notes on coverage
 
 - **Inclusion criteria:** evaluates an LLM (or LLM-augmented system) on a

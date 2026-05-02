@@ -49,6 +49,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from tqdm.auto import tqdm
 
 import torch
 from torch.optim import AdamW
@@ -281,7 +282,12 @@ def train(config: TrainingConfig) -> TrainingResult:
         # eval; this flag is how PyTorch tells them which.)
         model.train()
         running_train_loss = 0.0
-        for batch in train_loader:
+        train_iter = tqdm(
+            train_loader,
+            desc=f"epoch {epoch} train",
+            leave=False,
+        )
+        for batch in train_iter:
             # Move every tensor in the batch to the model's device.
             batch = {k: v.to(device) for k, v in batch.items()}
 
@@ -309,7 +315,12 @@ def train(config: TrainingConfig) -> TrainingResult:
         n_correct = 0
         n_total = 0
         with torch.no_grad():
-            for batch in val_loader:
+            val_iter = tqdm(
+                val_loader,
+                desc=f"epoch {epoch} val",
+                leave=False,
+            )
+            for batch in val_iter:
                 batch = {k: v.to(device) for k, v in batch.items()}
                 logits = model(batch["input_ids"], batch["attention_mask"])
                 loss = loss_fn(logits, batch["labels"])

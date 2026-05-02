@@ -56,6 +56,21 @@ ValueSets bundled at [src/phantom_codes/data/access_valuesets/](src/phantom_code
 - **Primary:** [MIMIC-IV-FHIR v2.1](https://physionet.org/content/mimic-iv-fhir/2.1/) — credentialed access via PhysioNet. Cannot be redistributed; this repo only contains code and synthetic fixtures.
 - **Open benchmark:** [Synthea](https://github.com/synthetichealth/synthea)-generated FHIR Bundles. Released as `benchmarks/synthetic_v1/` once that phase lands.
 
+### ⚠ Compliance: PhysioNet's responsible-LLM-use policy
+
+PhysioNet's [responsible-LLM-use policy](https://physionet.org/news/post/llm-responsible-use/) (effective 2025-09-24) **explicitly prohibits** sharing credentialed data with third parties, including sending it through commercial LLM APIs (Anthropic, OpenAI, Google, etc.). The policy recommends locally-deployed LLMs as the compliant alternative.
+
+This repo's evaluation framework is designed to be policy-compliant:
+
+- **Synthetic fixtures** (in `tests/fixtures/`) and **Synthea-generated data** can be sent to any LLM endpoint, commercial or local — they contain no MIMIC content.
+- **MIMIC-IV-FHIR data** must only be processed by:
+  1. Locally-deployed open-weight LLMs (vLLM, Ollama, llama.cpp) running on infrastructure you control, OR
+  2. Trained / fine-tuned classifiers running on your own GPU
+- The smoke test (`smoke-test --llms`) sends only synthetic fixture data to Claude/GPT/Gemini APIs and is policy-compliant.
+- The headline-run methodology (eval matrix on real MIMIC) requires either local-LLM endpoints or alternative compliant patterns; see project's internal methodology notes.
+
+**If you reproduce this work**, you are responsible for ensuring your own use complies with PhysioNet's DUA and current policy. We do not redistribute MIMIC data or any model weights derived from it.
+
 ## Data setup
 
 PhysioNet hosts MIMIC-IV-FHIR v2.1 via **HTTPS download and AWS S3 only — there is no GCS mirror** (despite PhysioNet's general support for Google account linking, this specific dataset isn't mirrored to GCS). Three supported paths depending on where you want the data to live:

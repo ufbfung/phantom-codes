@@ -32,6 +32,7 @@ htmlcov/
 CLAUDE.md
 CLAUDE.local.md
 BACKLOG.md
+NOTES.md
 *.private.md
 
 # MIMIC-IV-FHIR derived data — DUA prohibits redistribution.

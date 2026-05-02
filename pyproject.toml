@@ -30,6 +30,7 @@ dependencies = [
     "transformers>=4.42",
     "sentence-transformers>=3.0",
     "faiss-cpu>=1.8",
+    "accelerate>=0.30",  # MPS-aware training-loop helpers + mixed precision
     # Baselines
     "scikit-learn>=1.5",
     "rapidfuzz>=3.9",

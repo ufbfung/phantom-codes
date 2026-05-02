@@ -676,11 +676,75 @@ def _print_infra_assertions(assertions: InfraAssertions) -> None:
 
 @app.command()
 def train(
-    config_path: str = typer.Option("configs/models.yaml", "--config"),
-    models: str = typer.Option("retrieval,classifier", help="Comma-separated model names"),
+    config_path: str = typer.Option(
+        "configs/training.yaml",
+        "--config",
+        help="Path to training hyperparameter YAML",
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help=(
+            "Validate the config and resolve all paths without actually "
+            "running the training loop. Useful for catching typos / missing "
+            "data before burning a multi-hour training run."
+        ),
+    ),
 ) -> None:
-    """[stub] Fine-tune trained models on the train split."""
-    console.print(f"[yellow]stub[/] train config={config_path} models={models}")
+    """Fine-tune the PubMedBERT classifier head on the local MIMIC train split.
+
+    Reads `configs/training.yaml` (or the path passed via --config),
+    instantiates the trainer, and runs the full fit loop. Saves the best-
+    by-val-loss checkpoint to `models/checkpoints/pubmedbert/` and an
+    aggregate metrics JSON to `models/metrics/`.
+
+    Compliance posture: this command runs entirely locally. It does NOT
+    send MIMIC content to any cloud service or LLM API. Telemetry to
+    wandb/mlflow/comet is disabled by default at trainer-module import.
+    See `docs/learning/03-training-loop.md` for what each phase does.
+    """
+    import yaml
+
+    from phantom_codes.training.trainer import TrainingConfig
+    from phantom_codes.training.trainer import train as run_training
+
+    with open(config_path) as f:
+        raw = yaml.safe_load(f) or {}
+    # Filter out keys the dataclass doesn't know about — gives a friendly
+    # error if the user has stale field names in their YAML.
+    known_fields = {f.name for f in TrainingConfig.__dataclass_fields__.values()}
+    unknown = set(raw) - known_fields
+    if unknown:
+        console.print(f"[yellow]Ignoring unknown training-config keys:[/] {sorted(unknown)}")
+    cfg = TrainingConfig(**{k: v for k, v in raw.items() if k in known_fields})
+
+    console.print(f"[bold]Base model:[/] {cfg.base_model}")
+    console.print(f"[bold]Train data:[/] {cfg.train_path}")
+    console.print(f"[bold]Val data:[/]   {cfg.val_path}")
+    console.print(f"[bold]Output:[/]     {cfg.checkpoint_dir}")
+
+    # Validate that the train + val parquets exist before doing anything
+    # heavyweight. (Just check existence — don't read or output content.)
+    for label, p in [("train", cfg.train_path), ("val", cfg.val_path)]:
+        if not Path(p).exists():
+            console.print(
+                f"[red]✗ {label} data not found at {p}.[/] "
+                "Run `phantom-codes prepare` first to build the parquet splits."
+            )
+            raise typer.Exit(code=1)
+
+    if dry_run:
+        console.print(
+            "[green]✓ Dry-run OK[/] — config valid, data paths exist, "
+            "no actual training performed."
+        )
+        return
+
+    result = run_training(cfg)
+    console.print(
+        f"[green]✓ Training complete.[/] best_val_loss={result.best_val_loss:.4f} "
+        f"at epoch {result.best_epoch}; checkpoint at {result.checkpoint_path}"
+    )
 
 
 @app.command()

@@ -43,10 +43,20 @@ mimic_*.ndjson*
 
 # Model artifacts (rebuild from configs)
 models/checkpoints/
+models/metrics/
 *.pt
 *.bin
 *.safetensors
 faiss_index/
+
+# ML observability dirs that libraries auto-create.
+# Gitignored regardless of whether the library is wired up — defense in
+# depth against accidental leaks if a contributor adds wandb/mlflow/etc.
+wandb/
+mlruns/
+lightning_logs/
+tensorboard/
+runs/
 
 # Results — only aggregated CSVs and the rendered paper PDF are kept.
 results/raw/

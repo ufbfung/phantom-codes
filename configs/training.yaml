@@ -1,0 +1,87 @@
+# PubMedBERT classifier training config.
+#
+# Read by `phantom-codes train --config configs/training.yaml`.
+# All paths are local; this trainer does not access cloud resources.
+# See docs/learning/04-practical-considerations.md for hyperparameter
+# intuition and how to interpret each setting below.
+
+# ─────────────────────────────────────────────────────────────────────────
+# Model
+# ─────────────────────────────────────────────────────────────────────────
+
+# HuggingFace identifier for the base encoder. PubMedBERT-base has ~110M
+# parameters and was pre-trained on PubMed abstracts + full-text. Other
+# defensible choices: `michiyasunaga/BioLinkBERT-base`, `dmis-lab/biobert-v1.1`.
+base_model: microsoft/BiomedNLP-BiomedBERT-base-uncased-abstract-fulltext
+
+# Vocabulary size for the classification head. Top-N most-frequent ICD
+# codes in our training cohort. Each code becomes one output dimension
+# in a multi-label sigmoid head.
+top_n_codes: 50
+
+# ─────────────────────────────────────────────────────────────────────────
+# Data
+# ─────────────────────────────────────────────────────────────────────────
+
+# Local parquet splits produced by `phantom-codes prepare`.
+# Override on the CLI with --train-path / --val-path / --test-path.
+train_path: data/derived/conditions/train.parquet
+val_path:   data/derived/conditions/val.parquet
+test_path:  data/derived/conditions/test.parquet
+
+# Maximum tokens per input. PubMedBERT's max is 512. Our inputs are
+# short (D3/D4 modes are typically 20-50 tokens, D1/D2 with full FHIR
+# payloads rarely exceed 300). 256 covers our 99th percentile and
+# saves ~2× compute vs 512.
+max_seq_length: 256
+
+# ─────────────────────────────────────────────────────────────────────────
+# Training loop
+# ─────────────────────────────────────────────────────────────────────────
+
+# Per-device batch size. M1 unified memory (16 GB) handles batch=8 at
+# seq=256 with mixed precision. Bump if you have more memory.
+batch_size: 8
+
+# Number of full passes through the training set. 5 is a reasonable
+# starting point for fine-tuning; bump to 10 if val loss is still
+# decreasing at epoch 5.
+num_epochs: 5
+
+# Peak learning rate. Fine-tuning uses ~10-100× smaller LR than
+# from-scratch training because we don't want to "forget" what
+# PubMedBERT already knows about biomedical language. 2e-5 is the
+# canonical value from the BERT paper and rarely needs tuning.
+learning_rate: 2e-5
+
+# Linear warmup steps. The optimizer ramps LR from 0 to peak over this
+# many steps, then linearly decays to 0 over the rest of training.
+# Stabilizes early training; standard pattern.
+warmup_steps: 100
+
+# Weight decay (AdamW). Mild L2 regularization; 0.01 is the BERT default.
+weight_decay: 0.01
+
+# Stop if val loss doesn't improve for this many epochs. None disables.
+early_stopping_patience: 2
+
+# ─────────────────────────────────────────────────────────────────────────
+# Reproducibility
+# ─────────────────────────────────────────────────────────────────────────
+
+# Single seed used for Python `random`, NumPy, PyTorch CPU, PyTorch CUDA/MPS.
+# Same seed → same train/val split shuffling, same dropout masks, same
+# initialization for the classification head. Critical for reproducible
+# results in the paper.
+seed: 42
+
+# ─────────────────────────────────────────────────────────────────────────
+# Output
+# ─────────────────────────────────────────────────────────────────────────
+
+# Where to save the best-by-val-loss checkpoint. Gitignored.
+checkpoint_dir: models/checkpoints/pubmedbert
+
+# Where to save aggregate per-epoch metrics (loss, accuracy, F1) as
+# JSON. Aggregate-only — no per-record predictions, ever. Gitignored.
+metrics_dir: models/metrics

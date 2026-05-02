@@ -66,6 +66,8 @@ PhysioNet's [responsible-LLM-use policy](https://physionet.org/news/post/llm-res
 
 This separation provides three simultaneous benefits: (1) full compliance with PhysioNet's DUA, (2) full reproducibility — anyone can replicate the headline benchmark on Synthea without PhysioNet credentialing, and (3) the strongest possible auditability story since MIMIC content never traverses any network beyond the initial download from PhysioNet.
 
+**Trained-model weights are MIMIC-derivative.** Checkpoints under `models/checkpoints/` are gitignored and **never** committed to git, pushed to HuggingFace Hub, or uploaded to any cloud bucket. The training module ([`src/phantom_codes/training/trainer.py`](src/phantom_codes/training/trainer.py)) sets defensive environment variables at import time to disable wandb / mlflow / comet cloud telemetry, so accidental imports of those libraries can't leak training metrics either.
+
 **If you reproduce this work**, you are responsible for ensuring your own use complies with PhysioNet's DUA and current policy. We do not redistribute MIMIC data or any model weights derived from it.
 
 ## Data setup

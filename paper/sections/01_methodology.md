@@ -10,7 +10,8 @@
 
 ## Data and policy compliance
 
-Our trained models are fine-tuned on MIMIC-IV-FHIR v2.1 [@Johnson2023]
+Our trained models are fine-tuned on MIMIC-IV-FHIR v2.1
+[@Bennett2024; @Bennett2023; @Johnson2023]
 under PhysioNet credentialed access. To remain compliant with PhysioNet's
 responsible-LLM-use policy [@PhysioNet2025], which prohibits sending
 credentialed data through third-party APIs, all training and validation

@@ -341,8 +341,10 @@
 % E. Trained-model methodology references (added with §01_methodology)
 % ─────────────────────────────────────────────────────────────────────
 
-% Why we cite: Canonical citation for the MIMIC-IV dataset. The
-% FHIR-formatted v2.1 release (which we use) wraps this same source data.
+% Why we cite: Canonical citation for the underlying MIMIC-IV dataset.
+% The FHIR-formatted v2.1 release we actually use wraps this source —
+% see Bennett2024 (dataset) and Bennett2023 (conversion methods) for
+% the FHIR-specific citations PhysioNet requires alongside this one.
 @article{Johnson2023,
   author  = {Johnson, Alistair E. W. and Bulgarelli, Lucas and Shen, Lu and
              Gayles, Alvin and Shammout, Ayad and Horng, Steven and
@@ -357,6 +359,66 @@
   year    = {2023},
   doi     = {10.1038/s41597-022-01899-x},
   url     = {https://www.nature.com/articles/s41597-022-01899-x}
+}
+
+% Why we cite: PhysioNet-required citation for the MIMIC-IV-on-FHIR
+% v2.1 dataset specifically (distinct from the underlying MIMIC-IV
+% data citation in Johnson2023). Required by PhysioNet's data-use
+% citation policy on the MIMIC-IV-on-FHIR landing page. Cite alongside
+% Johnson2023 anywhere we reference the FHIR-formatted dataset version.
+@misc{Bennett2024,
+  author       = {Bennett, Alex and Wiedekopf, Joshua and Ulrich, Hannes
+                  and van Damme, Philip and Szul, Piotr and Grimes, John
+                  and Johnson, Alistair E. W.},
+  title        = {{MIMIC-IV} on {FHIR} (version 2.1)},
+  year         = {2024},
+  howpublished = {PhysioNet},
+  note         = {RRID:SCR\_007345},
+  doi          = {10.13026/rrj1-ny66},
+  url          = {https://doi.org/10.13026/rrj1-ny66}
+}
+
+% Why we cite: PhysioNet-required citation for the methods publication
+% describing the MIMIC-IV-to-FHIR conversion process. Pairs with
+% Bennett2024 (the dataset) — the JAMIA paper documents how MIMIC-IV
+% relational rows were transformed into FHIR resources, which is
+% relevant to our claims about FHIR-resource semantics and the URI
+% normalization we perform in degrade.py.
+@article{Bennett2023,
+  author  = {Bennett, Alex M. and Ulrich, Hannes and van Damme, Philip
+             and Wiedekopf, Joshua and Johnson, Alistair E. W.},
+  title   = {{MIMIC-IV} on {FHIR}: converting a decade of in-patient data
+             into an exchangeable, interoperable format},
+  journal = {Journal of the American Medical Informatics Association},
+  volume  = {30},
+  number  = {4},
+  pages   = {718--725},
+  year    = {2023},
+  month   = apr,
+  doi     = {10.1093/jamia/ocad002},
+  url     = {https://academic.oup.com/jamia/article/30/4/718/7000661}
+}
+
+% Why we cite: PhysioNet-required platform/infrastructure citation.
+% Foundational reference for PhysioNet, PhysioBank, and PhysioToolkit;
+% must accompany every publication using PhysioNet-hosted data per the
+% PhysioNet data-use citation policy. Goes in Acknowledgments alongside
+% the dataset-specific citations (Johnson2023 + Bennett2024 + Bennett2023).
+@article{Goldberger2000,
+  author  = {Goldberger, Ary L. and Amaral, Luis A. N. and Glass, Leon
+             and Hausdorff, Jeffrey M. and Ivanov, Plamen Ch. and
+             Mark, Roger G. and Mietus, Joseph E. and Moody, George B.
+             and Peng, Chung-Kang and Stanley, H. Eugene},
+  title   = {{PhysioBank}, {PhysioToolkit}, and {PhysioNet}: Components
+             of a New Research Resource for Complex Physiologic Signals},
+  journal = {Circulation},
+  volume  = {101},
+  number  = {23},
+  pages   = {e215--e220},
+  year    = {2000},
+  doi     = {10.1161/01.CIR.101.23.e215},
+  note    = {RRID:SCR\_007345},
+  url     = {https://www.ahajournals.org/doi/10.1161/01.CIR.101.23.e215}
 }
 
 % Why we cite: Source citation for Synthea, the synthetic FHIR

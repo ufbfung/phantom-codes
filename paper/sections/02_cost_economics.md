@@ -57,11 +57,251 @@ CSV):
 These are infrastructure metrics, not performance metrics — they're recorded
 even when the prediction is wrong.
 
-## Headline cost metrics (TBD — populate from headline run)
+## Preliminary cost data (Phase-0 smoke test, 2026-05-02)
+
+The following per-model, per-call costs are from a Phase-0 wiring-validation
+run on 6 in-scope synthetic FHIR Conditions × 4 degradation modes = 24
+records, evaluated against 9 LLM configurations (216 total LLM
+invocations, 210 successful, 6 transient `ServerError 503` failures on
+Gemini 2.5 Pro). Costs are computed from the per-prediction CSV's
+`cost_usd` column using the pricing snapshot in `configs/pricing.yaml`
+(snapshot date: 2026-05-01).
+
+> **These numbers are infrastructure validation, not findings.** Per the
+> project's research-integrity discipline, we do not draw performance
+> conclusions from smoke-test runs on synthetic fixtures. The cost
+> figures here are reported because (a) cost is an infrastructure metric,
+> not a performance metric, and (b) they ground the extrapolations in the
+> next subsection.
+
+### Per-call cost (smoke test, successful calls only)
+
+| Model × Mode | Successful calls | Mean in / out tokens | $ per call | p50 latency |
+|--------------|-----------------:|---------------------:|-----------:|------------:|
+| `gemini-2.5-flash:zeroshot` | 24 | 346 / 41 | $0.000038 | 1.7 s |
+| `gpt-4o-mini:zeroshot` | 24 | 440 / 125 | $0.000142 | 2.2 s |
+| `gemini-2.5-pro:zeroshot` | 18 | 384 / 67 | $0.001156 | 10.3 s |
+| `claude-haiku-4-5:zeroshot` | 24 | 1,208 / 140 | $0.001904 | 1.2 s |
+| `claude-haiku-4-5:rag` | 24 | 1,710 / 151 | $0.002467 | 1.3 s |
+| `claude-haiku-4-5:constrained` | 24 | 3,356 / 137 | $0.004042 | 1.2 s |
+| `gpt-5.5:zeroshot` | 24 | 436 / 70 | $0.004283 | 1.8 s |
+| `claude-sonnet-4-6:zeroshot` | 24 | 1,209 / 174 | $0.006246 | 2.8 s |
+| `claude-opus-4-7:zeroshot` | 24 | 1,617 / 152 | $0.011900 | 2.2 s |
+
+**Total smoke-test cost: $0.7652** for 216 LLM calls + 96 baseline calls
+(baselines have $0 API cost). This validates that running the full
+benchmark matrix at modest scale costs less than $1 — a useful upper
+bound for iteration during scaffolding.
+
+### Provider-tokenizer differences (Phase-0 observation)
+
+A finding worth surfacing: the same English prompt produces materially
+different token counts across providers. Our zero-shot system prompt is
+identical across all three providers, yet:
+
+- Anthropic Haiku: ~1,208 input tokens
+- OpenAI (GPT-4o-mini, GPT-5.5): ~440 input tokens
+- Google Gemini Flash/Pro: ~350–380 input tokens
+
+That's roughly a 3× difference in tokenization between Anthropic and
+Google for the same content. This compounds with per-token pricing to
+produce headline cost differences that are NOT explained by accuracy or
+capability — they're partly tokenizer-driven. We flag this because
+literature comparisons that don't normalize for tokenization can mislead
+readers about relative deployment cost.
+
+### Caching observations (Phase-0)
+
+- **Anthropic:** all five Anthropic configurations show
+  `cache_read_input_tokens = 0` across 24 calls. As discussed in §
+  *Real-world deployment considerations*, this is the model-specific
+  threshold issue: our system prompts (max ~2,800 tokens of cacheable
+  prefix in constrained mode) sit below Haiku 4.5 and Opus 4.7's 4,096
+  minimum. Caching is correctly enabled in code; it just doesn't
+  activate at our v1 prompt sizes.
+- **OpenAI:** automatic prefix caching reported 0 cache reads at our
+  prompt sizes (~440 tokens), below OpenAI's typical ~1,024-token
+  minimum.
+- **Google:** Gemini Flash showed implicit caching (`cache_read_tokens =
+  479` aggregate across 24 calls) — Google appears to cache more
+  aggressively at smaller prompt sizes. Pro did not.
+
+The cache-miss observation has direct cost implications for the next
+section's extrapolations: at our v1 prompt sizes, **none of the
+extrapolated costs benefit from caching discounts**. If v2 expands the
+candidate list above the Anthropic threshold, expected cost reductions
+of 2–8× on constrained-mode workloads would apply (cache reads cost ~10%
+of base input tokens).
+
+## Extrapolation to headline MIMIC run
+
+For the headline run, we plan to evaluate the full 9-configuration LLM
+matrix against MIMIC-IV-FHIR Conditions filtered to ACCESS Model scope
+(diabetes, ASCVD, CKD stage 3, hypertension, dyslipidemia, prediabetes,
+obesity). Each in-scope condition produces 4 records (one per
+degradation mode) and is evaluated by every LLM configuration, plus the
+4 non-LLM models (3 string baselines + 1 retrieval baseline).
+
+### Per-condition LLM cost
+
+Aggregating Phase-0 per-call costs across all 9 LLM configurations × 4
+degradation modes = 36 LLM invocations per condition:
+
+| Configuration | Cost per condition (4 modes) |
+|--------------|----------------------------:|
+| `gemini-2.5-flash:zeroshot` | $0.0002 |
+| `gpt-4o-mini:zeroshot` | $0.0006 |
+| `gemini-2.5-pro:zeroshot` | $0.0046 |
+| `claude-haiku-4-5:zeroshot` | $0.0076 |
+| `claude-haiku-4-5:rag` | $0.0099 |
+| `claude-haiku-4-5:constrained` | $0.0162 |
+| `gpt-5.5:zeroshot` | $0.0171 |
+| `claude-sonnet-4-6:zeroshot` | $0.0250 |
+| `claude-opus-4-7:zeroshot` | $0.0476 |
+| **Sum (full 9-config matrix)** | **$0.1288 per condition** |
+
+### Real-MIMIC scale-up factor
+
+Smoke-test fixtures contain minimal FHIR Condition payloads. Real MIMIC
+records carry additional metadata (extensions, provenance references,
+encounter linkages) that inflate input tokens for D1_full and D2_no_code
+modes specifically. D3_text_only and D4_abbreviated modes are dominated
+by short text and should be unaffected. Conservative scale-up factor:
+**1.3–1.5× higher per-call cost on real MIMIC** versus our fixtures.
+
+### Projected headline-run cost at three cohort sizes
+
+> **Estimates assume a 1.4× MIMIC scale-up applied to the full
+> 9-configuration matrix. Real cohort size depends on how many in-scope
+> conditions ACCESS-scope filtering yields from MIMIC-IV-FHIR; we
+> bracket plausible ranges below.**
+
+| Cohort size (in-scope conditions) | Total records (×4 modes) | LLM invocations (×9 configs) | Estimated total cost |
+|----------------------------------:|--------------------------:|------------------------------:|--------------------:|
+| 500 (small pilot) | 2,000 | 18,000 | **$90** |
+| 2,500 (moderate) | 10,000 | 90,000 | **$450** |
+| 10,000 (large) | 40,000 | 360,000 | **$1,800** |
+| 25,000 (full ACCESS scope, upper-bound estimate) | 100,000 | 900,000 | **$4,500** |
+
+**Per-model cost contribution** for a 10,000-condition cohort
+(illustrative — Opus 4.7 dominates the bill):
+
+| Model | Share of total cost |
+|-------|--------------------:|
+| `claude-opus-4-7:zeroshot` | ~37% (~$667) |
+| `claude-sonnet-4-6:zeroshot` | ~19% (~$346) |
+| `gpt-5.5:zeroshot` | ~13% (~$237) |
+| `claude-haiku-4-5:constrained` | ~13% (~$226) |
+| `claude-haiku-4-5:rag` | ~8% (~$138) |
+| `claude-haiku-4-5:zeroshot` | ~6% (~$107) |
+| `gemini-2.5-pro:zeroshot` | ~4% (~$64) |
+| `gpt-4o-mini:zeroshot` | <1% (~$8) |
+| `gemini-2.5-flash:zeroshot` | <1% (~$3) |
+
+### Cost-reduction levers we have
+
+If headline-run cost becomes a bottleneck, we have several knobs:
+
+1. **Drop Opus 4.7 from the matrix.** Single largest line item; v2 paper
+   could include it. Reduces total by ~37%.
+2. **Stratified sampling.** A representative ~2,500-condition subset
+   gives statistically reliable outcome rates at ~$450 instead of $4,500
+   for the full cohort.
+3. **Prompt-size optimization.** Expand the candidate list above
+   Anthropic's caching threshold to enable the ~10× cache-read
+   discount on Anthropic constrained-mode calls. Methodology change —
+   needs decision before lock.
+4. **Skip RAG mode in v1.** Constrained alone tests menu-following;
+   RAG adds per-record retrieval. Reduces total by ~8%.
+
+## Extrapolation to production deployment scale
+
+A production deployment looks very different from the headline benchmark
+because organizations choose ONE configuration (not the full 9-config
+matrix) and run it on incoming records continuously. We project costs
+for representative single-configuration deployments at three production
+scales.
+
+### Per-encounter cost (single LLM configuration)
+
+Assumes 1.4× MIMIC scale-up applied to per-call costs, and an average
+of 5 coded conditions per healthcare encounter (typical for inpatient
+discharges in cardiometabolic populations):
+
+| Production model choice | $ per condition | $ per encounter (5 conditions) |
+|-------------------------|----------------:|-------------------------------:|
+| Gemini 2.5 Flash | $0.000053 | $0.0003 |
+| GPT-4o-mini | $0.000199 | $0.001 |
+| Claude Haiku 4.5 (zeroshot) | $0.0027 | $0.013 |
+| Claude Sonnet 4.6 | $0.0087 | $0.044 |
+| GPT-5.5 | $0.0060 | $0.030 |
+| Claude Opus 4.7 | $0.0167 | $0.083 |
+
+### Annual cost at three production volumes
+
+| Volume scenario | Conditions/year | Encounters/year | Haiku 4.5 (cheap, fast) | Opus 4.7 (premium) |
+|----------------|----------------:|----------------:|------------------------:|--------------------:|
+| Small clinic (single specialty) | 25,000 | 5,000 | **$67** | **$418** |
+| Medium hospital | 250,000 | 50,000 | **$668** | **$4,175** |
+| Health system (multi-hospital) | 2,500,000 | 500,000 | **$6,675** | **$41,750** |
+| Population health platform | 25,000,000 | 5,000,000 | **$66,750** | **$417,500** |
+
+Even at population-health platform scale, Haiku 4.5 deployment is well
+under $100k/year for the API spend portion. Opus 4.7 at the same scale
+crosses into "real money" territory but is still small compared to the
+salary cost of equivalent human coding capacity.
+
+### Comparison to human-coder cost (rough magnitude)
+
+For order-of-magnitude grounding only — a precise break-even analysis
+follows in the next subsection:
+
+- Median U.S. medical-coder salary ≈ $60,000/year fully loaded
+  (≈ $30/hr including benefits and overhead)
+- Throughput ≈ 30–50 charts/day × ~250 working days/year = ~10,000
+  charts/year per coder
+- Implied cost per coded encounter ≈ $5–8 (human)
+- Implied cost per coded encounter ≈ $0.013 (Haiku) to $0.083 (Opus) (LLM)
+
+So the LLM API spend alone is **60×–600× cheaper per encounter** than a
+human coder's loaded cost, depending on model choice. **This is NOT the
+break-even** — the actual deployment cost includes QA on flagged
+predictions and exception handling. The next subsection computes that
+properly.
+
+### Caveats to the production extrapolation
+
+- Per-call cost is dominated by zero-shot mode in this projection.
+  Production deployments using constrained or RAG modes (which our data
+  shows are ~2× more expensive per call for Haiku) would see roughly 2×
+  the costs above. The trade-off is the constrained/RAG modes likely
+  have lower hallucination rates — quantified in headline results.
+- Real-world prompt sizes vary by encounter type. ICU discharge
+  summaries are denser than ED visits; cardiometabolic conditions
+  specifically may have longer FHIR payloads due to ASCVD/CKD staging
+  complexity. Our 1.4× scale-up factor is an estimate, not a measured
+  value. Sensitivity range: 1.2× (cleanly structured EHRs) to 2.0×
+  (legacy systems with verbose FHIR).
+- API pricing changes. The 2026-05-01 snapshot in
+  `configs/pricing.yaml` will become stale. We commit to publishing the
+  pricing table alongside cost numbers so readers can recompute under
+  current pricing.
+- These projections assume stable provider availability. The Gemini Pro
+  failure rate observed in our smoke test (~25% transient 503s during
+  one window) implies a deployment-relevant overhead we're not modeling
+  here.
+
+## Headline cost metrics (locked methodology, numbers TBD from headline run)
+
+The metrics below are the ones we will compute and report from the
+headline MIMIC run. The methods are settled; only the numbers are TBD.
 
 ### M1: Total run cost by (model, prompting mode)
 
-> **Placeholder table — fill in from headline run.**
+> **Placeholder table — to be filled in from headline run.** See
+> *Preliminary cost data* above for smoke-test versions of these
+> numbers, and *Extrapolation to headline MIMIC run* for projected
+> totals.
 
 | Model × Mode | Calls | $ total | $ per call (mean) | $ per call (median) |
 |--------------|-------|---------|-------------------|---------------------|

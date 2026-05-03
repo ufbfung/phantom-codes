@@ -50,7 +50,14 @@ def test_zero_and_none_costs_ignored() -> None:
 
 def test_soft_warnings_fire_in_order() -> None:
     warns: list[str] = []
-    monitor = CostMonitor(budget_usd=100.0, warn=warns.append)
+    # Use the old 3-threshold set explicitly so this test stays readable
+    # — the default in production is now 6 thresholds (5/10/25/50/75/90)
+    # which would muddle the threshold-progression assertions below.
+    monitor = CostMonitor(
+        budget_usd=100.0,
+        soft_warn_pcts=[0.5, 0.75, 0.9],
+        warn=warns.append,
+    )
 
     monitor.add(40.0)  # 40% — no warn
     assert warns == []
@@ -70,7 +77,11 @@ def test_soft_warnings_fire_in_order() -> None:
 
 def test_soft_warnings_fire_only_once_per_threshold() -> None:
     warns: list[str] = []
-    monitor = CostMonitor(budget_usd=100.0, warn=warns.append)
+    monitor = CostMonitor(
+        budget_usd=100.0,
+        soft_warn_pcts=[0.5, 0.75, 0.9],
+        warn=warns.append,
+    )
 
     # Cross all thresholds in one call
     monitor.add(95.0)
@@ -79,6 +90,31 @@ def test_soft_warnings_fire_only_once_per_threshold() -> None:
     # Subsequent adds shouldn't re-fire
     monitor.add(2.0)
     assert len(warns) == 3
+
+
+def test_default_thresholds_include_early_signals() -> None:
+    """Production default has 6 thresholds (5/10/25/50/75/90%) so users
+    get an early signal if a run is spending faster than expected."""
+    warns: list[str] = []
+    monitor = CostMonitor(budget_usd=100.0, warn=warns.append)
+
+    monitor.add(6.0)  # 6% — fires 5%
+    assert len(warns) == 1
+    assert "5%" in warns[0]
+
+    monitor.add(5.0)  # 11% — fires 10%
+    assert len(warns) == 2
+    assert "10%" in warns[1]
+
+    monitor.add(20.0)  # 31% — fires 25%
+    assert len(warns) == 3
+    assert "25%" in warns[2]
+
+    monitor.add(60.0)  # 91% — fires 50%, 75%, 90% (all at once)
+    assert len(warns) == 6
+    assert "50%" in warns[3]
+    assert "75%" in warns[4]
+    assert "90%" in warns[5]
 
 
 def test_status_string_with_budget() -> None:

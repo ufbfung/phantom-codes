@@ -37,7 +37,11 @@ class CostMonitor:
         budget_usd: hard ceiling. None disables the cap entirely (still
             tracks cost for reporting).
         soft_warn_pcts: thresholds (as fractions of `budget_usd`) at
-            which to emit a warning. Default: [0.5, 0.75, 0.9].
+            which to emit a warning. Default:
+            [0.05, 0.10, 0.25, 0.50, 0.75, 0.90]. Early thresholds
+            (5/10/25%) give the user a chance to react if a run is
+            spending faster than expected; later thresholds (50/75/90%)
+            are the standard "approaching the cap" alerts.
         warn: callable receiving a warning string. Default writes to
             stderr with a `[cost-monitor]` prefix.
 
@@ -54,7 +58,9 @@ class CostMonitor:
     """
 
     budget_usd: float | None = None
-    soft_warn_pcts: list[float] = field(default_factory=lambda: [0.5, 0.75, 0.9])
+    soft_warn_pcts: list[float] = field(
+        default_factory=lambda: [0.05, 0.10, 0.25, 0.50, 0.75, 0.90]
+    )
     warn: Callable[[str], None] | None = None
 
     # Internal state

@@ -856,7 +856,9 @@ def evaluate(
         help=(
             "Hard budget cap. Run aborts if running cost exceeds this; "
             "completed records' rows remain durable on disk via incremental writes. "
-            "Soft warnings fire at 50%, 75%, 90% of cap."
+            "Soft warnings fire at 5%, 10%, 25%, 50%, 75%, 90% of cap "
+            "(early thresholds give a chance to react if the run is spending "
+            "faster than expected)."
         ),
     ),
     dry_run: bool = typer.Option(
@@ -953,7 +955,7 @@ def evaluate(
     if cost_monitor:
         console.print(
             f"[bold]Budget:[/] hard cap ${max_cost_usd:.2f}; "
-            "soft warnings at 50/75/90%"
+            "soft warnings at 5/10/25/50/75/90%"
         )
 
     # ─── Dry-run gate ─────────────────────────────────────────────────

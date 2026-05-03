@@ -626,3 +626,66 @@
   archivePrefix = {arXiv},
   url       = {https://arxiv.org/abs/1908.03265}
 }
+
+% ─── Provider documentation (model IDs + pricing snapshots) ──────────
+% Cited from §Methods for transparency about which exact model
+% snapshots were evaluated, and from §Cost economics for the per-token
+% USD rates underlying the reported cost-per-correct numbers. Provider
+% documentation pages change without versioning, so each entry pins
+% the access date as the de-facto snapshot identifier.
+
+% Why we cite: source of truth for the OpenAI model_id strings used in
+% the headline matrix (`gpt-5.5`, `gpt-4o-mini`). The page's migration
+% guidance also identifies the current dated snapshot behind the bare
+% `gpt-5.5` alias (gpt-5.5-2026-04-23) — pinned in configs/models.yaml
+% for reproducibility.
+@misc{OpenAIModels2026,
+  author       = {{OpenAI}},
+  title        = {Latest Model Guide},
+  year         = {2026},
+  howpublished = {OpenAI Developer Documentation},
+  note         = {Accessed 2026-05-03},
+  url          = {https://developers.openai.com/api/docs/guides/latest-model}
+}
+
+% Why we cite: source of truth for the per-token USD pricing entries
+% in configs/pricing.yaml for OpenAI models (gpt-5.5: \$5 / \$30 per
+% 1M input/output tokens; gpt-4o-mini: \$0.15 / \$0.60). Pricing was
+% verified against this page on 2026-05-03.
+@misc{OpenAIPricing2026,
+  author       = {{OpenAI}},
+  title        = {Pricing},
+  year         = {2026},
+  howpublished = {OpenAI Developer Documentation},
+  note         = {Accessed 2026-05-03},
+  url          = {https://developers.openai.com/api/docs/pricing}
+}
+
+% Why we cite: source of truth for the Google model_id strings used in
+% the headline matrix. The Gemini 3 tier (gemini-3.1-pro-preview,
+% gemini-3-flash-preview) was preview status at evaluation time; this
+% URL documents the model lineup and preview status as it stood when
+% the eval matrix ran.
+@misc{GeminiModels2026,
+  author       = {{Google}},
+  title        = {{Gemini 3} model documentation},
+  year         = {2026},
+  howpublished = {Google AI for Developers Documentation},
+  note         = {Accessed 2026-05-03},
+  url          = {https://ai.google.dev/gemini-api/docs/gemini-3}
+}
+
+% Why we cite: source of truth for the per-token USD pricing entries
+% in configs/pricing.yaml for Gemini 2.5 (GA) and 3.x preview models
+% — e.g., gemini-3.1-pro-preview at \$2 / \$12 input/output per 1M
+% tokens (Standard tier, ≤200k context). Pricing was verified against
+% this page on 2026-05-03; preview-tier pricing may change at GA and
+% should be re-verified before any post-publication cost reporting.
+@misc{GeminiPricing2026,
+  author       = {{Google}},
+  title        = {Gemini {API} Pricing},
+  year         = {2026},
+  howpublished = {Google AI for Developers Documentation},
+  note         = {Accessed 2026-05-03},
+  url          = {https://ai.google.dev/gemini-api/docs/pricing}
+}

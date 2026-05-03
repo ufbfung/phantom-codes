@@ -293,8 +293,18 @@ Submission-ready formatting. ~2-3 hours.
 3. Verify Vancouver-style citation rendering side-by-side with a
    recent NEJM AI published article (sample any 2025-2026 Original
    Article from NEJM AI).
-4. Audit orphan citations: 4 currently unused entries (Gururangan,
-   Hendrycks, Singhal, Williams). Either cite or strip.
+4. Audit orphan citations: 4 originally-unused entries (Gururangan,
+   Hendrycks, Singhal, Williams) — either cite or strip. Plus 4 newly-
+   added provider-doc entries (`OpenAIModels2026`, `OpenAIPricing2026`,
+   `GeminiModels2026`, `GeminiPricing2026`) — these need to be wired
+   into the prose to avoid orphan status. Recommended placement:
+   - §1 Methods, where the LLM lineup is introduced: cite
+     `[@OpenAIModels2026; @GeminiModels2026]` next to the first
+     mention of model_id strings to ground reproducibility.
+   - §2 Cost economics, where per-token rates first appear: cite
+     `[@OpenAIPricing2026; @GeminiPricing2026]` with the pricing
+     snapshot table; once Anthropic pricing is verified
+     (BACKLOG cost-infra item), add `[@AnthropicPricing2026]` here too.
 5. Expand any `and others` author lists in `references.bib` to
    full lists (NEJM AI may want this).
 6. Final compile: `make clean && make pdf`. Verify zero warnings,

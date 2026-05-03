@@ -18,11 +18,12 @@ The full evaluation matrix:
 
 - **3 string-matching baselines** (exact, fuzzy, TF-IDF)
 - **1 frozen sentence-transformer retrieval baseline**
-- **9 frontier LLM configurations** across three providers:
+- **11 frontier LLM configurations** across three providers:
   - Anthropic Claude (Haiku 4.5 in zeroshot/constrained/RAG modes;
     Sonnet 4.6 zeroshot; Opus 4.7 zeroshot)
   - OpenAI GPT (GPT-5.5 zeroshot; GPT-4o-mini zeroshot)
-  - Google Gemini (2.5 Pro zeroshot; 2.5 Flash zeroshot)
+  - Google Gemini (2.5 Pro zeroshot, 2.5 Flash zeroshot — GA tier;
+    3.1 Pro Preview zeroshot, 3 Flash Preview zeroshot — preview tier)
 
 against **Synthea-generated FHIR Conditions** scoped to the [CMS ACCESS
 Model](https://dsacms.github.io/cmmi-access-model/) condition set
@@ -48,7 +49,7 @@ entry in [`configs/models.yaml`](configs/models.yaml).
 | Synthea cohort generation (one-time) | 5–10 min | $0 |
 | Inference dataset preparation | 2–5 min | $0 |
 | Smoke validation (recommended before headline) | 2–5 min | <$1 |
-| **Headline evaluation run** | **1–2 hours** | **$150–300 typical, $500 hard cap** |
+| **Headline evaluation run** | **8–15 hours** | **$60–250 typical, $500 hard cap** |
 | Report generation | <1 min | $0 |
 
 LLM API pricing fluctuates; figures above reflect 2026-Q2 rates with
@@ -192,8 +193,10 @@ uv run phantom-codes evaluate \
 
 This is the paper's headline experiment — every model in the matrix
 evaluated on 500 records × 4 modes (~2000 prediction rows per model;
-~14 models including the trained classifier if its checkpoint is
-present). 1–2 hours wall-clock, $150–300 typical cost.
+16 models in `headline_set` including the trained classifier if its
+checkpoint is present, otherwise 15). 8–15 hours wall-clock at typical
+provider rate limits (≈30–60 records/hr on the slowest LLM); $60–250
+typical cost.
 
 Output (timestamped):
 - `results/raw/headline_<utc>.csv` — per-prediction long-format CSV
@@ -204,6 +207,41 @@ Streaming writes mean partial results survive any interruption
 (Ctrl+C, network failure, cost-cap abort, OOM kill). Just re-run with
 the same `--max-records` and the appended writes pick up where they
 left off.
+
+#### Spot-check progress during the run (optional but recommended)
+
+The headline run is multi-hour and not always cheap. Run the blinded
+structural spot-check tool from another terminal to confirm models are
+firing correctly without surfacing the actual results:
+
+```bash
+uv run python scripts/blinded_progress_check.py \
+    --csv results/raw/headline_<utc>.csv \
+    --models-config configs/models.yaml \
+    --models-set headline_set \
+    --max-records 500 --max-cost-usd 500
+```
+
+The script reads only structural / wiring fields (model coverage,
+error tally per model, latency profile, cost trajectory, cache
+behavior) — it never touches `outcome`, `pred_code`, or any
+ground-truth column, so you can run it as many times as you want
+without biasing the analysis.
+
+Recommended cadence on a 500-record run:
+
+| Stage | When | Posture |
+|---|---|---|
+| **EARLY** | ~10% in (~50 rec, ~1 hr) | Aggressive — abort if any model >50% errors or coverage broken. <$10 spent; aborting saves 90% of budget. |
+| **MID** | ~50% in (~250 rec, ~6 hr) | Trend-oriented — abort if a NEW error type appears or projected cost > 80% of cap. Saves 50%. |
+| **LATE** | ~75% in (~375 rec, ~9 hr) | Validation only — by here, finishing is cheaper than re-running. Just confirm shape matches the mid checkpoint. |
+
+The script's exit code is `0` if all checks pass, `1` if any
+WARN-level issue is flagged, or `2` if the CSV is missing. The
+verdict block at the bottom lists every triggered issue with concrete
+abort/continue recommendations. See the docstring in
+[`scripts/blinded_progress_check.py`](scripts/blinded_progress_check.py)
+for the full check list and trigger thresholds.
 
 ### 8. Generate paper-ready tables
 
@@ -239,7 +277,8 @@ To verify your reproduction matches the published numbers:
    [`src/phantom_codes/data/access_valuesets/`](src/phantom_codes/data/access_valuesets/)
    ValueSets (CMS ACCESS Model FHIR IG v0.9.6).
 5. **Model registry**: [`configs/models.yaml`](configs/models.yaml)
-   `headline_set` defines the 14-model matrix.
+   `headline_set` defines the 16-model matrix (15 if no trained
+   PubMedBERT checkpoint is present locally).
 6. **Pricing snapshot**: [`configs/pricing.yaml`](configs/pricing.yaml)
    captures provider rates at the time of run. Update via vendor
    pricing pages if rerun much later.

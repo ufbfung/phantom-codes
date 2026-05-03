@@ -118,6 +118,56 @@ def test_parse_predictions_handles_empty_predictions_array() -> None:
     assert parse_predictions({"predictions": []}) == []
 
 
+def test_parse_predictions_skips_malformed_string_items() -> None:
+    """Real-world Opus failure: a `predictions` array contained a bare string
+    instead of `{"code": ..., "display": ..., "confidence": ...}`. Used to
+    crash the whole record with AttributeError; should now skip the bad item
+    and salvage the well-formed ones."""
+    tool_input = {
+        "predictions": [
+            "E11.9",  # malformed — bare string
+            {"code": "I10", "display": "HTN", "confidence": 0.7},
+        ]
+    }
+    preds = parse_predictions(tool_input)
+    assert len(preds) == 1
+    assert preds[0].code == "I10"
+
+
+def test_parse_predictions_skips_none_items() -> None:
+    tool_input = {
+        "predictions": [
+            None,
+            {"code": "E11.9", "display": "DM2", "confidence": 0.9},
+        ]
+    }
+    preds = parse_predictions(tool_input)
+    assert len(preds) == 1
+    assert preds[0].code == "E11.9"
+
+
+def test_parse_predictions_returns_empty_when_predictions_not_a_list() -> None:
+    """Defensive: model may return `predictions` as a bare dict / string /
+    null instead of the prescribed list shape."""
+    assert parse_predictions({"predictions": {"code": "E11.9"}}) == []
+    assert parse_predictions({"predictions": "E11.9"}) == []
+    assert parse_predictions({"predictions": None}) == []
+
+
+def test_parse_predictions_tolerates_non_numeric_confidence() -> None:
+    """Confidence might come back as a string ('0.9') or null; coerce or fall
+    back to 0.0 rather than crash."""
+    tool_input = {
+        "predictions": [
+            {"code": "E11.9", "display": "DM2", "confidence": "not-a-number"},
+            {"code": "I10", "display": "HTN", "confidence": None},
+        ]
+    }
+    preds = parse_predictions(tool_input)
+    assert {p.code for p in preds} == {"E11.9", "I10"}
+    assert all(p.score == 0.0 for p in preds)
+
+
 # ---------- LLMModel with a fake client ----------
 
 

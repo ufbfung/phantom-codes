@@ -177,13 +177,28 @@ def parse_predictions(tool_input: dict[str, Any]) -> list[Prediction]:
 
     Sorts by confidence (descending). Codes are normalized (stripped, uppercased
     where applicable, but ICD-10-CM is letter+digits with optional dot — we just strip).
+
+    Defensive against malformed shapes: a frontier LLM occasionally returns
+    `predictions` as something other than a list of objects (e.g., a list of
+    bare code strings, or a single dict instead of a list). We skip malformed
+    entries rather than crash the whole record's eval, and let well-formed
+    items through. If everything's malformed we return [] (which the runner
+    treats as "model returned no usable predictions" — same path as a model
+    that produces an empty array).
     """
     raw = tool_input.get("predictions", [])
+    if not isinstance(raw, list):
+        return []
     out: list[Prediction] = []
     for item in raw:
+        if not isinstance(item, dict):
+            continue
         code = (item.get("code") or "").strip()
         display = item.get("display")
-        confidence = float(item.get("confidence", 0.0))
+        try:
+            confidence = float(item.get("confidence", 0.0))
+        except (TypeError, ValueError):
+            confidence = 0.0
         if not code:
             continue
         out.append(

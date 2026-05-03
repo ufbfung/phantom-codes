@@ -26,9 +26,9 @@ Trained classifier:
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from glob import glob
 from pathlib import Path
-from collections.abc import Callable
 from typing import Any
 
 import yaml

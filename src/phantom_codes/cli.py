@@ -29,12 +29,6 @@ from phantom_codes.eval.runner import (
     run_eval,
     summarize_by_model_and_mode,
 )
-from phantom_codes.models.base import ConceptNormalizer
-from phantom_codes.models.baselines import (
-    ExactMatchBaseline,
-    FuzzyMatchBaseline,
-    TfidfBaseline,
-)
 from phantom_codes.models.llm import (
     AnthropicClient,
     GoogleClient,
@@ -42,12 +36,8 @@ from phantom_codes.models.llm import (
     PromptMode,
     build_system_prompt,
     build_user_message,
-    make_anthropic_model,
-    make_gemini_model,
-    make_openai_model,
     parse_predictions,
 )
-from phantom_codes.models.rag_llm import make_rag_anthropic_model
 from phantom_codes.models.retrieval import RetrievalModel
 
 # Load .env (gitignored) so ANTHROPIC_API_KEY / OPENAI_API_KEY / GEMINI_API_KEY
@@ -430,24 +420,19 @@ def smoke_test(
         "--fixtures",
         help="Path to a local ndjson of FHIR Conditions to evaluate against.",
     ),
-    include_llms: bool = typer.Option(
-        False,
-        "--llms/--no-llms",
-        help=(
-            "Also run LLM models. Haiku 4.5 runs all three prompting modes "
-            "(zero-shot + constrained + RAG); premium models (Opus 4.7, Sonnet 4.6, "
-            "GPT-5.5, Gemini 2.5 Pro) and economy comparators (GPT-4o-mini, Gemini "
-            "2.5 Flash) run zero-shot only for wiring validation. Requires "
-            "ANTHROPIC_API_KEY; OPENAI_API_KEY and GEMINI_API_KEY are optional. "
-            "Cost: ~$3-5 per run with all keys set."
-        ),
+    models_config: str = typer.Option(
+        "configs/models.yaml",
+        "--models-config",
+        help="Path to the model registry YAML.",
     ),
-    include_retrieval: bool = typer.Option(
-        True,
-        "--retrieval/--no-retrieval",
+    models_set: str = typer.Option(
+        "smoke_test_set",
+        "--models-set",
         help=(
-            "Include the bi-encoder retrieval baseline (frozen sentence-transformer "
-            "+ cosine similarity). First run downloads ~80MB of weights."
+            "Named set in the registry to load. Defaults to `smoke_test_set` "
+            "(3 baselines + retrieval + 1 cheap Haiku call ≈ <$0.10 per run). "
+            "Use `--models-set headline_set` to smoke-test the full matrix "
+            "against fixtures (much higher cost; pair with smaller fixtures)."
         ),
     ),
     out: str = typer.Option(
@@ -475,6 +460,11 @@ def smoke_test(
 
     Runs the full pipeline (degrade → eval → outcome classification → summary)
     against the fixture conditions. Verifies all wiring without needing MIMIC.
+
+    Model selection is config-driven via `--models-set`; LLM entries whose
+    API keys aren't set are silently skipped with a warning. To control
+    which models run, edit `configs/models.yaml` rather than passing flags
+    here.
     """
     scope = load_scope()
     validator = load_validator()
@@ -511,90 +501,23 @@ def smoke_test(
     )
     console.print(f"[bold]Records:[/] {len(records)} (in-scope conditions × 4 modes)")
 
-    # Models.
-    models: list[ConceptNormalizer] = [
-        ExactMatchBaseline(candidates),
-        FuzzyMatchBaseline(candidates),
-        TfidfBaseline(candidates),
-    ]
+    # ─── Build retriever ONCE so it's shared across any RAG-LLM entries
+    # in the loaded set. (sentence-transformer download happens here on
+    # first run.) The registry handles the case where the loaded set has
+    # no RAG entries — `retriever` is just unused in that case.
+    from phantom_codes.eval.registry import load_models_from_config
 
-    # Bi-encoder retrieval baseline (also reused as the retriever component of
-    # RAG-LLM if LLMs are enabled). Built once; sentence-transformer download
-    # happens here on first run.
-    retrieval_model: RetrievalModel | None = None
-    if include_retrieval:
-        console.print("[dim]Building retrieval encoder (first run downloads weights)...[/]")
-        retrieval_model = RetrievalModel(candidates)
-        models.append(retrieval_model)
+    console.print("[dim]Building retrieval encoder (first run downloads weights)...[/]")
+    shared_retriever = RetrievalModel(candidates)
 
-    if include_llms:
-        if not os.environ.get("ANTHROPIC_API_KEY"):
-            console.print("[red]ANTHROPIC_API_KEY not set — skipping Anthropic models[/]")
-        else:
-            # Haiku gets all three prompting modes — full wiring validation on the
-            # cheapest model. Premium models are zero-shot only.
-            models.extend([
-                make_anthropic_model(
-                    name="claude-haiku-4-5:zeroshot",
-                    model_id="claude-haiku-4-5",
-                    mode=PromptMode.ZEROSHOT,
-                ),
-                make_anthropic_model(
-                    name="claude-haiku-4-5:constrained",
-                    model_id="claude-haiku-4-5",
-                    mode=PromptMode.CONSTRAINED,
-                    candidates=candidates,
-                ),
-                make_anthropic_model(
-                    name="claude-sonnet-4-6:zeroshot",
-                    model_id="claude-sonnet-4-6",
-                    mode=PromptMode.ZEROSHOT,
-                ),
-                make_anthropic_model(
-                    name="claude-opus-4-7:zeroshot",
-                    model_id="claude-opus-4-7",
-                    mode=PromptMode.ZEROSHOT,
-                ),
-            ])
-            # RAG-LLM only makes sense when we have a retriever.
-            if retrieval_model is not None:
-                models.append(
-                    make_rag_anthropic_model(
-                        name="claude-haiku-4-5:rag",
-                        model_id="claude-haiku-4-5",
-                        retriever=retrieval_model,
-                        candidates=candidates,
-                        retrieve_k=20,
-                    )
-                )
-        if os.environ.get("OPENAI_API_KEY"):
-            models.extend([
-                make_openai_model(
-                    name="gpt-4o-mini:zeroshot",
-                    model_id="gpt-4o-mini",
-                    mode=PromptMode.ZEROSHOT,
-                ),
-                make_openai_model(
-                    name="gpt-5.5:zeroshot",
-                    model_id="gpt-5.5",
-                    mode=PromptMode.ZEROSHOT,
-                ),
-            ])
-        if os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"):
-            models.extend([
-                make_gemini_model(
-                    name="gemini-2.5-flash:zeroshot",
-                    model_id="gemini-2.5-flash",
-                    mode=PromptMode.ZEROSHOT,
-                ),
-                make_gemini_model(
-                    name="gemini-2.5-pro:zeroshot",
-                    model_id="gemini-2.5-pro",
-                    mode=PromptMode.ZEROSHOT,
-                ),
-            ])
-
-    console.print(f"[bold]Models:[/] {', '.join(m.name for m in models)}")
+    # ─── Load models from the registry (config-driven) ──────────────
+    console.print(f"[bold]Models:[/] loading set {models_set!r} from {models_config}")
+    models = load_models_from_config(
+        models_config, models_set, candidates, retriever=shared_retriever
+    )
+    console.print(f"[bold]Loaded:[/] {len(models)} models")
+    for m in models:
+        console.print(f"  - {m.name}")
 
     # Best-effort load of pricing so cost_usd gets populated per row at
     # runner time. If pricing.yaml is missing, cost columns will be None.
@@ -1021,10 +944,100 @@ def evaluate(
 
 @app.command()
 def report(
-    out: str = typer.Option("results/report.md", help="Output report path"),
+    csv: str = typer.Option(
+        ...,
+        "--csv",
+        help=(
+            "Per-prediction CSV from `phantom-codes evaluate` "
+            "(typically `results/raw/headline_*.csv`). Glob patterns are "
+            "expanded — if multiple files match, they're concatenated."
+        ),
+    ),
+    out_dir: str = typer.Option(
+        "",
+        "--out",
+        help=(
+            "Output directory for tables. If empty, defaults to "
+            "`results/summary/<csv-stem>/`."
+        ),
+    ),
+    pricing_config: str = typer.Option(
+        "configs/pricing.yaml",
+        "--pricing",
+        help="Pricing YAML used to recompute cost if rows lack the cost_usd column.",
+    ),
+    fmt: str = typer.Option(
+        "markdown",
+        "--format",
+        help="Output format: markdown (default), csv, or latex.",
+    ),
 ) -> None:
-    """[stub] Aggregate results into CSVs and a markdown report."""
-    console.print(f"[yellow]stub[/] report out={out}")
+    """Aggregate per-prediction CSVs into paper-ready result tables.
+
+    Produces five tables — headline outcome distribution per (model,
+    mode); per-mode hallucination rate with Wilson 95% CIs; top-1 vs
+    top-5 exact-match lift; cost-per-correct prediction; and per-
+    outcome-bucket cost decomposition. The combined markdown report
+    drops directly into §3 Results of the manuscript (replacing the
+    [TBD] placeholders).
+
+    Compliance posture: reads only the aggregate per-prediction CSV
+    that `evaluate` already wrote (Synthea-derived, safe to share).
+    Never touches MIMIC content. Outputs only counts, rates, and totals
+    — no per-record predictions.
+    """
+    from glob import glob
+
+    import pandas as pd
+
+    from phantom_codes.eval.report import write_report
+
+    # ─── Resolve glob → CSV file list ─────────────────────────────────
+    csv_paths = sorted(glob(csv))
+    if not csv_paths:
+        console.print(f"[red]✗ No CSVs matched {csv!r}[/]")
+        raise typer.Exit(code=1)
+
+    if len(csv_paths) == 1:
+        df = pd.read_csv(csv_paths[0])
+        primary_stem = Path(csv_paths[0]).stem
+    else:
+        console.print(f"[bold]Concatenating[/] {len(csv_paths)} CSV files")
+        for p in csv_paths:
+            console.print(f"  - {p}")
+        df = pd.concat([pd.read_csv(p) for p in csv_paths], ignore_index=True)
+        # Use a synthetic stem so the output dir doesn't collide if
+        # someone re-runs report with a different glob.
+        primary_stem = f"combined_{len(csv_paths)}"
+
+    # ─── Resolve output directory ─────────────────────────────────────
+    out_path = Path(out_dir) if out_dir else Path("results/summary") / primary_stem
+    out_path.mkdir(parents=True, exist_ok=True)
+
+    # ─── Optional pricing for cost recomputation ──────────────────────
+    pricing = None
+    if Path(pricing_config).exists():
+        pricing = load_pricing(pricing_config)
+
+    # ─── Generate + write tables ──────────────────────────────────────
+    console.print(f"[bold]Loaded[/] {len(df):,} prediction rows")
+    n_models = df["model_name"].nunique() if "model_name" in df.columns else 0
+    n_modes = df["mode"].nunique() if "mode" in df.columns else 0
+    console.print(f"[bold]Models:[/] {n_models}  [bold]Modes:[/] {n_modes}")
+
+    written = write_report(df, out_path, pricing=pricing, fmt=fmt)
+
+    table = Table(title="report results", show_header=True)
+    table.add_column("artifact")
+    table.add_column("path")
+    for name, path in written.items():
+        table.add_row(name, str(path))
+    console.print(table)
+
+    console.print(
+        "\n[green]✓ Done.[/] Drop the markdown into "
+        "[bold]paper/sections/03_results.md[/] to replace [TBD] placeholders."
+    )
 
 
 if __name__ == "__main__":

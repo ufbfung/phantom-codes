@@ -22,7 +22,7 @@
 #   implicit caching is automatic and not separately billed. `cache_read`
 #   reflects `cached_content_token_count`.
 
-snapshot_date: "2026-05-01"
+snapshot_date: "2026-05-03"
 
 models:
   # Anthropic — verified for Opus 4.7 (2026-04 announcement). Sonnet/Haiku
@@ -46,13 +46,13 @@ models:
     cache_creation: 1.25
     notes: "ESTIMATE — verify against console.anthropic.com pricing."
 
-  # OpenAI — verified for GPT-5.5 from 2026-04 launch.
+  # OpenAI — verified 2026-05-03 against developers.openai.com/api/docs/pricing.
   gpt-5.5:
     input: 5.00
     output: 30.00
     cache_read: 0.50
     cache_creation: 0.00
-    notes: "Verified from GPT-5.5 launch (2026-04). 1M context. >272k input → 2x input / 1.5x output."
+    notes: "Verified 2026-05-03. 1M context. >272k input → 2x input / 1.5x output. Bare slug; current dated snapshot is gpt-5.5-2026-04-23."
   gpt-5.5-pro:
     input: 30.00
     output: 180.00
@@ -65,7 +65,7 @@ models:
     cache_read: 0.075
     cache_creation: 0.00
 
-  # Google — verify against ai.google.dev pricing.
+  # Google — Gemini 2.5 (GA) verified against ai.google.dev pricing.
   gemini-2.5-pro:
     input: 1.25
     output: 10.00
@@ -77,3 +77,19 @@ models:
     output: 0.30
     cache_read: 0.019
     cache_creation: 0.00
+
+  # Google — Gemini 3 (preview) verified 2026-05-03 against
+  # ai.google.dev/gemini-api/docs/pricing. Standard tier, ≤200k tokens.
+  # Preview pricing may change at GA — re-verify before paper submission.
+  gemini-3.1-pro-preview:
+    input: 2.00
+    output: 12.00
+    cache_read: 0.20
+    cache_creation: 0.00
+    notes: "Preview model. <= 200k tokens. Above 200k: input 4.00, output 18.00, cache_read 0.40."
+  gemini-3-flash-preview:
+    input: 0.50
+    output: 3.00
+    cache_read: 0.05
+    cache_creation: 0.00
+    notes: "Preview model. Text/image/video pricing (audio is 2x: 1.00 input, 0.10 cache_read). Free tier available for development."

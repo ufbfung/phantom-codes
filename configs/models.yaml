@@ -83,9 +83,18 @@ headline_set:
   - {name: "claude-opus-4-7:zeroshot",   provider: anthropic, model_id: claude-opus-4-7,   mode: zeroshot}
 
   # ─── OpenAI ──────────────────────────────────────────────────────────
-  - {name: "gpt-5.5:zeroshot",     provider: openai, model_id: "gpt-5.5-2026-01-15", mode: zeroshot}
+  # model_id pinned to dated snapshot for reproducibility; `name` stays
+  # bare so it matches the `gpt-5.5` pricing key in pricing.yaml.
+  - {name: "gpt-5.5:zeroshot",     provider: openai, model_id: "gpt-5.5-2026-04-23", mode: zeroshot}
   - {name: "gpt-4o-mini:zeroshot", provider: openai, model_id: gpt-4o-mini,           mode: zeroshot}
 
   # ─── Google ──────────────────────────────────────────────────────────
-  - {name: "gemini-2.5-pro:zeroshot",   provider: google, model_id: "gemini-2.5-pro",   mode: zeroshot}
-  - {name: "gemini-2.5-flash:zeroshot", provider: google, model_id: "gemini-2.5-flash", mode: zeroshot}
+  # Both 2.5 (GA) and 3 (preview) included so the paper can compare a
+  # stable production model against the cutting-edge preview tier.
+  # 2.5-pro showed ~12% 503 throttling in the aborted run; documented as
+  # honest reporting in §Methods. 3-pro/flash are still preview at run
+  # time — disclosed in §Methods + the model_id "preview" suffix.
+  - {name: "gemini-2.5-pro:zeroshot",          provider: google, model_id: "gemini-2.5-pro",          mode: zeroshot}
+  - {name: "gemini-2.5-flash:zeroshot",        provider: google, model_id: "gemini-2.5-flash",        mode: zeroshot}
+  - {name: "gemini-3.1-pro-preview:zeroshot",  provider: google, model_id: "gemini-3.1-pro-preview",  mode: zeroshot}
+  - {name: "gemini-3-flash-preview:zeroshot",  provider: google, model_id: "gemini-3-flash-preview",  mode: zeroshot}

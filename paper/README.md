@@ -8,10 +8,12 @@ LaTeX install.
 
 The paper accompanies the open benchmark and reproducible code in this
 repository's top-level [README](../README.md). If you're a researcher
-wanting to evaluate your own model against the benchmark, the
-top-level README is the right starting point. If you're here to read
-the current draft of the paper itself, open `paper.pdf`. If you want
-to rebuild the PDF from source — read on.
+wanting to evaluate your own model against the benchmark or reproduce
+the paper's headline numbers, see [`BENCHMARK.md`](../BENCHMARK.md)
+for the full step-by-step reproduction guide (no MIMIC credentialing
+required). If you're here to read the current draft of the paper
+itself, open `paper.pdf`. If you want to rebuild the PDF from source
+— read on.
 
 ## Status
 

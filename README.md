@@ -134,17 +134,66 @@ uv sync --extra dev
 uv run pytest tests/
 uv run phantom-codes --help
 
-# End-to-end smoke test on local fixtures (no network, no MIMIC):
+# End-to-end smoke test on local fixtures (no network, no MIMIC).
+# Defaults to `smoke_test_set` from configs/models.yaml (3 baselines +
+# retrieval + 1 cheap Haiku call ≈ <$0.10 per run if ANTHROPIC_API_KEY
+# is set; LLM models with missing keys are silently skipped).
 uv run phantom-codes smoke-test
 
-# With LLMs (~$3-5 per run with all API keys set):
-#   ANTHROPIC_API_KEY (required) — Haiku, Sonnet, Opus 4.7
-#   OPENAI_API_KEY  (optional)   — GPT-4o-mini, GPT-5.5
-#   GEMINI_API_KEY  (optional)   — Gemini 2.5 Flash, Pro
-uv run phantom-codes smoke-test --llms
+# To exercise the full headline matrix on fixtures (much higher cost;
+# pair with smaller fixtures or --max-records on `evaluate`):
+uv run phantom-codes smoke-test --models-set headline_set
 ```
 
 The full MIMIC pipeline requires [PhysioNet credentialed access](https://physionet.org/about/citi-course/) for MIMIC-IV-FHIR v2.1. See the [Data setup](#data-setup) section above for the manual download + upload workflow (PhysioNet doesn't mirror this dataset to GCS).
+
+## Reproducing the headline benchmark
+
+The full evaluation matrix on Synthea — every model in the lineup
+evaluated on the same synthetic FHIR cohort — is fully reproducible
+**without** PhysioNet credentialing. Synthea data is freely
+redistributable and contains no real patient information.
+
+Quick sequence (each step has a single command):
+
+```bash
+# One-time setup
+brew install openjdk@17                 # Java 17+ for Synthea
+./scripts/setup_synthea.sh              # clone + build Synthea v4.0.0
+
+# Generate the 2,000-patient Synthea cohort (~5–10 min, ~30 GB peak)
+./scripts/generate_synthea_cohort.sh
+
+# Build the inference dataset (deduped, scope-filtered, 4 modes)
+uv run phantom-codes prepare-synthea
+rm -rf benchmarks/synthetic_v1/raw       # frees disk; bundles regenerable
+
+# Smoke-validate before the headline run (<$1)
+uv run phantom-codes evaluate \
+    --models-set smoke_test_set --max-records 50 --max-cost-usd 5
+
+# Headline run (~1–2 hours, $150–300 typical, $500 hard cap)
+uv run phantom-codes evaluate \
+    --models-set headline_set --max-records 500 --max-cost-usd 500
+
+# Generate paper-ready tables
+uv run phantom-codes report --csv results/raw/headline_*.csv
+```
+
+**Full reproduction guide**: see [BENCHMARK.md](BENCHMARK.md) for
+prerequisites, expected costs/runtimes, the SNOMED→ICD-10-CM
+curation workflow, troubleshooting, and the reproducibility
+checklist (Synthea SHA pin, generation seed, model registry, pricing
+snapshot).
+
+What's reproducible without MIMIC credentialing:
+- ✅ All Synthea cohort generation + preparation
+- ✅ All LLM evaluation (frontier APIs hit Synthea inputs only)
+- ✅ All baseline + retrieval models
+- ✅ All report tables + paper rebuild
+- ❌ The trained PubMedBERT classifier checkpoint (MIMIC-derivative;
+  not redistributed per PhysioNet's DUA — bring your own checkpoint
+  if you have MIMIC access)
 
 ## Repository layout
 
@@ -199,7 +248,7 @@ What we contribute on top of this prior work:
 
 ## References
 
-The full curated bibliography (16 references organized into foundational landmarks, direct LLM-on-medical-coding evaluations, and clinical-hallucination studies) lives at [paper/sections/references.md](paper/sections/references.md). The five papers most directly inspiring this work:
+The full curated bibliography (16+ references organized into foundational landmarks, direct LLM-on-medical-coding evaluations, and clinical-hallucination studies) lives at [paper/references.bib](paper/references.bib) — BibTeX entries with `% Why we cite:` annotation comments preserving the rationale for each. The five papers most directly inspiring this work:
 
 1. **Soroush et al. 2024 (NEJM AI)** — *Large Language Models Are Poor Medical Coders.* GPT-4 achieves 46% / 34% / 50% exact match on ICD-9 / ICD-10 / CPT respectively; substantial hallucination of non-existent codes. [doi:10.1056/AIdbp2300040](https://ai.nejm.org/doi/full/10.1056/AIdbp2300040)
 2. **Almeida et al. 2025 (NeurIPS GenAI4Health)** — *Large Language Models as Medical Code Selectors.* 33-LLM benchmark on ICPC-2; multi-axis evaluation (F1, cost, latency, format adherence). [arXiv:2507.14681](https://arxiv.org/abs/2507.14681)

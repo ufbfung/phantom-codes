@@ -32,7 +32,6 @@ import pandas as pd
 from phantom_codes.eval.cost import PricingTable, compute_call_cost, resolve_pricing_for_model
 from phantom_codes.eval.metrics import Outcome
 
-
 # ─────────────────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────

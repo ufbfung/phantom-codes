@@ -40,11 +40,14 @@ def test_compute_call_cost_zero_when_all_tokens_zero() -> None:
 
 def test_load_pricing_reads_yaml_into_dataclasses() -> None:
     table = load_pricing(PRICING_YAML)
-    assert table.snapshot_date == "2026-05-01"
+    assert table.snapshot_date == "2026-05-03"
     # All three providers' headline models should be present.
     assert "claude-opus-4-7" in table.models
     assert "gpt-5.5" in table.models
     assert "gemini-2.5-flash" in table.models
+    # Gemini 3 preview models added 2026-05-03 alongside the GA 2.5 tier.
+    assert "gemini-3.1-pro-preview" in table.models
+    assert "gemini-3-flash-preview" in table.models
     # Spot-check Opus 4.7 numbers from the announcement.
     opus = table.models["claude-opus-4-7"]
     assert opus.input == 5.00

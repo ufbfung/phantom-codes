@@ -36,6 +36,7 @@ import json
 import time
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
@@ -65,21 +66,37 @@ class EvalRecord:
     input_text: str | None
     gt_system: str
     gt_code: str
-    gt_group: str | None
+    gt_display: str | None = None
+    gt_group: str | None = None
 
     @property
     def truth(self) -> Truth:
         return Truth(system=self.gt_system, code=self.gt_code)
 
 
-def load_records(parquet_path: str) -> list[EvalRecord]:
-    """Load degraded records from a parquet file written by `prepare`."""
-    df = pd.read_parquet(parquet_path)
+def load_records(path: str) -> list[EvalRecord]:
+    """Load degraded records from disk. Format inferred from extension:
+    `.parquet` for the original `prepare` pipeline output; `.ndjson` /
+    `.jsonl` for the `prepare-synthea` inference dataset.
+    """
+    p = Path(path)
+    if p.suffix in (".ndjson", ".jsonl"):
+        rows: list[dict[str, Any]] = []
+        with p.open() as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    rows.append(json.loads(line))
+        df = pd.DataFrame(rows)
+    else:
+        df = pd.read_parquet(path)
+
     out: list[EvalRecord] = []
     for row in df.itertuples(index=False):
         fhir_raw = getattr(row, "input_fhir", None)
         fhir = json.loads(fhir_raw) if isinstance(fhir_raw, str) and fhir_raw else None
         text = getattr(row, "input_text", None)
+        gt_display_raw = getattr(row, "gt_display", None)
         out.append(
             EvalRecord(
                 resource_id=str(row.resource_id),
@@ -88,6 +105,11 @@ def load_records(parquet_path: str) -> list[EvalRecord]:
                 input_text=str(text) if isinstance(text, str) and text else None,
                 gt_system=str(row.gt_system),
                 gt_code=str(row.gt_code),
+                gt_display=(
+                    str(gt_display_raw)
+                    if isinstance(gt_display_raw, str) and gt_display_raw
+                    else None
+                ),
                 gt_group=getattr(row, "gt_group", None),
             )
         )
@@ -234,6 +256,106 @@ def run_eval(
                 evaluate_one(model, record, validator, top_k=top_k, pricing=pricing)
             )
     return pd.DataFrame(rows)
+
+
+def run_eval_streaming(
+    models: Sequence[ConceptNormalizer],
+    records: Sequence[EvalRecord],
+    validator: IcdValidator,
+    *,
+    top_k: int = 5,
+    pricing: PricingTable | None = None,
+    cost_monitor: Any = None,  # CostMonitor (avoiding circular import)
+    incremental_csv_path: str | Path | None = None,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """Streaming variant of `run_eval` for headline runs.
+
+    Differences from `run_eval`:
+      - Iterates record-major (record outer, model inner) so each
+        on-disk write corresponds to one record's full set of model
+        predictions. Aborting mid-run leaves complete records on disk.
+      - Optionally writes each record's rows to `incremental_csv_path`
+        as they're generated. The CSV is opened in append mode; rows
+        from completed records are durable even if the run aborts.
+      - Optionally checks `cost_monitor` after every record. If the
+        monitor raises `BudgetExceededError`, the run halts gracefully
+        and returns whatever's been processed so far, alongside an
+        `aborted=True` flag in the result-info dict.
+
+    Returns:
+        (predictions_df, info) where info has at least:
+          - `n_records_completed`: how many records ran end-to-end
+            before normal completion or abort
+          - `aborted`: True if `cost_monitor` raised BudgetExceededError
+          - `abort_reason`: string explanation if aborted
+    """
+    if incremental_csv_path is not None:
+        incremental_csv_path = Path(incremental_csv_path)
+        incremental_csv_path.parent.mkdir(parents=True, exist_ok=True)
+
+    rows: list[dict[str, Any]] = []
+    n_records_completed = 0
+    aborted = False
+    abort_reason: str | None = None
+    csv_writer = None
+    csv_file = None
+    field_names: list[str] | None = None
+
+    try:
+        for record in records:
+            batch: list[dict[str, Any]] = []
+            for model in models:
+                batch.extend(
+                    evaluate_one(model, record, validator, top_k=top_k, pricing=pricing)
+                )
+            rows.extend(batch)
+
+            # Lazy-open the CSV on the first batch so we know the field set.
+            if incremental_csv_path is not None and batch:
+                if csv_writer is None:
+                    field_names = list(batch[0].keys())
+                    csv_file = open(incremental_csv_path, "w", newline="")
+                    import csv as _csv
+
+                    csv_writer = _csv.DictWriter(csv_file, fieldnames=field_names)
+                    csv_writer.writeheader()
+                csv_writer.writerows(batch)
+                csv_file.flush()  # durable across crashes
+
+            n_records_completed += 1
+
+            # Cost-monitor check happens AFTER the record's batch is on
+            # disk, so abort preserves the completed record's rows.
+            if cost_monitor is not None:
+                # Sum cost from this record's batch (rank-0 rows only;
+                # higher ranks have None / 0 by runner convention).
+                batch_cost = sum(
+                    (row.get("cost_usd") or 0)
+                    for row in batch
+                    if row.get("pred_rank") == 0
+                )
+                try:
+                    cost_monitor.add(batch_cost)
+                except Exception as e:
+                    aborted = True
+                    abort_reason = str(e)
+                    break
+
+    finally:
+        if csv_file is not None:
+            csv_file.close()
+
+    info: dict[str, Any] = {
+        "n_records_completed": n_records_completed,
+        "n_records_total": len(records),
+        "aborted": aborted,
+        "abort_reason": abort_reason,
+    }
+    if cost_monitor is not None:
+        info["final_cost_usd"] = getattr(cost_monitor, "running_cost", None)
+        info["cost_status"] = cost_monitor.status() if hasattr(cost_monitor, "status") else None
+
+    return pd.DataFrame(rows), info
 
 
 def summarize_by_model_and_mode(predictions_df: pd.DataFrame) -> pd.DataFrame:

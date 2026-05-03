@@ -1,0 +1,96 @@
+{
+  "_README": "SNOMED concept IDs that were observed in Synthea pilot output BUT deliberately not added to data/synthea/snomed_to_icd10cm.json. These are codes whose canonical ICD-10-CM target is OUT of ACCESS-Model scope (per ACCESSCKMDiagnosisVS + ACCESSeCKMDiagnosisVS). Tracked separately so re-running scripts/inventory_synthea_snomed.py against future / larger cohorts can distinguish 'new code we haven't curated yet' from 'code we already evaluated and decided to drop.' The diff feature in inventory_synthea_snomed.py reads BOTH files when computing the 'new codes need curation' list.\n\nIf a future curator wants to expand ACCESS scope (e.g., include I21 acute MI for cardiovascular research), they would: (1) update src/phantom_codes/data/access_valuesets/, (2) move the relevant entries from this file to snomed_to_icd10cm.json with appropriate ICD codes, (3) regenerate cohort.",
+
+  "exclusions": {
+    "80394007": {
+      "snomed_display": "Hyperglycemia (disorder)",
+      "would_map_to": "R73.9",
+      "reason": "ACCESS eCKM only includes R73.03 (Prediabetes), not R73.9 (general hyperglycemia)."
+    },
+    "22298006": {
+      "snomed_display": "Myocardial infarction (disorder)",
+      "would_map_to": "I21.9",
+      "reason": "ACCESS CKM lists I20 (angina) + I24 (acute IHD) + specific I25.x chronic codes — but NOT I21 (acute MI)."
+    },
+    "399211009": {
+      "snomed_display": "History of myocardial infarction (situation)",
+      "would_map_to": "I25.2",
+      "reason": "I25.2 not explicitly in ACCESS CKM; CKM lists I25.10-I25.119 and I25.3-I25.6 but not I25.2."
+    },
+    "399261000": {
+      "snomed_display": "History of coronary artery bypass grafting (situation)",
+      "would_map_to": "Z95.1",
+      "reason": "Z95 status codes are not in ACCESS scope by definition (ACCESS targets diagnoses, not history/status)."
+    },
+    "401303003": {
+      "snomed_display": "Acute ST segment elevation myocardial infarction (disorder)",
+      "would_map_to": "I21.3",
+      "reason": "Same as 22298006 — I21 (acute MI) not in ACCESS CKM."
+    },
+    "401314000": {
+      "snomed_display": "Acute non-ST segment elevation myocardial infarction (disorder)",
+      "would_map_to": "I21.4",
+      "reason": "Same as 22298006."
+    },
+    "274531002": {
+      "snomed_display": "Abnormal findings diagnostic imaging heart+coronary circulat (finding)",
+      "would_map_to": "R93.1",
+      "reason": "R93 imaging findings are not diagnoses — out of ACCESS scope."
+    },
+    "237602007": {
+      "snomed_display": "Metabolic syndrome X (disorder)",
+      "would_map_to": "E88.81",
+      "reason": "ACCESS eCKM explicitly lists hypertension, dyslipidemia, prediabetes, obesity codes — NOT the metabolic-syndrome umbrella code. The component diagnoses appear separately in patient Conditions."
+    },
+    "431855005": {
+      "snomed_display": "Chronic kidney disease stage 1 (disorder)",
+      "would_map_to": "N18.1",
+      "reason": "ACCESS CKM specifically targets CKD stage 3 (N18.30/N18.31/N18.32). Stages 1, 2, 4, and 5 are out of scope."
+    },
+    "431856006": {
+      "snomed_display": "Chronic kidney disease stage 2 (disorder)",
+      "would_map_to": "N18.2",
+      "reason": "Same as 431855005 — ACCESS CKM is stage-3-only."
+    },
+    "431857002": {
+      "snomed_display": "Chronic kidney disease stage 4 (disorder)",
+      "would_map_to": "N18.4",
+      "reason": "Same as 431855005."
+    },
+    "46177005": {
+      "snomed_display": "End-stage renal disease (disorder)",
+      "would_map_to": "N18.6",
+      "reason": "Same as 431855005 — ACCESS CKM is stage-3-only."
+    },
+    "161665007": {
+      "snomed_display": "History of renal transplant (situation)",
+      "would_map_to": "Z94.0",
+      "reason": "Z94 status codes are not in ACCESS scope by definition."
+    },
+    "698306007": {
+      "snomed_display": "Awaiting transplantation of kidney (situation)",
+      "would_map_to": "Z76.82",
+      "reason": "Z76 status codes are not in ACCESS scope by definition."
+    },
+    "204949001": {
+      "snomed_display": "Renal dysplasia (disorder)",
+      "would_map_to": "Q61.4",
+      "reason": "Q61 codes are congenital kidney malformations; ACCESS CKM scope is N18.30/N18.31/N18.32 (CKD stage 3) only. Surfaced by full-cohort inventory diff 2026-05-03."
+    },
+    "213150003": {
+      "snomed_display": "Kidney transplant failure and rejection (disorder)",
+      "would_map_to": "T86.1X",
+      "reason": "T86.1X (Complications of kidney transplant) is not in ACCESS scope. Same reasoning as 161665007 (transplant status codes excluded). Surfaced by full-cohort inventory diff 2026-05-03."
+    },
+    "275408006": {
+      "snomed_display": "Postoperative renal failure (disorder)",
+      "would_map_to": "N99.0",
+      "reason": "N99 (postprocedural complications) not in ACCESS scope; ACCESS CKM is N18.30-32 (CKD stage 3) only. Surfaced by full-cohort inventory diff 2026-05-03."
+    },
+    "40095003": {
+      "snomed_display": "Injury of kidney (disorder)",
+      "would_map_to": "S37.0X",
+      "reason": "S37 (kidney trauma) not in ACCESS scope; ACCESS targets cardiometabolic disease, not traumatic injuries. Surfaced by full-cohort inventory diff 2026-05-03."
+    }
+  }
+}

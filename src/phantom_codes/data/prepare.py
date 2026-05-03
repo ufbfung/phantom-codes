@@ -179,3 +179,58 @@ def prepare(
         seed=config.seed,
     )
     return write_splits(splits, config, local_dir=local_out)
+
+
+def prepare_from_iter(
+    conditions: Iterable[dict[str, Any]],
+    out_path: Path,
+    scope: AccessScope | None = None,
+    fmt: str = "ndjson",
+) -> dict[str, Any]:
+    """End-to-end inference dataset assembly from an arbitrary Condition iterator.
+
+    Unlike `prepare()` (which produces train/val/test splits for MIMIC
+    fine-tuning), this builder is for *inference benchmarks*: every
+    in-scope condition × all 4 degradation modes get materialized
+    into a single output file. No splits.
+
+    Used by:
+        - `phantom-codes prepare-synthea` (Synthea Bundle source)
+        - Any future inference cohort source (Synthea variants,
+          custom hand-built cohorts, etc.)
+
+    Args:
+        conditions: iterator of FHIR Condition dicts (from any source).
+        out_path: where to write. Format inferred from `fmt`.
+        scope: optional pre-loaded ACCESS scope (defaults to load()).
+        fmt: "ndjson" (one row per line, JSON) or "parquet".
+
+    Returns:
+        Aggregate stats: total rows, unique resources, unique codes,
+        codes-per-mode counts. Used by the CLI to print a summary and
+        by manifest writers to record provenance.
+    """
+    rows = build_records(conditions, scope=scope)
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    if fmt == "parquet":
+        df = pd.DataFrame(rows, columns=RECORD_COLUMNS)
+        df.to_parquet(out_path, index=False)
+    elif fmt == "ndjson":
+        with out_path.open("w") as f:
+            for row in rows:
+                f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    else:
+        raise ValueError(f"Unknown fmt: {fmt!r} (expected 'ndjson' or 'parquet')")
+
+    n_rows = len(rows)
+    unique_resources = len({r["resource_id"] for r in rows})
+    unique_codes = len({r["gt_code"] for r in rows})
+    return {
+        "out_path": str(out_path),
+        "fmt": fmt,
+        "n_rows": n_rows,
+        "n_unique_resources": unique_resources,
+        "n_unique_codes": unique_codes,
+        "n_modes_per_resource": (n_rows // unique_resources) if unique_resources else 0,
+    }

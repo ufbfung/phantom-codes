@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "generator": "scripts/inventory_synthea_snomed.py",
+  "bundles_dir": "benchmarks/synthetic_v1/pilot/fhir",
+  "n_unique_snomed_codes": 28,
+  "scoping_keywords": [
+    "diabetes",
+    "diabetic",
+    "hyperglycaemia",
+    "hyperglycemia",
+    "prediabet",
+    "pre-diabet",
+    "metabolic syndrome",
+    "hypertensi",
+    "blood pressure",
+    "htn",
+    "kidney",
+    "renal",
+    "ckd",
+    "nephropathy",
+    "glomerular",
+    "atherosclero",
+    "coronary",
+    "myocardial",
+    "ischemic heart",
+    "ischaemic heart",
+    "ascvd",
+    "stroke",
+    "cerebrovascular",
+    "peripheral vascular",
+    "peripheral arter",
+    "hyperlipid",
+    "dyslipid",
+    "hypercholesterol",
+    "hypertriglyc",
+    "cholesterol",
+    "obes",
+    "morbid obesity",
+    "body mass index"
+  ],
+  "entries": {
+    "127013003": {
+      "snomed_display": "Disorder of kidney due to diabetes mellitus (disorder)",
+      "n_observed": 24
+    },
+    "1551000119108": {
+      "snomed_display": "Nonproliferative diabetic retinopathy due to type II diabetes mellitus",
+      "n_observed": 4
+    },
+    "157141000119108": {
+      "snomed_display": "Proteinuria due to type 2 diabetes mellitus (disorder)",
+      "n_observed": 17
+    },
+    "161665007": {
+      "snomed_display": "History of renal transplant (situation)",
+      "n_observed": 7
+    },
+    "162864005": {
+      "snomed_display": "Body mass index 30+ - obesity (finding)",
+      "n_observed": 83
+    },
+    "22298006": {
+      "snomed_display": "Myocardial infarction (disorder)",
+      "n_observed": 8
+    },
+    "237602007": {
+      "snomed_display": "Metabolic syndrome X (disorder)",
+      "n_observed": 31
+    },
+    "274531002": {
+      "snomed_display": "Abnormal findings diagnostic imaging heart+coronary circulat (finding)",
+      "n_observed": 39
+    },
+    "302870006": {
+      "snomed_display": "Hypertriglyceridemia (disorder)",
+      "n_observed": 17
+    },
+    "368581000119106": {
+      "snomed_display": "Neuropathy due to type 2 diabetes mellitus (disorder)",
+      "n_observed": 7
+    },
+    "399211009": {
+      "snomed_display": "History of myocardial infarction (situation)",
+      "n_observed": 8
+    },
+    "399261000": {
+      "snomed_display": "History of coronary artery bypass grafting (situation)",
+      "n_observed": 13
+    },
+    "401303003": {
+      "snomed_display": "Acute ST segment elevation myocardial infarction (disorder)",
+      "n_observed": 2
+    },
+    "401314000": {
+      "snomed_display": "Acute non-ST segment elevation myocardial infarction (disorder)",
+      "n_observed": 6
+    },
+    "408512008": {
+      "snomed_display": "Body mass index 40+ - severely obese (finding)",
+      "n_observed": 1
+    },
+    "414545008": {
+      "snomed_display": "Ischemic heart disease (disorder)",
+      "n_observed": 39
+    },
+    "431855005": {
+      "snomed_display": "Chronic kidney disease stage 1 (disorder)",
+      "n_observed": 26
+    },
+    "431856006": {
+      "snomed_display": "Chronic kidney disease stage 2 (disorder)",
+      "n_observed": 22
+    },
+    "431857002": {
+      "snomed_display": "Chronic kidney disease stage 4 (disorder)",
+      "n_observed": 9
+    },
+    "433144002": {
+      "snomed_display": "Chronic kidney disease stage 3 (disorder)",
+      "n_observed": 17
+    },
+    "44054006": {
+      "snomed_display": "Diabetes mellitus type 2 (disorder)",
+      "n_observed": 17
+    },
+    "46177005": {
+      "snomed_display": "End-stage renal disease (disorder)",
+      "n_observed": 1
+    },
+    "55822004": {
+      "snomed_display": "Hyperlipidemia (disorder)",
+      "n_observed": 26
+    },
+    "59621000": {
+      "snomed_display": "Essential hypertension (disorder)",
+      "n_observed": 39
+    },
+    "698306007": {
+      "snomed_display": "Awaiting transplantation of kidney (situation)",
+      "n_observed": 9
+    },
+    "714628002": {
+      "snomed_display": "Prediabetes (finding)",
+      "n_observed": 67
+    },
+    "80394007": {
+      "snomed_display": "Hyperglycemia (disorder)",
+      "n_observed": 8
+    },
+    "90781000119102": {
+      "snomed_display": "Microalbuminuria due to type 2 diabetes mellitus (disorder)",
+      "n_observed": 21
+    }
+  }
+}

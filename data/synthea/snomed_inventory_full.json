@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "generator": "scripts/inventory_synthea_snomed.py",
+  "bundles_dir": "benchmarks/synthetic_v1/raw/fhir",
+  "n_unique_snomed_codes": 36,
+  "scoping_keywords": [
+    "diabetes",
+    "diabetic",
+    "hyperglycaemia",
+    "hyperglycemia",
+    "prediabet",
+    "pre-diabet",
+    "metabolic syndrome",
+    "hypertensi",
+    "blood pressure",
+    "htn",
+    "kidney",
+    "renal",
+    "ckd",
+    "nephropathy",
+    "glomerular",
+    "atherosclero",
+    "coronary",
+    "myocardial",
+    "ischemic heart",
+    "ischaemic heart",
+    "ascvd",
+    "stroke",
+    "cerebrovascular",
+    "peripheral vascular",
+    "peripheral arter",
+    "hyperlipid",
+    "dyslipid",
+    "hypercholesterol",
+    "hypertriglyc",
+    "cholesterol",
+    "obes",
+    "morbid obesity",
+    "body mass index"
+  ],
+  "entries": {
+    "127013003": {
+      "snomed_display": "Disorder of kidney due to diabetes mellitus (disorder)",
+      "n_observed": 451
+    },
+    "1501000119109": {
+      "snomed_display": "Proliferative diabetic retinopathy due to type II diabetes mellitus",
+      "n_observed": 8
+    },
+    "1551000119108": {
+      "snomed_display": "Nonproliferative diabetic retinopathy due to type II diabetes mellitus",
+      "n_observed": 100
+    },
+    "157141000119108": {
+      "snomed_display": "Proteinuria due to type 2 diabetes mellitus (disorder)",
+      "n_observed": 310
+    },
+    "161665007": {
+      "snomed_display": "History of renal transplant (situation)",
+      "n_observed": 170
+    },
+    "162864005": {
+      "snomed_display": "Body mass index 30+ - obesity (finding)",
+      "n_observed": 1735
+    },
+    "204949001": {
+      "snomed_display": "Renal dysplasia (disorder)",
+      "n_observed": 1
+    },
+    "213150003": {
+      "snomed_display": "Kidney transplant failure and rejection (disorder)",
+      "n_observed": 18
+    },
+    "22298006": {
+      "snomed_display": "Myocardial infarction (disorder)",
+      "n_observed": 237
+    },
+    "230690007": {
+      "snomed_display": "Cerebrovascular accident (disorder)",
+      "n_observed": 57
+    },
+    "237602007": {
+      "snomed_display": "Metabolic syndrome X (disorder)",
+      "n_observed": 642
+    },
+    "274531002": {
+      "snomed_display": "Abnormal findings diagnostic imaging heart+coronary circulat (finding)",
+      "n_observed": 888
+    },
+    "275408006": {
+      "snomed_display": "Postoperative renal failure (disorder)",
+      "n_observed": 1
+    },
+    "302870006": {
+      "snomed_display": "Hypertriglyceridemia (disorder)",
+      "n_observed": 318
+    },
+    "368581000119106": {
+      "snomed_display": "Neuropathy due to type 2 diabetes mellitus (disorder)",
+      "n_observed": 109
+    },
+    "399211009": {
+      "snomed_display": "History of myocardial infarction (situation)",
+      "n_observed": 237
+    },
+    "399261000": {
+      "snomed_display": "History of coronary artery bypass grafting (situation)",
+      "n_observed": 334
+    },
+    "40095003": {
+      "snomed_display": "Injury of kidney (disorder)",
+      "n_observed": 8
+    },
+    "401303003": {
+      "snomed_display": "Acute ST segment elevation myocardial infarction (disorder)",
+      "n_observed": 88
+    },
+    "401314000": {
+      "snomed_display": "Acute non-ST segment elevation myocardial infarction (disorder)",
+      "n_observed": 141
+    },
+    "408512008": {
+      "snomed_display": "Body mass index 40+ - severely obese (finding)",
+      "n_observed": 24
+    },
+    "414545008": {
+      "snomed_display": "Ischemic heart disease (disorder)",
+      "n_observed": 882
+    },
+    "431855005": {
+      "snomed_display": "Chronic kidney disease stage 1 (disorder)",
+      "n_observed": 468
+    },
+    "431856006": {
+      "snomed_display": "Chronic kidney disease stage 2 (disorder)",
+      "n_observed": 407
+    },
+    "431857002": {
+      "snomed_display": "Chronic kidney disease stage 4 (disorder)",
+      "n_observed": 225
+    },
+    "433144002": {
+      "snomed_display": "Chronic kidney disease stage 3 (disorder)",
+      "n_observed": 321
+    },
+    "44054006": {
+      "snomed_display": "Diabetes mellitus type 2 (disorder)",
+      "n_observed": 320
+    },
+    "46177005": {
+      "snomed_display": "End-stage renal disease (disorder)",
+      "n_observed": 91
+    },
+    "55822004": {
+      "snomed_display": "Hyperlipidemia (disorder)",
+      "n_observed": 532
+    },
+    "59621000": {
+      "snomed_display": "Essential hypertension (disorder)",
+      "n_observed": 922
+    },
+    "60951000119105": {
+      "snomed_display": "Blindness due to type 2 diabetes mellitus (disorder)",
+      "n_observed": 3
+    },
+    "698306007": {
+      "snomed_display": "Awaiting transplantation of kidney (situation)",
+      "n_observed": 225
+    },
+    "714628002": {
+      "snomed_display": "Prediabetes (finding)",
+      "n_observed": 1367
+    },
+    "80394007": {
+      "snomed_display": "Hyperglycemia (disorder)",
+      "n_observed": 157
+    },
+    "90781000119102": {
+      "snomed_display": "Microalbuminuria due to type 2 diabetes mellitus (disorder)",
+      "n_observed": 392
+    },
+    "97331000119101": {
+      "snomed_display": "Macular edema and retinopathy due to type 2 diabetes mellitus (disorder)",
+      "n_observed": 11
+    }
+  }
+}

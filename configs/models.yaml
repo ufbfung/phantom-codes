@@ -1,0 +1,91 @@
+# Phantom Codes — model registry.
+#
+# Declarative spec for which models to evaluate. Consumed by
+# `src/phantom_codes/eval/registry.py:load_models_from_config()` and
+# wired into the `phantom-codes evaluate` (and `smoke-test`) commands
+# via the `--models-set` flag.
+#
+# Two named sets are defined:
+#
+#   smoke_test_set  — Cheap / fast subset for development iteration.
+#                     Used by `phantom-codes smoke-test`. Should be
+#                     small enough to run end-to-end against the
+#                     synthetic fixtures in <1 minute and <$0.10.
+#
+#   headline_set    — The full evaluation matrix that produces the
+#                     paper's headline numbers. Run once on the
+#                     Synthea cohort via `phantom-codes evaluate
+#                     --models-set headline_set`.
+#
+# Provider dispatch (handled by registry.py):
+#   - exact / fuzzy / tfidf  → constrained-only string-matching baselines
+#   - retrieval              → frozen sentence-transformer + cosine
+#   - classifier             → fine-tuned PubMedBERT checkpoint
+#   - anthropic              → Claude (zero-shot, constrained, or omitted)
+#   - openai                 → GPT
+#   - google                 → Gemini
+#   - anthropic-rag          → Claude with per-record retrieval prepended
+#   - openai-rag             → GPT with retrieval
+#   - google-rag             → Gemini with retrieval
+#
+# LLM providers are skipped silently (with a warning) if the
+# corresponding API key isn't set in the environment. This lets
+# contributors run partial evaluations without all keys configured.
+#
+# To add a new model: append an entry to the appropriate set with
+# `provider`, `model_id`, and `mode` (or `retrieve_k` for RAG variants).
+# No code changes needed unless adding a new provider type.
+
+# ─── Smoke test set ────────────────────────────────────────────────────
+# Goals: validate the full eval pipeline end-to-end on minimum cost.
+# Skip premium models entirely; one cheap LLM in each prompting mode.
+
+smoke_test_set:
+  - {name: "baseline:exact", provider: exact}
+  - {name: "baseline:fuzzy", provider: fuzzy}
+  - {name: "baseline:tfidf", provider: tfidf}
+  - {name: "sentence-transformer:retrieval", provider: retrieval}
+  - {name: "claude-haiku-4-5:zeroshot",   provider: anthropic, model_id: claude-haiku-4-5, mode: zeroshot}
+
+# ─── Headline set ──────────────────────────────────────────────────────
+# Goals: full evaluation matrix for paper §3 Results.
+# Frontier LLMs across three prompting modes (only Haiku gets all 3 to
+# save cost; premium models are zero-shot only). Retrieval baseline,
+# trained classifier, and three constrained-only baselines round it out.
+
+headline_set:
+  # Constrained-only string-matching baselines (essentially free)
+  - {name: "baseline:exact", provider: exact}
+  - {name: "baseline:fuzzy", provider: fuzzy}
+  - {name: "baseline:tfidf", provider: tfidf}
+
+  # Frozen sentence-transformer retrieval baseline (also reused as the
+  # retriever for RAG-LLM variants)
+  - {name: "sentence-transformer:retrieval", provider: retrieval}
+
+  # Trained PubMedBERT classifier (loaded from local checkpoint glob)
+  - name: "pubmedbert:classifier"
+    provider: classifier
+    checkpoint_path: "models/checkpoints/pubmedbert/best_*.pt"
+
+  # ─── Anthropic ───────────────────────────────────────────────────────
+  # Haiku in all 3 prompting modes for full within-model ablation.
+  # Convention: `name` = `<canonical model_id>:<mode>` so resolve_pricing_for_model()
+  # strips the suffix and matches the key in configs/pricing.yaml directly.
+  - {name: "claude-haiku-4-5:zeroshot",    provider: anthropic, model_id: claude-haiku-4-5, mode: zeroshot}
+  - {name: "claude-haiku-4-5:constrained", provider: anthropic, model_id: claude-haiku-4-5, mode: constrained}
+  - name: "claude-haiku-4-5:rag"
+    provider: anthropic-rag
+    model_id: claude-haiku-4-5
+    retrieve_k: 10
+  # Premium Anthropic models — zero-shot only (cost control)
+  - {name: "claude-sonnet-4-6:zeroshot", provider: anthropic, model_id: claude-sonnet-4-6, mode: zeroshot}
+  - {name: "claude-opus-4-7:zeroshot",   provider: anthropic, model_id: claude-opus-4-7,   mode: zeroshot}
+
+  # ─── OpenAI ──────────────────────────────────────────────────────────
+  - {name: "gpt-5.5:zeroshot",     provider: openai, model_id: "gpt-5.5-2026-01-15", mode: zeroshot}
+  - {name: "gpt-4o-mini:zeroshot", provider: openai, model_id: gpt-4o-mini,           mode: zeroshot}
+
+  # ─── Google ──────────────────────────────────────────────────────────
+  - {name: "gemini-2.5-pro:zeroshot",   provider: google, model_id: "gemini-2.5-pro",   mode: zeroshot}
+  - {name: "gemini-2.5-flash:zeroshot", provider: google, model_id: "gemini-2.5-flash", mode: zeroshot}

@@ -1,0 +1,66 @@
+# Phantom Codes — Synthea cohort-generation hyperparameters.
+#
+# Consumed by scripts/generate_synthea_cohort.sh (which translates these
+# YAML keys into Synthea's `synthea.properties` overrides on the
+# command line). Keep flat — no nested structures.
+#
+# Reproducibility: the (seed, population_size, modules) triple is what
+# determines whether two researchers regenerate identical cohorts.
+# Pinning Synthea v4.0.0 in setup_synthea.sh is the fourth axis.
+
+# ─── Cohort size ───────────────────────────────────────────────────────
+# 2,000 alive patients yields ~500-800 in-scope ACCESS-Model conditions
+# after dedup + scope filtering in WS2. Scale up if you need more
+# statistical power; scale down if storage/runtime is tight.
+population_size: 2000
+
+# ─── Determinism ───────────────────────────────────────────────────────
+# Single seed reproduces the same patient population across runs.
+# Same seed + same Synthea SHA + same modules = byte-identical Bundles.
+seed: 42
+
+# ─── Demographics (default mix; not tuned for ACCESS scope) ────────────
+gender_ratio: 0.5
+min_age: 18
+max_age: 95
+
+# ─── Modules to disable (irrelevant to ACCESS Model scope) ─────────────
+# Synthea ships 120+ disease modules. We disable the ones outside
+# our scope to focus the cohort and reduce generation time. The
+# enabled set still produces our target conditions (diabetes, HTN,
+# CKD, ASCVD, dyslipidemia, prediabetes, obesity) plus the realistic
+# multimorbidity context that comes with them.
+disabled_modules:
+  - covid19
+  - breast_cancer
+  - lung_cancer
+  - colorectal_cancer
+  - prostate_cancer
+  - dementia
+  - alzheimers
+  - epilepsy
+  - injuries
+
+# ─── FHIR exporter settings ────────────────────────────────────────────
+# US Core IG version (Synthea v4.0.0 supports US Core 7).
+# Phantom Codes uses base FHIR R4 Conditions; US Core profile compliance
+# is preserved for downstream ecosystem compatibility but not required.
+fhir_us_core_version: "7.0.0"
+
+# Don't bundle into bulk-data NDJSON; we want one file per patient
+# so the loader can parallelize parsing trivially.
+fhir_bulk_data: false
+
+# ─── SNOMED → ICD-10-CM mapping ────────────────────────────────────────
+# This is the curated map produced via WS1's inventory + curation steps
+# (see scripts/inventory_synthea_snomed.py and the handoff protocol in
+# the project plan). When this file is set on Synthea's exporter, every
+# Condition in the output FHIR Bundles emits BOTH SNOMED (native) AND
+# ICD-10-CM (mapped) codings in `code.coding[]`.
+icd10_code_map: "data/synthea/snomed_to_icd10cm.json"
+
+# ─── Output ────────────────────────────────────────────────────────────
+# All outputs land under benchmarks/synthetic_v1/raw/, gitignored.
+# The aggregate provenance manifest is committed at
+# benchmarks/synthetic_v1/manifest.yaml after generation.
+output_dir: "benchmarks/synthetic_v1/raw"

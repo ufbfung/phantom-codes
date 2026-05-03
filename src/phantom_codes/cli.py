@@ -356,6 +356,73 @@ def prepare(
     console.print(table)
 
 
+@app.command("prepare-synthea")
+def prepare_synthea(
+    bundles_dir: str = typer.Option(
+        "benchmarks/synthetic_v1/raw/fhir",
+        "--bundles-dir",
+        help="Directory of Synthea-generated FHIR Bundle JSON files (one per patient).",
+    ),
+    out_path: str = typer.Option(
+        "benchmarks/synthetic_v1/conditions.ndjson",
+        "--out",
+        help="Output path for the inference dataset (ndjson by default; use .parquet to switch format).",
+    ),
+) -> None:
+    """Build the Synthea inference dataset from Bundle JSON files.
+
+    Reads every FHIR Bundle in --bundles-dir, extracts Condition resources,
+    de-duplicates per-(patient, ICD-10-CM code), filters to ACCESS Model
+    scope, and materializes each in-scope Condition into all 4
+    degradation modes (D1/D2/D3/D4). Writes a single ndjson (or parquet)
+    file ready for `phantom-codes evaluate`.
+
+    Unlike `prepare` (which produces train/val/test splits for MIMIC
+    fine-tuning), this command produces a single inference cohort —
+    Synthea is the universal benchmark, not training data.
+
+    Compliance: Synthea is open synthetic data. No MIMIC content is
+    read or produced by this command.
+    """
+    from phantom_codes.data.prepare import prepare_from_iter
+    from phantom_codes.data.synthea_loader import iter_conditions_from_directory
+
+    bundles_path = Path(bundles_dir)
+    if not bundles_path.exists():
+        console.print(
+            f"[red]✗ Bundles directory not found: {bundles_path}[/]\n"
+            "Run [bold]./scripts/generate_synthea_cohort.sh[/bold] first to generate the cohort."
+        )
+        raise typer.Exit(code=1)
+
+    out = Path(out_path)
+    fmt = "parquet" if out.suffix == ".parquet" else "ndjson"
+
+    console.print(f"[bold]Reading[/] Synthea Bundles from {bundles_path}")
+    console.print(f"[bold]Writing[/]  {fmt} → {out}")
+
+    conditions = iter_conditions_from_directory(bundles_path)
+    stats = prepare_from_iter(conditions, out_path=out, fmt=fmt)
+
+    table = Table(title="prepare-synthea results", show_header=True)
+    table.add_column("metric")
+    table.add_column("value", justify="right")
+    table.add_row("output", stats["out_path"])
+    table.add_row("format", stats["fmt"])
+    table.add_row("rows (in-scope × 4 modes)", f"{stats['n_rows']:,}")
+    table.add_row("unique conditions (in-scope)", f"{stats['n_unique_resources']:,}")
+    table.add_row("unique ICD codes", f"{stats['n_unique_codes']:,}")
+    table.add_row("modes per condition", f"{stats['n_modes_per_resource']}")
+    console.print(table)
+
+    if stats["n_rows"] == 0:
+        console.print(
+            "[yellow]⚠️  Zero in-scope rows. Check that[/] "
+            "[bold]data/synthea/snomed_to_icd10cm.json[/bold] "
+            "[yellow]was applied during cohort generation (--exporter.code_map.icd10-cm).[/]"
+        )
+
+
 @app.command("smoke-test")
 def smoke_test(
     fixtures: str = typer.Option(
@@ -749,11 +816,205 @@ def train(
 
 @app.command()
 def evaluate(
-    config_path: str = typer.Option("configs/eval.yaml", "--config"),
-    models: str = typer.Option(..., help="Comma-separated model names"),
+    cohort: str = typer.Option(
+        "benchmarks/synthetic_v1/conditions.ndjson",
+        "--cohort",
+        help="Inference dataset (ndjson or parquet) produced by `prepare-synthea`.",
+    ),
+    models_config: str = typer.Option(
+        "configs/models.yaml",
+        "--models-config",
+        help="Path to the model registry YAML.",
+    ),
+    models_set: str = typer.Option(
+        "headline_set",
+        "--models-set",
+        help="Named set in the registry to load (e.g., `smoke_test_set`, `headline_set`).",
+    ),
+    pricing_config: str = typer.Option(
+        "configs/pricing.yaml",
+        "--pricing",
+        help="Path to per-model pricing YAML; used for cost monitoring + per-row $ tracking.",
+    ),
+    out: str = typer.Option(
+        "",
+        "--out",
+        help=(
+            "Output CSV path. If empty, defaults to "
+            "`results/raw/headline_{utc_timestamp}.csv` (gitignored)."
+        ),
+    ),
+    top_k: int = typer.Option(5, "--top-k", help="Number of predictions per (model, record) pair."),
+    max_records: int | None = typer.Option(
+        None,
+        "--max-records",
+        help="Cap the number of records processed (useful for smoke / dry-run on a subset).",
+    ),
+    max_cost_usd: float = typer.Option(
+        500.0,
+        "--max-cost-usd",
+        help=(
+            "Hard budget cap. Run aborts if running cost exceeds this; "
+            "completed records' rows remain durable on disk via incremental writes. "
+            "Soft warnings fire at 50%, 75%, 90% of cap."
+        ),
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Validate config + instantiate models, but make NO API calls. Exits 0 on success.",
+    ),
 ) -> None:
-    """[stub] Run all (model, degradation) combinations and persist per-prediction results."""
-    console.print(f"[yellow]stub[/] evaluate config={config_path} models={models}")
+    """Run the full (model × degradation-mode) evaluation matrix on a cohort.
+
+    End-to-end pipeline: load cohort → load model registry → run streaming
+    eval with cost monitoring + incremental CSV writes → write manifest
+    sidecar capturing run metadata + final cost. Per-record predictions
+    persist to disk as they're generated; aborting (Ctrl+C, budget cap,
+    network failure) preserves all rows from completed records.
+
+    Compliance posture: pulls a Synthea-derived cohort by default; never
+    accesses MIMIC content. The runner's per-call try/except (already in
+    place from smoke-test) means individual model failures don't kill the
+    matrix — they just write `error_type`/`error_msg` columns.
+    """
+    from phantom_codes.eval.cost_monitor import CostMonitor
+    from phantom_codes.eval.registry import load_models_from_config
+    from phantom_codes.eval.runner import run_eval_streaming
+
+    # ─── Resolve paths ────────────────────────────────────────────────
+    cohort_path = Path(cohort)
+    if not cohort_path.exists():
+        console.print(
+            f"[red]✗ Cohort file not found: {cohort_path}[/]\n"
+            "Run [bold]./scripts/generate_synthea_cohort.sh[/] then "
+            "[bold]uv run phantom-codes prepare-synthea[/] first."
+        )
+        raise typer.Exit(code=1)
+
+    if not Path(models_config).exists():
+        console.print(f"[red]✗ Models config not found: {models_config}[/]")
+        raise typer.Exit(code=1)
+
+    if not out:
+        run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+        out = f"results/raw/headline_{run_id}.csv"
+    out_path = Path(out)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # ─── Load cohort, candidates, validator, retriever ────────────────
+    console.print(f"[bold]Loading[/] cohort: {cohort_path}")
+    records = load_records(str(cohort_path))
+    if max_records:
+        records = records[:max_records]
+    console.print(f"[bold]Records:[/] {len(records)} (post-cap)")
+
+    scope = load_scope()
+    validator = load_validator()
+
+    # Build candidate list from the union of CMS explicit codes + observed cohort codes.
+    seen_codes: dict[str, str] = {}
+    for r in records:
+        if r.gt_code not in seen_codes:
+            seen_codes[r.gt_code] = r.gt_display or r.gt_code
+    observed = list(seen_codes.items())
+    candidates = scope.candidates_for_codes(observed)
+    console.print(f"[bold]Candidates:[/] {len(candidates)} (CMS + observed)")
+
+    # Build retriever once for any RAG-LLM entries to share
+    console.print("[dim]Building retrieval encoder (first run downloads weights)...[/]")
+    retriever = RetrievalModel(candidates)
+
+    # ─── Load model registry ──────────────────────────────────────────
+    console.print(f"[bold]Models:[/] loading set {models_set!r} from {models_config}")
+    models = load_models_from_config(
+        models_config, models_set, candidates, retriever=retriever
+    )
+    console.print(f"[bold]Loaded:[/] {len(models)} models")
+    for m in models:
+        console.print(f"  - {m.name}")
+
+    if not models:
+        console.print("[red]✗ No models loaded; check API keys + registry config[/]")
+        raise typer.Exit(code=1)
+
+    # ─── Pricing + cost monitor ───────────────────────────────────────
+    pricing = None
+    if Path(pricing_config).exists():
+        pricing = load_pricing(pricing_config)
+        console.print(f"[bold]Pricing:[/] {pricing_config} loaded")
+    else:
+        console.print(
+            f"[yellow]⚠ Pricing config not found: {pricing_config}; "
+            "cost tracking disabled[/]"
+        )
+
+    cost_monitor = CostMonitor(budget_usd=max_cost_usd) if pricing else None
+    if cost_monitor:
+        console.print(
+            f"[bold]Budget:[/] hard cap ${max_cost_usd:.2f}; "
+            "soft warnings at 50/75/90%"
+        )
+
+    # ─── Dry-run gate ─────────────────────────────────────────────────
+    if dry_run:
+        console.print(
+            f"[green]✓ Dry-run OK[/] — config valid, "
+            f"{len(models)} models instantiated, no API calls made."
+        )
+        return
+
+    # ─── Run streaming eval ───────────────────────────────────────────
+    console.print(f"[bold]Running:[/] streaming eval → {out_path}")
+    started_at = datetime.now(UTC)
+    df, info = run_eval_streaming(
+        models,
+        records,
+        validator,
+        top_k=top_k,
+        pricing=pricing,
+        cost_monitor=cost_monitor,
+        incremental_csv_path=out_path,
+    )
+    finished_at = datetime.now(UTC)
+
+    # ─── Manifest sidecar ─────────────────────────────────────────────
+    manifest = build_manifest(
+        run_id=out_path.stem,
+        command_name="evaluate",
+        started_at=started_at,
+        finished_at=finished_at,
+        seed=42,
+        fixtures_path=str(cohort_path),
+        n_records=len(records),
+        n_candidates=len(candidates),
+        models=models,
+        df=df,
+        pricing_table=pricing,
+        csv_path=out_path,
+        infra_only=False,
+    )
+    manifest_p = manifest_path_for(out_path)
+    write_manifest(manifest, manifest_p)
+
+    # ─── Summary ──────────────────────────────────────────────────────
+    if info["aborted"]:
+        console.print(
+            f"[red]✗ Run aborted:[/] {info['abort_reason']}\n"
+            f"  records completed: {info['n_records_completed']} / {info['n_records_total']}\n"
+            f"  partial results: {out_path}\n"
+            f"  manifest: {manifest_p}"
+        )
+        raise typer.Exit(code=2)
+
+    console.print(
+        f"[green]✓ Eval complete[/] — {len(df)} rows from "
+        f"{info['n_records_completed']} records × {len(models)} models\n"
+        f"  predictions: {out_path}\n"
+        f"  manifest: {manifest_p}"
+    )
+    if cost_monitor:
+        console.print(f"  {cost_monitor.status()}")
 
 
 @app.command()

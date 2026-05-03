@@ -64,6 +64,17 @@ results/raw/
 results/predictions/
 results/per_run/
 
+# Synthea — the generator binary (cloned + built locally, regenerable
+# via scripts/setup_synthea.sh) and the generated synthetic cohorts
+# (regenerable via scripts/generate_synthea_cohort.sh from the seed +
+# pinned Synthea SHA in the script). The committed manifest at
+# benchmarks/synthetic_v1/manifest.yaml lets reproducers verify they
+# regenerated the same cohort byte-for-byte.
+tools/synthea/
+benchmarks/synthetic_v1/raw/
+benchmarks/synthetic_v1/pilot/
+benchmarks/synthetic_v1/conditions.ndjson
+
 # LaTeX build artifacts
 paper/*.aux
 paper/*.bbl

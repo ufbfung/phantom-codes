@@ -1,0 +1,199 @@
+{
+  "44054006": [{
+    "code": "E11.9",
+    "description": "Type 2 diabetes mellitus without complications",
+    "snomed_display": "Diabetes mellitus type 2 (disorder)",
+    "access_group": "ckm",
+    "confidence": "high",
+    "source": "ICD-10-CM 2026 + ACCESS CKM (is-a E11)",
+    "notes": "Default canonical mapping for unspecified T2DM.",
+    "n_observed_pilot": 17
+  }],
+
+  "1551000119108": [{
+    "code": "E11.3299",
+    "description": "Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, unspecified eye",
+    "snomed_display": "Nonproliferative diabetic retinopathy due to type II diabetes mellitus",
+    "access_group": "ckm",
+    "confidence": "verified",
+    "source": "SNOMED browser canonical mapping (per Brian); ACCESS CKM (is-a E11)",
+    "notes": "Verified against SNOMED browser's official SNOMED→ICD-10-CM mapping by Brian on 2026-05-03.",
+    "n_observed_pilot": 4
+  }],
+
+  "157141000119108": [{
+    "code": "E11.21",
+    "description": "Type 2 diabetes mellitus with diabetic nephropathy",
+    "snomed_display": "Proteinuria due to type 2 diabetes mellitus (disorder)",
+    "access_group": "ckm",
+    "confidence": "high",
+    "source": "ICD-10-CM 2026 + ACCESS CKM (is-a E11)",
+    "notes": "Proteinuria is the clinical hallmark of diabetic nephropathy.",
+    "n_observed_pilot": 17
+  }],
+
+  "90781000119102": [{
+    "code": "E11.29",
+    "description": "Type 2 diabetes mellitus with other diabetic kidney complication",
+    "snomed_display": "Microalbuminuria due to type 2 diabetes mellitus (disorder)",
+    "access_group": "ckm",
+    "confidence": "verified",
+    "source": "SNOMED browser canonical mapping + cross-walk synonymy match (per Brian); ACCESS CKM (is-a E11)",
+    "notes": "Verified by Brian on 2026-05-03. Distinct from proteinuria (E11.21) — microalbuminuria is an earlier-stage diabetic kidney finding.",
+    "n_observed_pilot": 21
+  }],
+
+  "368581000119106": [{
+    "code": "E11.40",
+    "description": "Type 2 diabetes mellitus with diabetic neuropathy, unspecified",
+    "snomed_display": "Neuropathy due to type 2 diabetes mellitus (disorder)",
+    "access_group": "ckm",
+    "confidence": "high",
+    "source": "ICD-10-CM 2026 + ACCESS CKM (is-a E11)",
+    "notes": "Default for unspecified diabetic neuropathy.",
+    "n_observed_pilot": 7
+  }],
+
+  "127013003": [{
+    "code": "E11.22",
+    "description": "Type 2 diabetes mellitus with diabetic chronic kidney disease",
+    "snomed_display": "Disorder of kidney due to diabetes mellitus (disorder)",
+    "access_group": "ckm",
+    "confidence": "high",
+    "source": "ICD-10-CM 2026 + ACCESS CKM (is-a E11)",
+    "notes": "Most general diabetic kidney complication code.",
+    "n_observed_pilot": 24
+  }],
+
+  "714628002": [{
+    "code": "R73.03",
+    "description": "Prediabetes",
+    "snomed_display": "Prediabetes (finding)",
+    "access_group": "eckm",
+    "confidence": "high",
+    "source": "ICD-10-CM 2026 + ACCESS eCKM (explicit)",
+    "notes": "",
+    "n_observed_pilot": 67
+  }],
+
+  "59621000": [{
+    "code": "I10",
+    "description": "Essential (primary) hypertension",
+    "snomed_display": "Essential hypertension (disorder)",
+    "access_group": "eckm",
+    "confidence": "high",
+    "source": "ICD-10-CM 2026 + ACCESS eCKM (explicit)",
+    "notes": "",
+    "n_observed_pilot": 39
+  }],
+
+  "55822004": [{
+    "code": "E78.5",
+    "description": "Hyperlipidemia, unspecified",
+    "snomed_display": "Hyperlipidemia (disorder)",
+    "access_group": "eckm",
+    "confidence": "high",
+    "source": "ICD-10-CM 2026 + ACCESS eCKM (explicit)",
+    "notes": "",
+    "n_observed_pilot": 26
+  }],
+
+  "302870006": [{
+    "code": "E78.1",
+    "description": "Pure hyperglyceridemia",
+    "snomed_display": "Hypertriglyceridemia (disorder)",
+    "access_group": "eckm",
+    "confidence": "high",
+    "source": "ICD-10-CM 2026 + ACCESS eCKM (explicit)",
+    "notes": "",
+    "n_observed_pilot": 17
+  }],
+
+  "162864005": [{
+    "code": "E66.9",
+    "description": "Obesity, unspecified",
+    "snomed_display": "Body mass index 30+ - obesity (finding)",
+    "access_group": "eckm",
+    "confidence": "high",
+    "source": "ICD-10-CM 2026 + ACCESS eCKM (explicit)",
+    "notes": "Generic BMI-30+ obesity → unspecified obesity code.",
+    "n_observed_pilot": 83
+  }],
+
+  "408512008": [{
+    "code": "E66.01",
+    "description": "Morbid (severe) obesity due to excess calories",
+    "snomed_display": "Body mass index 40+ - severely obese (finding)",
+    "access_group": "eckm",
+    "confidence": "high",
+    "source": "ICD-10-CM 2026 + ACCESS eCKM (explicit)",
+    "notes": "BMI ≥ 40 = morbid obesity.",
+    "n_observed_pilot": 1
+  }],
+
+  "414545008": [{
+    "code": "I25.9",
+    "description": "Chronic ischemic heart disease, unspecified",
+    "snomed_display": "Ischemic heart disease (disorder)",
+    "access_group": "OUT_OF_SCOPE",
+    "confidence": "verified",
+    "source": "SNOMED browser canonical mapping (per Brian); ICD-10-CM 2026",
+    "notes": "I25.9 is the semantic match per the SNOMED browser. ACCESS CKM ValueSet explicitly enumerates I25.10-I25.119, I25.3, I25.41-I25.6 but NOT I25.9 (the unspecified parent). Per Brian's methodology decision (2026-05-03): we stay true to (a) the SNOMED browser's canonical SNOMED→ICD mapping and (b) the explicit ACCESS ValueSet as published. Conditions emitted with I25.9 will be filtered out by is_in_scope() — they don't reach the benchmark cohort. Documented in §Methods as a known consequence of strict scope adherence.",
+    "n_observed_pilot": 39
+  }],
+
+  "433144002": [{
+    "code": "N18.30",
+    "description": "Chronic kidney disease, stage 3 unspecified",
+    "snomed_display": "Chronic kidney disease stage 3 (disorder)",
+    "access_group": "ckm",
+    "confidence": "high",
+    "source": "ICD-10-CM 2026 + ACCESS CKM (explicit)",
+    "notes": "",
+    "n_observed_pilot": 17
+  }],
+
+  "1501000119109": [{
+    "code": "E11.3599",
+    "description": "Type 2 diabetes mellitus with proliferative diabetic retinopathy without macular edema, unspecified eye",
+    "snomed_display": "Proliferative diabetic retinopathy due to type II diabetes mellitus",
+    "access_group": "ckm",
+    "confidence": "verified",
+    "source": "ICD-10-CM 2026 + ACCESS CKM (is-a E11) — Brian-verified 2026-05-03",
+    "notes": "Verified by Brian — E11.3599 is the right choice. Alternatives like E11.351X (retinal detachment subtypes) are too specific to features not in the SNOMED display. Mirrors the nonproliferative companion entry 1551000119108 → E11.3299.",
+    "n_observed_full": 8
+  }],
+
+  "230690007": [{
+    "code": "I63.9",
+    "description": "Cerebral infarction, unspecified",
+    "snomed_display": "Cerebrovascular accident (disorder)",
+    "access_group": "ckm",
+    "confidence": "verified",
+    "source": "SNOMED browser crosswalk + ACCESS CKM (explicit) — Brian-verified 2026-05-03",
+    "notes": "Verified by Brian — I63.9 is in the SNOMED browser crosswalk and is the best in-scope choice. I64 is also a possible mapping per browser but doesn't appear in other lookups Brian uses, so I63.9 wins.",
+    "n_observed_full": 57
+  }],
+
+  "60951000119105": [{
+    "code": "E11.39",
+    "description": "Type 2 diabetes mellitus with other diabetic ophthalmic complication",
+    "snomed_display": "Blindness due to type 2 diabetes mellitus (disorder)",
+    "access_group": "ckm",
+    "confidence": "verified",
+    "source": "ICD-10-CM ↔ SNOMED synonym match (per Brian) + ACCESS CKM (is-a E11) — Brian-verified 2026-05-03",
+    "notes": "Verified by Brian — ICD-10-CM has a synonym match between E11.39 and this SNOMED concept that's quite exact.",
+    "n_observed_full": 3
+  }],
+
+  "97331000119101": [{
+    "code": "E11.311",
+    "description": "Type 2 diabetes mellitus with unspecified diabetic retinopathy with macular edema",
+    "snomed_display": "Macular edema and retinopathy due to type 2 diabetes mellitus (disorder)",
+    "access_group": "ckm",
+    "confidence": "verified",
+    "source": "ICD-10-CM 2026 + ACCESS CKM (is-a E11) — Brian-verified 2026-05-03",
+    "notes": "Verified by Brian — E11.311 is the most specific + best match. Alternatives with severity (E11.321 mild / E11.331 moderate / E11.341 severe / E11.351 proliferative) would be too specific given the SNOMED display doesn't specify retinopathy severity.",
+    "n_observed_full": 11
+  }]
+}

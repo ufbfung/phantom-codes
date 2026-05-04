@@ -1,10 +1,12 @@
-# Methods: Trained-Model Training and Hardware
+# Methods
 
-> **Status:** Draft v0 (2026-05-02). Numbers from the headline training run
-> are filled in inline as `[TBD: from headline run, expected 2026-05-03]`.
-> The methodology framing, model-choice rationale, and hardware
-> description are settled. This section sits between the introduction
-> (frames the research question) and the results (reports the numbers).
+> **Status:** Draft v1 (2026-05-04). Numbers from the headline
+> training run filled in. Section reorganized to cover both
+> evaluation arms: trained-model training (subsections under
+> "Trained-model methodology") and LLM evaluation matrix
+> (subsections under "Evaluation methodology"). Both arms terminate
+> on the same Synthea cohort (§Results) so they share a common
+> evaluation-protocol subsection.
 
 ---
 
@@ -281,12 +283,17 @@ rather than relying on a separately-tracked config file.
 The first headline training run is in progress at the time of this
 draft. Expected outcomes:
 
-- **Validation top-1 accuracy** at convergence: [TBD: from headline
-  run]. Range observed in fixture-data smoke tests is misleading
-  (perfect convergence in 3 epochs on 12 examples) and is omitted.
-  For a 50-code multi-label task with ~80% of examples on
-  high-frequency codes, a healthy result would be in the 0.55–0.80
-  top-1 range; below 0.40 would indicate a signal problem.
+- **Validation top-1 accuracy** at convergence: 0.992–0.993
+  across three training epochs on the held-out validation split.
+  This high value reflects the long-tail concentration of
+  ACCESS-scope cohort (the top-50 codes cover the bulk of training
+  rows; see §Cohort) combined with an effective fine-tune of a
+  pre-trained biomedical encoder. The same checkpoint, evaluated on
+  the Synthea out-of-distribution cohort, yields a per-mode top-1
+  accuracy distribution discussed in §Results — the gap between
+  in-distribution validation accuracy and out-of-distribution
+  Synthea accuracy is itself one of the deployment-relevant
+  measurements this paper aims to surface.
 - **Validation loss curve**: monotonic decrease for at least the
   first epoch, plateau or slight increase by epoch 2-3 (expected
   early-stopping trigger).
@@ -322,3 +329,134 @@ Three limitations are worth surfacing explicitly:
    relative to what a longer-context training run would achieve.
    The headline experiment (D4_abbreviated, ~5–30 tokens) is
    unaffected.
+
+## Evaluation methodology
+
+### Evaluation cohort
+
+The headline matrix is evaluated on a single Synthea-generated
+cohort of 125 unique FHIR Conditions, each materialized into the
+four degradation modes for a total of 500 EvalRecord items. Cohort
+generation is fully deterministic: Synthea v4.0.0
+[@Walonoski2018] is run at a pinned commit SHA with `seed=42`,
+producing patient bundles whose Conditions are extracted via the
+project's Bundle parser, deduplicated per (patient, ICD code), and
+filtered to ACCESS-scope codes via the same value-set definitions
+used for MIMIC training. The pinned-SHA + seed combination yields
+byte-identical cohorts on replication; full reproduction guidance
+is in the project's BENCHMARK reference. Cohort composition (12
+unique ICD-10-CM codes; distribution skewed toward obesity,
+prediabetes, and hypertension by virtue of Synthea's default
+module configuration) is reported in §Results.
+
+### Models evaluated
+
+The headline matrix comprises 29 model configurations, drawn from
+five families: three string-matching baselines (exact, fuzzy,
+TF-IDF), one frozen sentence-transformer retrieval baseline, the
+fine-tuned PubMedBERT classifier described above, and 24 frontier
+LLM configurations across three providers and three prompting
+modes. Each LLM appears in `zeroshot`, `constrained`, and `rag`
+configurations:
+
+- **Anthropic** (3 models × 3 modes = 9 configs): Claude Haiku
+  4.5 (`claude-haiku-4-5`), Sonnet 4.6 (`claude-sonnet-4-6`),
+  Opus 4.7 (`claude-opus-4-7`)
+  [@OpenAIModels2026 for the analogous OpenAI guide]
+- **OpenAI** (2 models × 3 modes = 6 configs): GPT-5.5 (pinned to
+  the dated snapshot `gpt-5.5-2026-04-23`) and GPT-4o-mini
+  [@OpenAIModels2026]
+- **Google** (3 models × 3 modes = 9 configs): Gemini 2.5 Pro,
+  Gemini 2.5 Flash, and Gemini 3 Flash Preview (the latter is
+  preview-status at evaluation time and disclosed as such)
+  [@GeminiModels2026]
+
+Gemini 3.1 Pro Preview was excluded from the headline matrix due
+to insufficient daily quota at our API tier (Tier 1 cap of 250
+requests per day, vs. the ~6,000 calls required for full
+coverage); a partial-coverage analysis appears in §Supplementary.
+Per-token pricing for cost calculations was sourced from each
+provider's documentation as of the evaluation date
+[@OpenAIPricing2026; @GeminiPricing2026].
+
+### Prompting modes
+
+All LLMs are evaluated under three prompting modes that vary in
+how much external structure is provided:
+
+- **`zeroshot`**: a generic system prompt instructs the model to
+  return the most likely ICD-10-CM code for the input, with no
+  candidate list. The model selects from its full pre-training
+  vocabulary, which includes both real codes and the possibility
+  of fabricated codes.
+- **`constrained`**: the system prompt additionally includes the
+  full list of CMS ACCESS-scope candidate codes (with display
+  strings) and instructs the model to choose only from that list.
+  Mechanical schema enforcement (provider-specific: Anthropic
+  forced tool use, OpenAI structured outputs, Google
+  `response_schema`) is applied across all modes; in
+  `constrained` mode the menu itself is also passed in-prompt.
+- **`rag`**: a frozen sentence-transformer (default
+  `all-MiniLM-L6-v2`) retrieves the top-k = 10 ACCESS-scope
+  candidate codes most similar to the per-record input and
+  injects only those into a constrained-style prompt. This
+  contrasts with `constrained` (full menu) by varying the
+  candidate set per record.
+
+The verbatim system + user prompts and per-provider tool-use /
+schema configurations are reproduced in §Supplementary S1.
+
+### Outcome taxonomy
+
+Each per-record top-1 prediction is classified into one of six
+mutually exclusive, exhaustive outcome buckets, ordered from best
+to worst by deployment relevance:
+
+1. **`exact_match`**: predicted code equals ground-truth code.
+2. **`category_match`**: predicted code is in the same ICD-10-CM
+   3-character category as ground truth (e.g., E11.0 vs. E11.9 —
+   both Type 2 diabetes).
+3. **`chapter_match`**: predicted code is in the same ICD-10-CM
+   chapter (first character) but a different category.
+4. **`out_of_domain`**: predicted code exists in CMS ICD-10-CM but
+   has no hierarchical relation to ground truth.
+5. **`no_prediction`**: the model returned no usable prediction —
+   an empty `predictions` array, an explicit refusal, or a
+   transient API failure that exhausted the SDK's internal retry
+   budget. The model fabricated nothing; it abstained.
+6. **`hallucination`**: the predicted code does not exist in the
+   FY2026 CMS ICD-10-CM tabular list (mechanically validated
+   against the bundled validator).
+
+The `no_prediction` and `hallucination` buckets capture
+qualitatively different failure modes and are therefore reported
+separately. From a deployment-safety perspective, abstention is
+preferable to fabrication — an abstaining model emits no spurious
+code that downstream systems silently mishandle, even though both
+fail to produce a usable prediction. From a model-quality
+perspective, persistent abstention is still a quality concern but
+is not equivalent to fabrication. Earlier work on LLM medical
+coding [@Soroush2024] uses a single error bucket that conflates
+these failure modes; the six-way split surfaces the distinction
+that conflation hides.
+
+### Statistical analysis
+
+Per-(model, mode) outcome rates are reported as point estimates
+with 95% Wilson confidence intervals [@Wilson1927-conceptually,
+implemented in `eval/report.py` per the formula in any standard
+biostatistics text]. Wilson intervals are preferred over
+normal-approximation intervals for small N or rates near zero or
+one — both common in our matrix (per-cell N = 125; constrained-mode
+hallucination rates approach 0% for several models). Within-model
+paired comparisons (zero-shot vs. constrained vs. RAG on identical
+inputs) are reported as exact McNemar tests on the discordant
+prediction pairs. Across-model and across-mode comparisons are
+reported descriptively with overlapping/non-overlapping CIs; we
+deliberately do not perform null-hypothesis significance tests
+across the full 24-LLM × 4-mode × 6-bucket grid because (a) the
+intended interpretation is comparative deployment-relevance rather
+than detection of any single effect, and (b) Bonferroni or similar
+corrections at this matrix size would render most cells
+underpowered and obscure the directional patterns the paper aims
+to surface.

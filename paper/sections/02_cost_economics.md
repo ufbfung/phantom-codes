@@ -315,29 +315,42 @@ viable if you don't have suitable local hardware.
   one window) implies a deployment-relevant overhead we're not modeling
   here.
 
-## Headline cost metrics (locked methodology, numbers TBD from headline run)
+## Headline cost metrics
 
-The metrics below are the ones we will compute and report from the
-headline MIMIC run. The methods are settled; only the numbers are TBD.
+The numbers below are populated from the n=125 Synthea headline
+evaluation (2026-05-04). The full per-(model, prompting-mode)
+breakdown across all 24 LLM configurations and the per-outcome-bucket
+cost decomposition appear in §Supplementary S5; the headline-relevant
+subset that anchors the deployment-cost discussion below is reported
+here.
 
 ### M1: Total run cost by (model, prompting mode)
 
-> **Placeholder table — to be filled in from headline run.** See
-> *Preliminary cost data* above for smoke-test versions of these
-> numbers, and *Extrapolation to headline MIMIC run* for projected
-> totals.
+Selected configurations from the headline matrix; full table in
+§Supplementary S5. "n" is the count of billed (cost > 0) rank-0 calls;
+configurations with high abstention rates (e.g., gemini-2.5-pro) show
+n < 500 because abstention API responses do not bill output tokens
+even though the call counts toward our matrix.
 
-| Model × Mode | Calls | $ total | $ per call (mean) | $ per call (median) |
-|--------------|-------|---------|-------------------|---------------------|
-| claude-opus-4-7:zeroshot | TBD | TBD | TBD | TBD |
-| claude-sonnet-4-6:zeroshot | TBD | TBD | TBD | TBD |
-| claude-haiku-4-5:zeroshot | TBD | TBD | TBD | TBD |
-| claude-haiku-4-5:constrained | TBD | TBD | TBD | TBD |
-| claude-haiku-4-5:rag | TBD | TBD | TBD | TBD |
-| gpt-5.5:zeroshot | TBD | TBD | TBD | TBD |
-| gpt-4o-mini:zeroshot | TBD | TBD | TBD | TBD |
-| gemini-2.5-pro:zeroshot | TBD | TBD | TBD | TBD |
-| gemini-2.5-flash:zeroshot | TBD | TBD | TBD | TBD |
+| Model × Mode | n | $ total | $ per call (mean) | $ per call (median) |
+|---|---:|---:|---:|---:|
+| claude-opus-4-7:zeroshot | 500 | 6.77 | 0.01354 | 0.01315 |
+| claude-sonnet-4-6:zeroshot | 500 | 3.41 | 0.00682 | 0.00639 |
+| claude-haiku-4-5:zeroshot | 500 | 1.12 | 0.00223 | 0.00226 |
+| claude-haiku-4-5:constrained | 500 | 2.14 | 0.00428 | 0.00424 |
+| claude-haiku-4-5:rag | 500 | 1.22 | 0.00243 | 0.00250 |
+| gpt-5.5:zeroshot | 499 | 3.59 | 0.00720 | 0.00586 |
+| gpt-4o-mini:zeroshot | 500 | 0.07 | 0.00015 | 0.00016 |
+| gemini-2.5-pro:zeroshot | 424 | 0.41 | 0.00096 | 0.00089 |
+| gemini-2.5-flash:zeroshot | 500 | 0.03 | 0.00005 | 0.00006 |
+
+The 270× spread in per-call mean cost across the matrix
+(\$0.00005 for Gemini 2.5 Flash to \$0.0135 for Claude Opus 4.7)
+sets the floor for the deployment-cost analysis below: per-call
+price varies more dramatically than per-call accuracy in this
+cohort, so cost-per-correct-prediction (M2 below) is dominated by
+the per-call price for any model that achieves ≥80% top-1
+accuracy.
 
 ### M2: Cost-per-correct-prediction
 

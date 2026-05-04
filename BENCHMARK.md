@@ -37,9 +37,11 @@ Model](https://dsacms.github.io/cmmi-access-model/) condition set
 (diabetes, hypertension, dyslipidemia, prediabetes, obesity, CKD-3,
 ASCVD/cerebrovascular). Each condition is materialized into four
 degradation modes (D1_full / D2_no_code / D3_text_only /
-D4_abbreviated) and scored via the 5-way outcome taxonomy
+D4_abbreviated) and scored via the 6-way outcome taxonomy
 (exact_match / category_match / chapter_match / out_of_domain /
-hallucination).
+no_prediction / hallucination — where no_prediction captures
+abstention/empty-array responses, distinct from hallucination which
+is reserved for fabricated non-existent codes).
 
 The trained PubMedBERT classifier described in §Methods is omitted
 from this guide — its checkpoint is MIMIC-derivative (per PhysioNet's

@@ -76,7 +76,7 @@ normalization? — is answerable only under D4 conditions.]
 
 ## Implications for clinical deployment
 
-The 5-way outcome taxonomy reframes the deployment question. Standard
+The 6-way outcome taxonomy reframes the deployment question. Standard
 top-1-accuracy framing treats every wrong answer equally, but the
 deployment cost of a hallucinated code (downstream systems silently
 mishandle a non-existent code; the error propagates into billing,

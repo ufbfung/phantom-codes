@@ -120,14 +120,19 @@ methodological rather than architectural:
   remaining LLM advantage must come from genuine semantic retrieval rather
   than lexical overlap. Three lower-stress modes (D1_full, D2_no_code,
   D3_text_only) provide a controlled gradient of input information.
-- **A 5-way outcome taxonomy with hallucination as an explicit, mutually
-  exclusive bucket.** Every prediction lands in exactly one of:
-  exact_match, category_match, chapter_match, out_of_domain (real ICD-10-CM
-  code, no hierarchical relation to truth), or hallucination (predicted
-  code does not exist in ICD-10-CM, mechanically checked against the
-  CMS-published FY2026 tabular list). This replaces the standard
-  precision/recall framing with a hierarchy-aware classification of
-  failure modes.
+- **A 6-way outcome taxonomy with hallucination and abstention as
+  explicit, mutually-exclusive buckets.** Every prediction lands in exactly
+  one of: exact_match, category_match, chapter_match, out_of_domain (real
+  ICD-10-CM code, no hierarchical relation to truth), no_prediction (model
+  returned no usable prediction — empty array, refusal, or transient API
+  failure), or hallucination (predicted code does not exist in ICD-10-CM,
+  mechanically checked against the CMS-published FY2026 tabular list).
+  Splitting no_prediction from hallucination matters for deployment safety:
+  an abstaining model is preferable to a confidently-wrong one because no
+  spurious code propagates downstream, even though both fail to produce a
+  usable prediction. This replaces the standard precision/recall framing
+  with a hierarchy-aware classification of failure modes that distinguishes
+  fabrication from abstention.
 - **A controlled within-model ablation between zero-shot and constrained
   prompting.** The same LLM, the same input, varying only whether a
   candidate list from the CMS ACCESS Model FHIR ValueSets is provided.

@@ -6,7 +6,7 @@ A reproducible benchmark for evaluating how well LLMs and trained models map deg
 
 **Clinical concept normalization** is the task of mapping mentions of clinical entities (diagnoses, labs, medications) to identifiers in controlled vocabularies (ICD-10-CM, LOINC, RxNorm, etc.). It's a foundational task for healthcare data integration, billing, research cohort construction, and AI-assisted documentation.
 
-**Status:** Phase 0 complete for diagnoses. Degradation pipeline, 5-way outcome taxonomy, ICD-10-CM validator, LLM module (Claude + GPT + Gemini in zero-shot + constrained + RAG modes), bi-encoder retrieval baseline, constrained-only baselines (exact / fuzzy / TF-IDF), token + cost tracking, run-manifest sidecars for reproducibility, blinded `--infra-only` smoke-test mode, and end-to-end eval runner are implemented and tested. Real MIMIC ingestion is wired (with MIMIC-FHIR URI/code normalization) and the PubMedBERT classifier head + local PyTorch MPS training loop are implemented; the first headline training run is in progress on M1 hardware.
+**Status:** Phase 0 complete for diagnoses. Degradation pipeline, 6-way outcome taxonomy, ICD-10-CM validator, LLM module (Claude + GPT + Gemini in zero-shot + constrained + RAG modes), bi-encoder retrieval baseline, constrained-only baselines (exact / fuzzy / TF-IDF), token + cost tracking, run-manifest sidecars for reproducibility, blinded `--infra-only` smoke-test mode, and end-to-end eval runner are implemented and tested. Real MIMIC ingestion is wired (with MIMIC-FHIR URI/code normalization) and the PubMedBERT classifier head + local PyTorch MPS training loop are implemented; the first headline training run is in progress on M1 hardware.
 
 **v1 scope:** diagnoses (ICD-10-CM). v2+ extends to labs (LOINC) and medications (RxNorm) using the same framework.
 
@@ -31,7 +31,7 @@ across four degradation modes:
 
 D4 is the headline mode: it strips the canonical display tokens that string-matching baselines depend on while preserving the underlying diagnosis. That's where LLMs are forced to actually *retrieve from semantic understanding* — and where hallucinations should surface.
 
-## Five-way outcome taxonomy
+## Six-way outcome taxonomy
 
 Every prediction lands in exactly one bucket. Aligned with the literature: hierarchical-match terminology from [Mullenbach et al. 2018 (CAML)](https://aclanthology.org/N18-1100/), OOD framing from [Hendrycks & Gimpel 2017](https://arxiv.org/abs/1610.02136), hallucination/fabrication from [Ji et al. 2023](https://dl.acm.org/doi/10.1145/3571730).
 
@@ -39,7 +39,10 @@ Every prediction lands in exactly one bucket. Aligned with the literature: hiera
 - `category_match` — same 3-char ICD-10 category (e.g., E11.0 vs E11.9)
 - `chapter_match` — same ICD-10 chapter (E vs E), different category
 - `out_of_domain` — real ICD-10-CM code, no hierarchical relation to truth
-- `hallucination` — predicted code does NOT exist in ICD-10-CM (**the headline metric**)
+- `no_prediction` — model returned no usable prediction (empty array, refusal, or transient API failure). Distinct from hallucination — nothing was fabricated; the model abstained.
+- `hallucination` — predicted code does NOT exist in ICD-10-CM (**the headline metric** — *narrow* definition: fabrications only)
+
+Hallucination and no-prediction are reported separately to surface a deployment-relevant distinction: an abstaining model is safer than a confidently-wrong one (no spurious code propagates downstream), even though both fail to produce a usable prediction. (Refined 2026-05-04 from a 5-bucket version that lumped abstention into hallucination — see CHANGELOG / metrics.py docstring for the rationale.)
 
 The taxonomy generalizes naturally to LOINC and RxNorm in v2: same definitions with the appropriate hierarchy and validator file.
 
@@ -207,7 +210,7 @@ src/phantom_codes/
                 #   classifier (PubMedBERT inference wrapper)
   training/     # PyTorch fine-tuning: dataset, trainer, devices, seeding;
                 #   MPS-native, telemetry-disabled by default
-  eval/         # metrics (5-way taxonomy), runner, infra (blinded
+  eval/         # metrics (6-way taxonomy), runner, infra (blinded
                 #   smoke-test), cost (pricing → $), manifest (run sidecars)
   cli.py
 configs/        # YAML configs (data.yaml, pricing.yaml, training.yaml)
@@ -228,14 +231,14 @@ paper/
 - **v2**: + labs (LOINC), via Observation resources
 - **v3**: + medications (RxNorm), via MedicationRequest resources
 
-The 5-way outcome taxonomy, eval runner, and prompt-caching infrastructure are designed to extend across vocabularies without architectural change.
+The 6-way outcome taxonomy, eval runner, and prompt-caching infrastructure are designed to extend across vocabularies without architectural change.
 
 ## Inspirations and related work
 
 Phantom Codes draws on five recent (2024-2026) lines of work in LLM-based clinical coding:
 
 - **From Almeida et al. 2025 (ICPC-2 benchmark, NeurIPS GenAI4Health):** the multi-axis evaluation table — F1 paired with cost, latency, token usage, and format adherence — gives a more honest picture of LLM viability than accuracy alone. We adopt the same multi-axis framing for our headline results.
-- **From Bhatti et al. 2025 (MAX-EVAL-11):** clinically-informed scoring with weighted reward by code relevance and diagnostic specificity. Our 5-way outcome taxonomy is a sibling of this idea — discrete buckets instead of continuous weights, but the same intuition that not every wrong answer is equally wrong.
+- **From Bhatti et al. 2025 (MAX-EVAL-11):** clinically-informed scoring with weighted reward by code relevance and diagnostic specificity. Our 6-way outcome taxonomy is a sibling of this idea — discrete buckets instead of continuous weights, but the same intuition that not every wrong answer is equally wrong.
 - **From Motzfeldt et al. 2025 (Code Like Humans, EMNLP Findings):** the "agentic" alternative to single-shot prompting — sequential search/verify/predict over the ICD index. We treat their approach as a third prompting mode to add (alongside our `zeroshot` and `constrained`) and test whether agent decomposition reduces hallucination on D4 inputs.
 - **From Kim et al. 2025 (Medical Hallucination in Foundation Models):** a strict definition of medical hallucination as "factually incorrect, logically inconsistent, or unsupported by authoritative clinical evidence in ways that could alter clinical decisions." Our `hallucination` bucket (code does not exist in ICD-10-CM) is a narrow, mechanically-checkable instance of their broader definition.
 - **From Li et al. 2025 (ICD Coding Rationales):** the faithfulness/plausibility distinction for evaluating rationales, with a MIMIC-IV/ICD-10 rationale-annotated dataset. A natural v2 extension is to ask each LLM for a rationale alongside its code and evaluate both axes.
@@ -256,7 +259,7 @@ The full curated bibliography (16+ references organized into foundational landma
 4. **Motzfeldt et al. 2025 (EMNLP Findings)** — *Code Like Humans.* Agentic ICD-10 coding traversing the alphabetic index sequentially. [arXiv:2509.05378](https://arxiv.org/abs/2509.05378)
 5. **Kim et al. 2025** — *Medical Hallucinations in Foundation Models and Their Impact on Healthcare.* Defines medical hallucination broadly; benchmarks 11 foundation models. [arXiv:2503.05777](https://arxiv.org/abs/2503.05777)
 
-Foundational references for the 5-way outcome taxonomy:
+Foundational references for the 6-way outcome taxonomy:
 
 - Mullenbach et al. 2018 (CAML, NAACL) — hierarchical-match terminology. [aclanthology.org/N18-1100](https://aclanthology.org/N18-1100/)
 - Hendrycks & Gimpel 2017 (ICLR) — OOD detection baseline. [arXiv:1610.02136](https://arxiv.org/abs/1610.02136)

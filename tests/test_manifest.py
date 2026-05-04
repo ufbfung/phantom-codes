@@ -307,9 +307,10 @@ def test_build_manifest_assembles_run_metadata(tmp_path: Path) -> None:
     assert manifest.infra_only is True
     assert len(manifest.models) == 2
     assert manifest.pricing_snapshot_date == pricing.snapshot_date
-    # We saw 2 outcome buckets out of 5; missing 3.
+    # We saw 2 outcome buckets out of 6 (taxonomy expanded 2026-05-04 to
+    # split NO_PREDICTION out of HALLUCINATION); missing 4.
     assert manifest.all_buckets_reached is False
-    assert len(manifest.missing_buckets) == 3
+    assert len(manifest.missing_buckets) == 4
 
 
 def test_write_manifest_yaml_roundtrips(tmp_path: Path) -> None:

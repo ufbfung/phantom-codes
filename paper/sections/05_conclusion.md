@@ -17,7 +17,7 @@ treat hallucinated codes as a flag-and-route-for-review category
 distinct from hierarchical near-misses.]
 
 [TBD — paragraph two: restate the methodological contributions
-(5-way outcome taxonomy with hallucination as an explicit bucket;
+(6-way outcome taxonomy with hallucination and abstention as explicit, distinct buckets;
 within-model zero-shot vs.\ constrained ablation; D4\_abbreviated as
 a stress test that strips the lexical signal string-matching
 baselines depend on; compliance-by-construction train-on-MIMIC /

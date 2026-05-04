@@ -122,10 +122,14 @@ def test_best_outcome_in_topk_picks_best_among_first_k() -> None:
     assert best_outcome_in_topk(preds, truth, REAL, k=3) == Outcome.EXACT_MATCH
 
 
-def test_best_outcome_in_topk_empty_predictions_is_hallucination() -> None:
-    """Model returning nothing usable counts as failure (hallucination bucket)."""
+def test_best_outcome_in_topk_empty_predictions_is_no_prediction() -> None:
+    """Model returning nothing usable maps to NO_PREDICTION (abstention),
+    distinct from HALLUCINATION (fabrication of a non-existent code).
+    Refined 2026-05-04 from the original 5-bucket taxonomy that lumped
+    these together — see metrics.py module docstring for the safety
+    rationale (abstention is preferable to fabrication)."""
     truth = _truth("E11.9")
-    assert best_outcome_in_topk([], truth, REAL, k=5) == Outcome.HALLUCINATION
+    assert best_outcome_in_topk([], truth, REAL, k=5) == Outcome.NO_PREDICTION
 
 
 def test_summarize_counts_and_rates() -> None:

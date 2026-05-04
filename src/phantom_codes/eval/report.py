@@ -1,11 +1,15 @@
 """Aggregate per-prediction CSVs into paper-ready result tables.
 
 Consumes the long-format prediction CSV produced by `evaluate`'s
-streaming runner and produces five aggregate views ready to drop
+streaming runner and produces six aggregate views ready to drop
 into §3 Results of the manuscript:
 
-  - `headline_table`        : per-(model, mode) outcome distribution
+  - `headline_table`        : per-(model, mode) outcome distribution (6 buckets)
   - `hallucination_table`   : per-mode hallucination rate by model + 95% CI
+                              (NARROW definition: fabrications only;
+                              empty-prediction failures shown separately)
+  - `no_prediction_table`   : per-mode no-prediction (abstention) rate
+                              by model + 95% CI
   - `cost_per_correct_table`: per-model $ per exact-match prediction
   - `top_k_lift_table`      : top-1 vs top-5 exact-match comparison
   - `per_bucket_cost_table` : cost decomposition by outcome bucket
@@ -14,6 +18,14 @@ All tables emit both a DataFrame and a markdown string. Markdown is
 the default output format because §3 Results is currently markdown
 and pandoc-driven; CSV / LaTeX outputs are also supported via the
 `format=` argument on the public `write_report()` function.
+
+Legacy CSV compatibility: pre-2026-05-04 runs wrote `outcome=hallucination`
+for empty-prediction rows (the original 5-bucket taxonomy treated empty
+predictions as a hallucination failure mode). `write_report()` calls
+`reclassify_legacy_no_prediction()` to fix those rows in-place before
+aggregation, so legacy CSVs produce the same results as fresh runs
+under the 6-bucket taxonomy. The on-disk CSV is unchanged; the
+correction is purely in-memory.
 
 Compliance posture: this module reads only aggregate per-prediction
 output already on disk (Synthea-derived CSV — safe). Never touches
@@ -31,6 +43,63 @@ import pandas as pd
 
 from phantom_codes.eval.cost import PricingTable, compute_call_cost, resolve_pricing_for_model
 from phantom_codes.eval.metrics import Outcome
+
+# ─────────────────────────────────────────────────────────────────────────
+# Legacy CSV compatibility
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def reclassify_legacy_no_prediction(df: pd.DataFrame) -> pd.DataFrame:
+    """Reclassify legacy `outcome=hallucination` rows that are actually
+    empty-prediction (abstention) cases as `outcome=no_prediction`.
+
+    Pre-2026-05-04 runs used a 5-bucket taxonomy that lumped empty
+    predictions in with hallucination. This function detects those
+    rows and rewrites three columns (in a copy of the dataframe):
+    `outcome`, `best_top1`, `best_top5`. The on-disk CSV is unchanged.
+
+    Detection criterion: rank-0 row with empty `pred_code` AND
+    current outcome is "hallucination". We rewrite the outcome on
+    that row, and also update best_top1/best_top5 for every row in
+    the same (model_name, resource_id, mode) group — those columns
+    are per-(record, model, mode) and currently say "hallucination"
+    on every row in the group.
+
+    No-op for already-fresh CSVs (no rows match the criterion).
+    """
+    out = df.copy()
+
+    # Identify rank-0 empty-pred rows currently labelled "hallucination".
+    legacy_mask = (
+        (out["pred_rank"] == 0)
+        & (out["outcome"] == Outcome.HALLUCINATION.value)
+        & (out["pred_code"].isna() | (out["pred_code"].astype(str).str.strip() == ""))
+    )
+    if not legacy_mask.any():
+        return out
+
+    # Update the rank-0 row's outcome.
+    out.loc[legacy_mask, "outcome"] = Outcome.NO_PREDICTION.value
+
+    # Update best_top1 / best_top5 for every row in the matching
+    # (model_name, resource_id, mode) groups. These columns are
+    # constant within a group, so we only need the keys.
+    legacy_keys = out.loc[legacy_mask, ["model_name", "resource_id", "mode"]]
+    legacy_set = set(legacy_keys.itertuples(index=False, name=None))
+
+    if not legacy_set:
+        return out
+
+    group_keys = list(zip(out["model_name"], out["resource_id"], out["mode"], strict=True))
+    in_legacy_group = pd.Series([k in legacy_set for k in group_keys], index=out.index)
+
+    halluc = Outcome.HALLUCINATION.value
+    no_pred = Outcome.NO_PREDICTION.value
+    out.loc[in_legacy_group & (out["best_top1"] == halluc), "best_top1"] = no_pred
+    out.loc[in_legacy_group & (out["best_top5"] == halluc), "best_top5"] = no_pred
+
+    return out
+
 
 # ─────────────────────────────────────────────────────────────────────────
 # Helpers
@@ -91,11 +160,10 @@ def headline_table(df: pd.DataFrame) -> tuple[pd.DataFrame, str]:
     """Per-(model, mode) outcome distribution — the §3 Results headline.
 
     Rows: (model_name, mode) pairs.
-    Columns: count of predictions in each Outcome bucket.
+    Columns: count of predictions in each Outcome bucket (6-way taxonomy).
 
-    The 5-way taxonomy gets one column per bucket plus an `n` column.
     Order: exact_match, category_match, chapter_match, out_of_domain,
-    hallucination — matches the paper's §1 description.
+    no_prediction, hallucination — matches the paper's §1 description.
     """
     top1 = _top1_only(df)
     rows: list[dict[str, Any]] = []
@@ -109,9 +177,11 @@ def headline_table(df: pd.DataFrame) -> tuple[pd.DataFrame, str]:
         rows.append(row)
     out = pd.DataFrame(rows).sort_values(["model", "mode"]).reset_index(drop=True)
 
-    # Markdown rendering — counts + percentages per bucket
-    lines = ["| Model | Mode | n | Exact | Category | Chapter | OOD | Hallucination |"]
-    lines.append("|---|---|---:|---:|---:|---:|---:|---:|")
+    # Markdown rendering — counts + percentages per bucket. NoPred = NO_PREDICTION
+    # (abstention); Halluc = HALLUCINATION (fabrication). Kept short to fit a
+    # 9-column table in a paper-friendly width.
+    lines = ["| Model | Mode | n | Exact | Category | Chapter | OOD | NoPred | Halluc |"]
+    lines.append("|---|---|---:|---:|---:|---:|---:|---:|---:|")
     for r in rows:
         lines.append(
             f"| {r['model']} | {r['mode']} | {r['n']} | "
@@ -119,7 +189,54 @@ def headline_table(df: pd.DataFrame) -> tuple[pd.DataFrame, str]:
             f"{r[Outcome.CATEGORY_MATCH.value]} ({_format_pct(r[Outcome.CATEGORY_MATCH.value + '_pct'])}) | "
             f"{r[Outcome.CHAPTER_MATCH.value]} ({_format_pct(r[Outcome.CHAPTER_MATCH.value + '_pct'])}) | "
             f"{r[Outcome.OUT_OF_DOMAIN.value]} ({_format_pct(r[Outcome.OUT_OF_DOMAIN.value + '_pct'])}) | "
+            f"{r[Outcome.NO_PREDICTION.value]} ({_format_pct(r[Outcome.NO_PREDICTION.value + '_pct'])}) | "
             f"{r[Outcome.HALLUCINATION.value]} ({_format_pct(r[Outcome.HALLUCINATION.value + '_pct'])}) |"
+        )
+    return out, "\n".join(lines)
+
+
+def no_prediction_table(df: pd.DataFrame) -> tuple[pd.DataFrame, str]:
+    """Per-mode NO_PREDICTION (abstention) rate by model with 95% CI.
+
+    Companion to `hallucination_table`. Distinguishes models that
+    "abstain at scale" (Gemini 2.5 Pro returning empty arrays under
+    schema enforcement, baseline:exact returning empty when the input
+    text doesn't match any candidate display verbatim) from models that
+    fabricate non-existent codes.
+
+    Deployment-safety read: high NO_PREDICTION + low HALLUCINATION = a
+    safe-but-not-useful model (it doesn't lie, but it doesn't help
+    either). High HALLUCINATION + low NO_PREDICTION = a confidently
+    wrong model (worst deployment posture).
+    """
+    top1 = _top1_only(df)
+    rows: list[dict[str, Any]] = []
+    for (model, mode), grp in top1.groupby(["model_name", "mode"]):
+        n = len(grp)
+        k = int((grp["best_top1"] == Outcome.NO_PREDICTION.value).sum())
+        rate = (k / n) if n else 0.0
+        lo, hi = _wilson_95ci(k, n)
+        rows.append({
+            "model": model,
+            "mode": mode,
+            "n": n,
+            "n_no_predictions": k,
+            "rate": rate,
+            "ci_lower": lo,
+            "ci_upper": hi,
+        })
+
+    mode_order = ["D1_full", "D2_no_code", "D3_text_only", "D4_abbreviated"]
+    rows.sort(key=lambda r: (r["model"], _safe_index(r["mode"], mode_order)))
+
+    out = pd.DataFrame(rows)
+
+    lines = ["| Model | Mode | n | NoPredictions | Rate (95% CI) |"]
+    lines.append("|---|---|---:|---:|---:|")
+    for r in rows:
+        lines.append(
+            f"| {r['model']} | {r['mode']} | {r['n']} | {r['n_no_predictions']} | "
+            f"{_format_pct_with_ci(r['rate'], r['ci_lower'], r['ci_upper'])} |"
         )
     return out, "\n".join(lines)
 
@@ -337,9 +454,15 @@ def write_report(
     out_path.mkdir(parents=True, exist_ok=True)
     written: dict[str, Path] = {}
 
+    # Legacy compatibility: rewrites empty-prediction rows from
+    # outcome=hallucination → outcome=no_prediction in-memory. No-op for
+    # fresh runs that already write the 6-bucket taxonomy directly.
+    df = reclassify_legacy_no_prediction(df)
+
     tables = {
         "headline": headline_table(df),
         "hallucination": hallucination_table(df),
+        "no_prediction": no_prediction_table(df),
         "cost_per_correct": cost_per_correct_table(df, pricing),
         "top_k_lift": top_k_lift_table(df),
         "per_bucket_cost": per_bucket_cost_table(df, pricing),
@@ -363,9 +486,19 @@ def write_report(
             "",
             tables["headline"][1],
             "",
-            "## Hallucination rate (with 95% Wilson CI)",
+            "## Hallucination rate (fabrications only, with 95% Wilson CI)",
+            "",
+            "Note: HALLUCINATION here is the *narrow* definition — predicted",
+            "code does not exist in ICD-10-CM (a fabricated string). Empty",
+            "predictions / abstentions are reported separately in the next",
+            "table as NO_PREDICTION. This is a methodology refinement from",
+            "the original 5-bucket taxonomy (see CHANGELOG).",
             "",
             tables["hallucination"][1],
+            "",
+            "## No-prediction rate (abstention, with 95% Wilson CI)",
+            "",
+            tables["no_prediction"][1],
             "",
             "## Top-1 vs Top-5 exact-match lift",
             "",

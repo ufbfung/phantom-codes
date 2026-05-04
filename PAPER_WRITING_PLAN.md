@@ -347,7 +347,7 @@ Submission-ready formatting. ~2-3 hours.
 Logistics + artifacts. ~3-4 hours code + writing + external setup.
 
 1. **Cover letter** (`paper/cover_letter.md`, 1 page):
-   - Novelty: 5-way taxonomy + D4 stress test + within-model ablation
+   - Novelty: 6-way taxonomy (with no_prediction split from hallucination) + D4 stress test + within-model ablation
    - Reproducibility story: compliance-by-design Synthea evaluation
    - Explicit non-overlap statement vs. Soroush 2024
    - Why this paper fits NEJM AI (clinical-deployment audience,
@@ -382,7 +382,7 @@ Submit + freeze. ~2-3 hours active + asynchronous follow-up.
    - Locked degradation modes (D1/D2/D3/D4 definitions)
    - Locked abbreviation table (`abbreviations.yaml` SHA at lock)
    - Locked candidate-list construction (CMS + observed)
-   - Locked 5-way outcome taxonomy
+   - Locked 6-way outcome taxonomy (refined 2026-05-04 from 5-way to split no_prediction out of hallucination)
    - Locked scope filter
    - Locked headline LLM set (`configs/models.yaml#headline_set`
      SHA at lock)

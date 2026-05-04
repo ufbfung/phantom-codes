@@ -1,6 +1,6 @@
 """Per-prediction outcome classification + aggregate metrics.
 
-Five-way taxonomy aligned with the literature:
+Six-way taxonomy aligned with the literature:
 
 - EXACT_MATCH       — predicted code equals truth (exact match / top-1 accuracy)
 - CATEGORY_MATCH    — same 3-char ICD-10 category (e.g., E11.0 vs E11.9 both Type 2 DM)
@@ -9,11 +9,21 @@ Five-way taxonomy aligned with the literature:
                        (chapter-level match)
 - OUT_OF_DOMAIN     — real ICD-10-CM code, no hierarchical relation to truth
                        (OOD prediction, Hendrycks & Gimpel 2017)
+- NO_PREDICTION     — model returned no usable prediction (empty `predictions` array,
+                       transient API failure, or refusal). Distinct from HALLUCINATION:
+                       the model didn't fabricate anything, it abstained. From a
+                       deployment-safety perspective, abstention is strictly preferable
+                       to fabrication (no spurious code propagates downstream); from a
+                       model-quality perspective, persistent abstention indicates the
+                       model isn't useful for the task.
 - HALLUCINATION     — predicted code does NOT exist in ICD-10-CM
                        (fabrication / hallucination, narrow definition; Ji et al. 2023)
 
-Outcomes are mutually exclusive, exhaustive, and ordered by quality. Every prediction
-lands in exactly one bucket.
+Outcomes are mutually exclusive, exhaustive, and ordered by quality (best→worst).
+Every prediction lands in exactly one bucket. Note the rank ordering treats abstention
+(NO_PREDICTION) as preferable to fabrication (HALLUCINATION) — see the deployment-
+safety rationale above; persistent abstention is still a quality concern but doesn't
+emit harmful artifacts the way fabrication does.
 
 Top-k variants apply the same classification to ranked predictions and take the *best*
 outcome among the top-k.
@@ -36,16 +46,21 @@ class Outcome(StrEnum):
     CATEGORY_MATCH = "category_match"
     CHAPTER_MATCH = "chapter_match"
     OUT_OF_DOMAIN = "out_of_domain"
+    NO_PREDICTION = "no_prediction"
     HALLUCINATION = "hallucination"
 
 
 # Ordered best→worst. Used for top-k aggregation: take the best outcome in the top-k slice.
+# NO_PREDICTION is ranked BETTER than HALLUCINATION because abstention does not emit a
+# spurious code that propagates downstream — see the module docstring for the safety
+# rationale.
 OUTCOME_RANK: dict[Outcome, int] = {
     Outcome.EXACT_MATCH: 0,
     Outcome.CATEGORY_MATCH: 1,
     Outcome.CHAPTER_MATCH: 2,
     Outcome.OUT_OF_DOMAIN: 3,
-    Outcome.HALLUCINATION: 4,
+    Outcome.NO_PREDICTION: 4,
+    Outcome.HALLUCINATION: 5,
 }
 
 
@@ -116,10 +131,11 @@ def best_outcome_in_topk(
     """Return the best (lowest-rank) outcome among the top-k predictions.
 
     If there are fewer than k predictions, classify what we have. If there are zero
-    predictions, return HALLUCINATION (model failed to predict anything usable).
+    predictions, return NO_PREDICTION (model abstained / failed to return anything).
+    Distinct from HALLUCINATION because nothing was fabricated.
     """
     if not predictions:
-        return Outcome.HALLUCINATION
+        return Outcome.NO_PREDICTION
     sliced = list(predictions[:k])
     outcomes = [classify(p, truth, validator) for p in sliced]
     return min(outcomes, key=lambda o: OUTCOME_RANK[o])

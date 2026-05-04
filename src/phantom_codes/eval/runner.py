@@ -126,7 +126,8 @@ def evaluate_one(
     """Run one model on one record; emit one row per top-k prediction slot.
 
     If the model returns nothing, emit a single row with null predictions and
-    HALLUCINATION outcome (the empty-prediction failure mode).
+    NO_PREDICTION outcome (the abstention failure mode — distinct from
+    HALLUCINATION because nothing was fabricated).
 
     Fault tolerance: if `model.predict()` raises (e.g., transient API errors
     that exhausted the SDK's internal retries), record the error in the
@@ -233,7 +234,11 @@ def evaluate_one(
         }
 
     if not preds:
-        return [_row(rank=0, pred=None, outcome=Outcome.HALLUCINATION)]
+        # Empty predictions = model abstained or upstream API failed; distinct
+        # from HALLUCINATION (nothing was fabricated). The error_type column on
+        # this rank-0 row preserves whether the cause was an exception or a
+        # legitimate empty `predictions` array.
+        return [_row(rank=0, pred=None, outcome=Outcome.NO_PREDICTION)]
 
     return [
         _row(rank=rank, pred=pred, outcome=classify(pred, record.truth, validator))

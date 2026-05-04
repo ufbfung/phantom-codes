@@ -93,14 +93,15 @@ def test_evaluate_one_oracle_gets_exact_match_when_fhir_present(tmp_path: Path) 
     assert rows[0]["best_top1"] == Outcome.EXACT_MATCH.value
 
 
-def test_evaluate_one_empty_predictions_yield_hallucination_row(tmp_path: Path) -> None:
+def test_evaluate_one_empty_predictions_yield_no_prediction_row(tmp_path: Path) -> None:
     records = _build_records(tmp_path)
     d4 = next(r for r in records if r.mode == "D4_abbreviated" and r.resource_id == "fixture-001")
     rows = evaluate_one(_OracleModel(), d4, load_validator(), top_k=5)
     assert len(rows) == 1
-    # Oracle returns [] when input_fhir is None (D4 case) → hallucination row.
+    # Oracle returns [] when input_fhir is None (D4 case) → no_prediction row
+    # (NOT hallucination — nothing was fabricated; the model abstained).
     assert rows[0]["pred_code"] is None
-    assert rows[0]["outcome"] == Outcome.HALLUCINATION.value
+    assert rows[0]["outcome"] == Outcome.NO_PREDICTION.value
 
 
 def test_evaluate_one_classifies_outcome_taxonomy(tmp_path: Path) -> None:
@@ -312,9 +313,11 @@ def test_evaluate_one_records_error_when_predict_raises(tmp_path: Path) -> None:
     assert len(rows) == 1
     assert rows[0]["error_type"] == "RuntimeError"
     assert rows[0]["error_msg"] == "boom"
-    # Empty preds → existing path emits a single HALLUCINATION row.
+    # Empty preds → existing path emits a single NO_PREDICTION row
+    # (refined 2026-05-04 — was HALLUCINATION under the 5-bucket taxonomy;
+    # API failures should be classified as abstention, not fabrication).
     assert rows[0]["pred_code"] is None
-    assert rows[0]["outcome"] == Outcome.HALLUCINATION.value
+    assert rows[0]["outcome"] == Outcome.NO_PREDICTION.value
     # Token + cost columns are zero/None on a failed call.
     assert rows[0]["input_tokens"] == 0
     assert rows[0]["output_tokens"] == 0

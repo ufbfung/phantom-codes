@@ -110,26 +110,53 @@ Settled before this scope kicks off, so phases run without re-litigation:
 Phases 1, 2, and 3 can run somewhat in parallel after the headline
 run completes; phases 4-8 are roughly sequential.
 
-### Phase 1 — Headline-numbers integration (gated on Brian's headline run)
+### Phase 1 — Headline-numbers integration (headline run completed 2026-05-04)
 
 Drop the report tables into the paper. ~3-4 hours.
 
-1. Run `phantom-codes report --csv results/raw/headline_<latest>.csv
-   --pricing configs/pricing.yaml --out results/summary/<run_id>/`.
+**Cohort actually evaluated**: 125 unique Synthea Conditions × 4
+degradation modes × 29 model-entry configurations. Smaller than the
+originally-targeted 500-record cap because of a `--max-records`
+semantic ambiguity (it counts cohort rows, not unique resources;
+see BACKLOG.md §P4 for the fix-it followup). Per-cell N is therefore
+**125, not 500** — Wilson 95% CI half-widths are roughly **±5.4% on
+a 10% rate, ±9% on a 50% rate** (vs ±2.7% / ±4.4% at n=500). This
+is publishable but the §Methods cohort-size paragraph and §Results
+table headers should be honest about it. Replication at the
+originally-intended n=500 is straightforward (`--max-records 2000`)
+and goes in §Limitations as a v2 path.
+
+**Source CSV**: `results/raw/headline_n125_20260504T040931Z.csv`
+(renamed from `headline_20260504T040931Z.csv` to make the cohort
+size explicit in the filename and prevent accidental glob-pickup of
+future larger runs).
+
+1. Run `phantom-codes report --csv results/raw/headline_n125_20260504T040931Z.csv
+   --pricing configs/pricing.yaml --out results/summary/n125_run/`.
 2. Replace every `[TBD]` in `paper/sections/03_results.md` with the
    corresponding value from the report tables. Affected locations:
    - Cohort top-50 coverage percentage (line ~25)
    - Per-mode classifier accuracy table (lines 47-50)
-   - Hallucination-rate table by model × mode (line 83)
-   - Top-1 accuracy table (line 92)
+   - Hallucination-rate table by model × mode (line 83) — include
+     Wilson 95% CIs in each cell, not just point estimates
+   - Top-1 accuracy table (line 92) — same CI treatment
    - Cost-per-correct table (lines 96-99)
    - 5-way outcome distribution under D4 (line 118)
 3. Replace `[TBD]` rows in `paper/sections/02_cost_economics.md`
    per-model cost table (lines 332-340) with values from
    `headline.json` cost totals.
 4. Fill `paper/sections/01_methodology.md` line 284 (validation
-   top-1 accuracy at convergence).
-5. Verify all numbers reconcile across §1, §2, §3 (same model, same
+   top-1 accuracy at convergence) AND add a sentence to the cohort
+   paragraph noting "evaluated on 125 unique Synthea-generated FHIR
+   Conditions across all four degradation modes."
+5. **Note in §Methods + §Limitations**: Gemini 3.1 Pro Preview was
+   excluded from headline_set entirely (Tier 1 quota constraints); a
+   separate ~21-record archived partial-coverage run (see BACKLOG
+   "Stretch / future") is referenced for any S6 supplementary
+   exploration. Gemini 2.5 Pro had ~88-90% per-mode coverage in the
+   headline run (Tier 1 RPD throttling at high call volume); this
+   should be footnoted in the per-cell tables for that model.
+6. Verify all numbers reconcile across §1, §2, §3 (same model, same
    mode, same number).
 
 **Files modified:** `paper/sections/01_methodology.md`,

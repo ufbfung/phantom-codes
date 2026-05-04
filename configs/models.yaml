@@ -49,9 +49,16 @@ smoke_test_set:
 
 # ─── Headline set ──────────────────────────────────────────────────────
 # Goals: full evaluation matrix for paper §3 Results.
-# Frontier LLMs across three prompting modes (only Haiku gets all 3 to
-# save cost; premium models are zero-shot only). Retrieval baseline,
-# trained classifier, and three constrained-only baselines round it out.
+# Every frontier LLM evaluated in all three prompting modes (zeroshot /
+# constrained / rag) for full within-model ablation across providers.
+# Plus retrieval baseline, trained classifier, and three constrained-
+# only string-matching baselines.
+#
+# Convention: `name` = `<canonical model_id>:<mode>` so
+# resolve_pricing_for_model() strips the suffix and matches the key in
+# configs/pricing.yaml directly. RAG variants use a separate provider
+# (`anthropic-rag` / `openai-rag` / `google-rag`) and a `retrieve_k`
+# field for the per-record retrieval depth.
 
 headline_set:
   # Constrained-only string-matching baselines (essentially free)
@@ -60,7 +67,7 @@ headline_set:
   - {name: "baseline:tfidf", provider: tfidf}
 
   # Frozen sentence-transformer retrieval baseline (also reused as the
-  # retriever for RAG-LLM variants)
+  # retriever for all RAG-LLM variants below)
   - {name: "sentence-transformer:retrieval", provider: retrieval}
 
   # Trained PubMedBERT classifier (loaded from local checkpoint glob)
@@ -68,33 +75,76 @@ headline_set:
     provider: classifier
     checkpoint_path: "models/checkpoints/pubmedbert/best_*.pt"
 
-  # ─── Anthropic ───────────────────────────────────────────────────────
-  # Haiku in all 3 prompting modes for full within-model ablation.
-  # Convention: `name` = `<canonical model_id>:<mode>` so resolve_pricing_for_model()
-  # strips the suffix and matches the key in configs/pricing.yaml directly.
+  # ─── Anthropic (all 3 modes per model) ──────────────────────────────
   - {name: "claude-haiku-4-5:zeroshot",    provider: anthropic, model_id: claude-haiku-4-5, mode: zeroshot}
   - {name: "claude-haiku-4-5:constrained", provider: anthropic, model_id: claude-haiku-4-5, mode: constrained}
   - name: "claude-haiku-4-5:rag"
     provider: anthropic-rag
     model_id: claude-haiku-4-5
     retrieve_k: 10
-  # Premium Anthropic models — zero-shot only (cost control)
-  - {name: "claude-sonnet-4-6:zeroshot", provider: anthropic, model_id: claude-sonnet-4-6, mode: zeroshot}
-  - {name: "claude-opus-4-7:zeroshot",   provider: anthropic, model_id: claude-opus-4-7,   mode: zeroshot}
+  - {name: "claude-sonnet-4-6:zeroshot",    provider: anthropic, model_id: claude-sonnet-4-6, mode: zeroshot}
+  - {name: "claude-sonnet-4-6:constrained", provider: anthropic, model_id: claude-sonnet-4-6, mode: constrained}
+  - name: "claude-sonnet-4-6:rag"
+    provider: anthropic-rag
+    model_id: claude-sonnet-4-6
+    retrieve_k: 10
+  - {name: "claude-opus-4-7:zeroshot",    provider: anthropic, model_id: claude-opus-4-7, mode: zeroshot}
+  - {name: "claude-opus-4-7:constrained", provider: anthropic, model_id: claude-opus-4-7, mode: constrained}
+  - name: "claude-opus-4-7:rag"
+    provider: anthropic-rag
+    model_id: claude-opus-4-7
+    retrieve_k: 10
 
-  # ─── OpenAI ──────────────────────────────────────────────────────────
+  # ─── OpenAI (all 3 modes per model) ─────────────────────────────────
   # model_id pinned to dated snapshot for reproducibility; `name` stays
   # bare so it matches the `gpt-5.5` pricing key in pricing.yaml.
-  - {name: "gpt-5.5:zeroshot",     provider: openai, model_id: "gpt-5.5-2026-04-23", mode: zeroshot}
-  - {name: "gpt-4o-mini:zeroshot", provider: openai, model_id: gpt-4o-mini,           mode: zeroshot}
+  - {name: "gpt-5.5:zeroshot",    provider: openai, model_id: "gpt-5.5-2026-04-23", mode: zeroshot}
+  - {name: "gpt-5.5:constrained", provider: openai, model_id: "gpt-5.5-2026-04-23", mode: constrained}
+  - name: "gpt-5.5:rag"
+    provider: openai-rag
+    model_id: "gpt-5.5-2026-04-23"
+    retrieve_k: 10
+  - {name: "gpt-4o-mini:zeroshot",    provider: openai, model_id: gpt-4o-mini, mode: zeroshot}
+  - {name: "gpt-4o-mini:constrained", provider: openai, model_id: gpt-4o-mini, mode: constrained}
+  - name: "gpt-4o-mini:rag"
+    provider: openai-rag
+    model_id: gpt-4o-mini
+    retrieve_k: 10
 
-  # ─── Google ──────────────────────────────────────────────────────────
+  # ─── Google (all 3 modes per model) ─────────────────────────────────
   # Both 2.5 (GA) and 3 (preview) included so the paper can compare a
   # stable production model against the cutting-edge preview tier.
   # 2.5-pro showed ~12% 503 throttling in the aborted run; documented as
-  # honest reporting in §Methods. 3-pro/flash are still preview at run
-  # time — disclosed in §Methods + the model_id "preview" suffix.
-  - {name: "gemini-2.5-pro:zeroshot",          provider: google, model_id: "gemini-2.5-pro",          mode: zeroshot}
-  - {name: "gemini-2.5-flash:zeroshot",        provider: google, model_id: "gemini-2.5-flash",        mode: zeroshot}
-  - {name: "gemini-3.1-pro-preview:zeroshot",  provider: google, model_id: "gemini-3.1-pro-preview",  mode: zeroshot}
-  - {name: "gemini-3-flash-preview:zeroshot",  provider: google, model_id: "gemini-3-flash-preview",  mode: zeroshot}
+  # honest reporting in §Methods. 3-pro/flash are preview at run time —
+  # disclosed in §Methods and via the model_id "preview" suffix.
+  - {name: "gemini-2.5-pro:zeroshot",    provider: google, model_id: "gemini-2.5-pro", mode: zeroshot}
+  - {name: "gemini-2.5-pro:constrained", provider: google, model_id: "gemini-2.5-pro", mode: constrained}
+  - name: "gemini-2.5-pro:rag"
+    provider: google-rag
+    model_id: "gemini-2.5-pro"
+    retrieve_k: 10
+  - {name: "gemini-2.5-flash:zeroshot",    provider: google, model_id: "gemini-2.5-flash", mode: zeroshot}
+  - {name: "gemini-2.5-flash:constrained", provider: google, model_id: "gemini-2.5-flash", mode: constrained}
+  - name: "gemini-2.5-flash:rag"
+    provider: google-rag
+    model_id: "gemini-2.5-flash"
+    retrieve_k: 10
+  # gemini-3.1-pro-preview removed from headline_set on 2026-05-04.
+  # Reason: Tier 1 daily-quota cap is 250 RPD vs the ~6,000 calls needed
+  # for the full 500-record × 4-deg-mode × 3-entry matrix. At Tier 1,
+  # the model 429-RESOURCE_EXHAUSTED's after the first ~21 records and
+  # adds ~91s per-call retry-backoff overhead to every subsequent
+  # record, inflating the full-run wall clock from ~30hr to ~75hr for
+  # ~12-15% per-cell coverage on this model. We have ~21 records of
+  # partial coverage archived at
+  #   results/raw/archived_headline_20260504T001727Z.csv
+  # which can be analyzed separately as supplementary material (see
+  # BACKLOG.md "Post-main-run supplements"). When Brian's account
+  # accumulates $100 of organic Gemini API spend (Tier 2 unlock),
+  # gemini-3.1-pro-preview can be re-added with full coverage.
+  - {name: "gemini-3-flash-preview:zeroshot",    provider: google, model_id: "gemini-3-flash-preview", mode: zeroshot}
+  - {name: "gemini-3-flash-preview:constrained", provider: google, model_id: "gemini-3-flash-preview", mode: constrained}
+  - name: "gemini-3-flash-preview:rag"
+    provider: google-rag
+    model_id: "gemini-3-flash-preview"
+    retrieve_k: 10

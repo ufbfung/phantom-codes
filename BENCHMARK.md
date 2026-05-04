@@ -18,12 +18,19 @@ The full evaluation matrix:
 
 - **3 string-matching baselines** (exact, fuzzy, TF-IDF)
 - **1 frozen sentence-transformer retrieval baseline**
-- **11 frontier LLM configurations** across three providers:
-  - Anthropic Claude (Haiku 4.5 in zeroshot/constrained/RAG modes;
-    Sonnet 4.6 zeroshot; Opus 4.7 zeroshot)
-  - OpenAI GPT (GPT-5.5 zeroshot; GPT-4o-mini zeroshot)
-  - Google Gemini (2.5 Pro zeroshot, 2.5 Flash zeroshot — GA tier;
-    3.1 Pro Preview zeroshot, 3 Flash Preview zeroshot — preview tier)
+- **24 frontier LLM configurations** — every LLM in all 3 prompting
+  modes (zeroshot / constrained / rag) for full within-model ablation
+  across providers:
+  - Anthropic Claude × 3 modes each (Haiku 4.5, Sonnet 4.6, Opus 4.7) = 9
+  - OpenAI GPT × 3 modes each (GPT-5.5, GPT-4o-mini) = 6
+  - Google Gemini × 3 modes each (2.5 Pro, 2.5 Flash, 3 Flash Preview) = 9
+
+> **Note on Gemini 3.1 Pro Preview**: omitted from the headline matrix
+> due to preview-tier API quota constraints (Tier 1 cap of 250
+> requests/day vs. the ~6,000 calls required for full coverage).
+> Partial-coverage data from a 21-record archived run is presented
+> separately as supplementary material; see `BACKLOG.md` for the
+> follow-up analysis plan.
 
 against **Synthea-generated FHIR Conditions** scoped to the [CMS ACCESS
 Model](https://dsacms.github.io/cmmi-access-model/) condition set
@@ -49,7 +56,7 @@ entry in [`configs/models.yaml`](configs/models.yaml).
 | Synthea cohort generation (one-time) | 5–10 min | $0 |
 | Inference dataset preparation | 2–5 min | $0 |
 | Smoke validation (recommended before headline) | 2–5 min | <$1 |
-| **Headline evaluation run** | **8–15 hours** | **$60–250 typical, $500 hard cap** |
+| **Headline evaluation run** | **24–36 hours** | **$80–300 typical, $500 hard cap** |
 | Report generation | <1 min | $0 |
 
 LLM API pricing fluctuates; figures above reflect 2026-Q2 rates with
@@ -193,9 +200,10 @@ uv run phantom-codes evaluate \
 
 This is the paper's headline experiment — every model in the matrix
 evaluated on 500 records × 4 modes (~2000 prediction rows per model;
-16 models in `headline_set` including the trained classifier if its
-checkpoint is present, otherwise 15). 8–15 hours wall-clock at typical
-provider rate limits (≈30–60 records/hr on the slowest LLM); $60–250
+29 entries in `headline_set` including the trained classifier if its
+checkpoint is present, otherwise 28). 24–36 hours wall-clock at
+typical provider rate limits (≈15–25 records/hr on the slowest LLM
+when iterating through all 3 prompting modes per record); $80–300
 typical cost.
 
 Output (timestamped):
@@ -277,8 +285,13 @@ To verify your reproduction matches the published numbers:
    [`src/phantom_codes/data/access_valuesets/`](src/phantom_codes/data/access_valuesets/)
    ValueSets (CMS ACCESS Model FHIR IG v0.9.6).
 5. **Model registry**: [`configs/models.yaml`](configs/models.yaml)
-   `headline_set` defines the 16-model matrix (15 if no trained
-   PubMedBERT checkpoint is present locally).
+   `headline_set` defines the 29-entry matrix (28 if no trained
+   PubMedBERT checkpoint is present locally) — every LLM in all 3
+   prompting modes for full within-model ablation. Gemini 3.1 Pro
+   Preview is intentionally excluded from the headline matrix
+   pending Tier 2+ quota; see the `# gemini-3.1-pro-preview removed`
+   block in `configs/models.yaml` and the partial-coverage analysis
+   note in `BACKLOG.md`.
 6. **Pricing snapshot**: [`configs/pricing.yaml`](configs/pricing.yaml)
    captures provider rates at the time of run. Update via vendor
    pricing pages if rerun much later.

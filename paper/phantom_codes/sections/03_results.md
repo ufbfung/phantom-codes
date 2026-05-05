@@ -12,17 +12,19 @@ diabetes variants (E11.x; 31% combined), essential hypertension
 
 ## Outcome distribution
 
-Two patterns dominate the per-(model, mode) outcome distribution
-(per-cell N = 125; full table in Supplementary §S2.1). First,
-Anthropic constrained mode achieves zero fabrication across all
-three sizes (Haiku 4.5, Sonnet 4.6, Opus 4.7) and all four
-degradation modes; GPT-4o-mini and GPT-5.5 constrained match.
-Second, fabrication is rare across the 27 LLM configurations:
-median D4\_abbreviated hallucination = 0%; 90th-percentile ≈ 39%,
-high tail driven exclusively by two Gemini Flash configurations
-(2.5 Flash zero-shot 43.2%; 3 Flash Preview zero-shot 39.2%). The
-frontier-Anthropic + GPT-5.5 grouping shows ≤3.2% D4 hallucination
-in any tested configuration.
+Two patterns dominate (per-cell N = 125; full table in
+Supplementary §S2.1). First, **Anthropic constrained and RAG modes
+achieve zero fabrication** across all sizes and all four
+degradation modes; GPT-4o-mini and GPT-5.5 constrained / RAG match.
+Second, **fabrication concentrates in zero-shot prompting and
+varies by model tier**: flagship (Opus 4.7, GPT-5.5, Gemini 2.5
+Pro) ranges 0–5.6% across all cells (max from Opus zero-shot D3);
+sub-flagship (Sonnet 4.6, Haiku 4.5, GPT-4o-mini, Gemini Flash
+variants) ranges 0–12.8% (max from GPT-4o-mini zero-shot D2). A
+pooled median understates the spread (D1/D2 expose the source code;
+constrained / RAG cells are 0% by design). Gemini 2.5 Pro's 0% is
+from abstention (95.2% no\_prediction at D4 zero-shot), not safe
+answering.
 
 ## Failure-mode breakdown: hallucination and abstention
 
@@ -107,7 +109,6 @@ Halluc columns surface all three deployment dimensions in one
 row. Sorted by \$/correct ascending; n=500 per row.
 
 **Table 3.** Cost per correct prediction. *constr.* = constrained.
-API model IDs in §Methods.
 
 | Model                          | Mode     | Top-1 | Halluc | Total | $/correct |
 |:-------------------------------|:---------|------:|-------:|------:|----------:|
@@ -136,16 +137,13 @@ the largest frontier model is not the deployment-leader. Gemini
 ## Outcome distribution under D4 abbreviation stress
 
 D4\_abbreviated is the strongest stress test: explicit ICD codes
-are removed, canonical display strings are stripped, and clinical
-entities are replaced with jargon ("T2DM", "HTN", "CKD-3").
-String-matching baselines collapse (fuzzy and TF-IDF both drop
-~30pp from D3 to D4 exact-match rate); any remaining top-1 accuracy
-must come from semantic mapping rather than lexical overlap.
-Anthropic constrained mode is robust under D4 (Haiku 93.6%, Sonnet
-90.4%, Opus 86.4% top-1 vs.\ 100% at D1); the drop is small and the
-failure mode is exclusively `category_match` rather than fabrication
-or abstention. Frontier zero-shot LLMs show a 5–15pp top-1 drop
-D1→D4 but maintain low hallucination; GPT-5.5 zero-shot actually
-*improves* on D4 (84.8%) relative to D3 (71.2%) by avoiding the
-out-of-domain Z68.x BMI codes it produces under D3. Gemini 2.5 Pro
-abstention worsens monotonically D1→D4 in all three prompting modes.
+and canonical display strings are stripped, and clinical entities
+are replaced with jargon ("T2DM", "HTN", "CKD-3"). String-matching
+baselines collapse (fuzzy and TF-IDF both drop ~30pp from D3 to
+D4); remaining top-1 accuracy must come from semantic mapping.
+Anthropic constrained mode is robust under D4 (Haiku 93.6%,
+Sonnet 90.4%, Opus 86.4% top-1 vs.\ 100% at D1); failure mode is
+exclusively `category_match`. Frontier zero-shot LLMs show a
+5–15pp top-1 drop D1→D4 but maintain low hallucination. Gemini
+2.5 Pro abstention worsens monotonically D1→D4 in all three
+prompting modes.

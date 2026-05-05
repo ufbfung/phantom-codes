@@ -2,12 +2,14 @@
 
 ## Principal findings
 
-The headline result is that **fabrication is rare in modern frontier
-LLMs, while abstention is the more consequential failure mode for
-some models** — a framing the 6-way taxonomy makes visible. Across
-the 24 LLM configurations, the median D4\_abbreviated hallucination
-rate is 0% (90th-percentile ≈ 39%, driven by two Gemini Flash
-zero-shot configurations). Hallucination is a prompting-mode
+The headline result is that **fabrication is bounded in modern
+frontier LLMs and stratifies cleanly by model tier and prompting
+mode**, while abstention is the more consequential failure mode
+for some models — a framing the 6-way taxonomy makes visible.
+Across the 24 LLM configurations, hallucination ranges 0–5.6% for
+flagship models (Opus 4.7, GPT-5.5, Gemini 2.5 Pro) and 0–12.8%
+for sub-flagship models, with the upper bound from GPT-4o-mini
+zero-shot D2. Hallucination is a prompting-mode
 property, not a fixed model property: the shift from zero-shot to
 constrained prompting eliminates fabrication entirely for every
 Anthropic and OpenAI model that shows any nonzero zero-shot

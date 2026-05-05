@@ -129,14 +129,13 @@ six outcome buckets that separate fabrication (code does not exist
 in CMS-published ICD-10-CM) from abstention (no usable prediction).
 
 \noindent\textbf{Results.} On 125 unique Synthea Conditions $\times$
-4 degradation modes, fabrication was rare (median per-cell
-hallucination = 0\%); constrained prompting eliminated it entirely
-for every Anthropic and OpenAI model showing nonzero zero-shot
-hallucination. Abstention emerged as a more consequential failure
-mode for some models — notably Gemini 2.5 Pro at 88\% empty-
-prediction rate under zero-shot D4. Cost-per-correct ranged
-270$\times$; GPT-4o-mini constrained at \$0.0003 per exact-match was
-the cost-frontier configuration.
+4 degradation modes, fabrication ranged 0–5.6\% across flagship
+configurations and 0–12.8\% across sub-flagship; constrained
+prompting eliminated it for every Anthropic and OpenAI model.
+Abstention emerged as more consequential for some models —
+notably Gemini 2.5 Pro at 88\% empty-prediction under zero-shot
+D4. Cost-per-correct ranged 270$\times$; GPT-4o-mini constrained at
+\$0.0003 per exact-match was the cost-frontier.
 
 \noindent\textbf{Discussion.} Hallucination appears more
 controllable than prior literature suggested at this scale, but

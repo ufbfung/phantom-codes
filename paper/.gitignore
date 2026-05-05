@@ -1,12 +1,15 @@
-# Build artifacts — markdown sources, main.tex, and references.bib are
-# the canonical source of truth. The build/ directory is fully derived
-# (regenerated on every `make pdf`) and should never be committed.
+# Build artifacts — markdown sources, .tex masters, and references.bib are
+# the canonical source of truth. Each paper subdirectory has its own
+# build/ directory that is fully derived and should never be committed.
 #
-# Note: paper/paper.pdf is intentionally *not* gitignored — it's the
-# manually-promoted draft snapshot (via `make snapshot`) that gives
-# casual readers a one-click preview without needing a local LaTeX
-# install. Update via `make snapshot` at meaningful checkpoints.
+# Note: paper/phantom_codes.pdf, paper/phantom_codes_supplementary.pdf,
+# and paper/pubmedbert_finetuning.pdf are intentionally *not* gitignored
+# — they're the manually-promoted snapshots (via `make snapshot-*`) that
+# give casual readers a one-click preview without needing a local LaTeX
+# install.
 build/
+phantom_codes/build/
+pubmedbert/build/
 
 # Editor cruft that sometimes appears alongside LaTeX
 *.synctex.gz

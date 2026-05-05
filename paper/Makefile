@@ -1,48 +1,53 @@
 # Phantom Codes — paper build.
 #
-# Targets:
-#   make pdf      — convert all sections/*.md → build/sections/*.tex via
-#                   pandoc, then compile main.tex → build/paper.pdf
-#   make snapshot — promote build/paper.pdf → paper/paper.pdf so the
-#                   committed draft PDF is up to date. Run after
-#                   meaningful content changes; commit the resulting
-#                   paper/paper.pdf so casual readers can preview the
-#                   draft on GitHub without a local LaTeX install.
-#   make clean    — wipe build/
-#   make watch    — rebuild on any source change (requires `entr`:
-#                   `brew install entr`)
-#   make deps     — print install hints for pandoc + LaTeX
+# Repository hosts two papers from a single project:
 #
-# Quick reference for new contributors:
-#   - Edit prose in sections/*.md (markdown is canonical)
-#   - Edit document structure / packages / title in main.tex
-#   - Run `make pdf` to preview
-#   - Generated build/ is gitignored
+#   1. Phantom Codes (JAMIA submission)
+#      - sources: paper/phantom_codes/{main.tex,supplementary.tex,sections/,supp_sections/}
+#      - snapshots: paper/phantom_codes.pdf, paper/phantom_codes_supplementary.pdf
+#
+#   2. PubMedBERT fine-tuning tech report (planned arXiv preprint)
+#      - sources: paper/pubmedbert/{main.tex,sections/}
+#      - snapshot: paper/pubmedbert_finetuning.pdf
+#
+# Both papers share paper/references.bib via biblatex (their .tex masters
+# point at ../references.bib). Each paper has its own self-contained build/
+# subdirectory under its sources directory.
+#
+# Targets:
+#   make phantom_codes              — build phantom_codes/build/main.pdf
+#   make phantom_codes_supp         — build phantom_codes/build/supplementary.pdf
+#   make pubmedbert                 — build pubmedbert/build/main.pdf
+#   make all                        — build all three
+#
+#   make snapshot-phantom_codes     — promote → paper/phantom_codes.pdf
+#   make snapshot-phantom_codes-supp — promote → paper/phantom_codes_supplementary.pdf
+#   make snapshot-pubmedbert        — promote → paper/pubmedbert_finetuning.pdf
+#   make snapshot-all               — all three snapshots in one go
+#
+#   make clean                      — wipe both build/ subdirectories
+#   make watch                      — rebuild on any source change (requires `entr`)
+#   make deps                       — print install hints
 
-# ─── Inputs ────────────────────────────────────────────────────────────
-# Three documents share references.bib via biblatex, all built from
-# markdown via pandoc:
-#   Main manuscript (JAMIA): sections/*.md → build/sections/*.tex → build/paper.pdf
-#   Supplement     (JAMIA): supp_sections/*.md → build/supp_sections/*.tex → build/supplementary.pdf
-#   arXiv tech report:      arxiv_sections/*.md → build/arxiv_sections/*.tex → build/arxiv.pdf
-MD_SECTIONS := $(sort $(wildcard sections/*.md))
-TEX_SECTIONS := $(patsubst sections/%.md,build/sections/%.tex,$(MD_SECTIONS))
-PDF := build/paper.pdf
+# ─── Source/target inputs ──────────────────────────────────────────────
+PC_DIR := phantom_codes
+PC_MD_SECTIONS := $(sort $(wildcard $(PC_DIR)/sections/*.md))
+PC_TEX_SECTIONS := $(patsubst $(PC_DIR)/sections/%.md,$(PC_DIR)/build/sections/%.tex,$(PC_MD_SECTIONS))
+PC_PDF := $(PC_DIR)/build/main.pdf
 
-MD_SUPP_SECTIONS := $(sort $(wildcard supp_sections/*.md))
-TEX_SUPP_SECTIONS := $(patsubst supp_sections/%.md,build/supp_sections/%.tex,$(MD_SUPP_SECTIONS))
-SUPP_PDF := build/supplementary.pdf
+PC_MD_SUPP_SECTIONS := $(sort $(wildcard $(PC_DIR)/supp_sections/*.md))
+PC_TEX_SUPP_SECTIONS := $(patsubst $(PC_DIR)/supp_sections/%.md,$(PC_DIR)/build/supp_sections/%.tex,$(PC_MD_SUPP_SECTIONS))
+PC_SUPP_PDF := $(PC_DIR)/build/supplementary.pdf
 
-MD_ARXIV_SECTIONS := $(sort $(wildcard arxiv_sections/*.md))
-TEX_ARXIV_SECTIONS := $(patsubst arxiv_sections/%.md,build/arxiv_sections/%.tex,$(MD_ARXIV_SECTIONS))
-ARXIV_PDF := build/arxiv.pdf
+PB_DIR := pubmedbert
+PB_MD_SECTIONS := $(sort $(wildcard $(PB_DIR)/sections/*.md))
+PB_TEX_SECTIONS := $(patsubst $(PB_DIR)/sections/%.md,$(PB_DIR)/build/sections/%.tex,$(PB_MD_SECTIONS))
+PB_PDF := $(PB_DIR)/build/main.pdf
 
 # ─── Tools ─────────────────────────────────────────────────────────────
 PANDOC := pandoc
 PDFLATEX := xelatex
 BIBER := biber
-# --biblatex makes pandoc emit \autocite{key} for [@key] callouts in the
-# markdown, deferring resolution to biblatex/biber at xelatex time.
 PANDOC_OPTS := \
 	--from markdown+pipe_tables+backtick_code_blocks+yaml_metadata_block \
 	--to latex \
@@ -51,114 +56,110 @@ PANDOC_OPTS := \
 	--no-highlight \
 	--biblatex
 
-PDFLATEX_OPTS := \
-	-interaction=nonstopmode \
-	-halt-on-error \
-	-output-directory=build
-
-BIBER_OPTS := \
-	--input-directory=build \
-	--output-directory=build
-
 # ─── Targets ───────────────────────────────────────────────────────────
-.PHONY: pdf supp arxiv snapshot snapshot-supp snapshot-arxiv snapshot-all clean watch deps
+.PHONY: all phantom_codes phantom_codes_supp pubmedbert \
+	snapshot-phantom_codes snapshot-phantom_codes-supp snapshot-pubmedbert snapshot-all \
+	clean watch deps
 
-pdf: $(PDF)
-supp: $(SUPP_PDF)
-arxiv: $(ARXIV_PDF)
+all: phantom_codes phantom_codes_supp pubmedbert
+phantom_codes: $(PC_PDF)
+phantom_codes_supp: $(PC_SUPP_PDF)
+pubmedbert: $(PB_PDF)
 
-$(PDF): main.tex references.bib $(TEX_SECTIONS) | build
-	@echo "[paper] compiling main.tex (pass 1 — collect citations)"
-	$(PDFLATEX) $(PDFLATEX_OPTS) main.tex >/dev/null
-	@echo "[paper] running biber (resolve bibliography)"
-	$(BIBER) $(BIBER_OPTS) main >/dev/null
-	@echo "[paper] compiling main.tex (pass 2 — insert bibliography)"
-	$(PDFLATEX) $(PDFLATEX_OPTS) main.tex >/dev/null
-	@echo "[paper] compiling main.tex (pass 3 — finalize cross-refs)"
-	$(PDFLATEX) $(PDFLATEX_OPTS) main.tex >/dev/null
-	@mv build/main.pdf $(PDF)
-	@echo "[paper] ✓ $(PDF)"
+# ─── Phantom Codes main paper ──────────────────────────────────────────
+$(PC_PDF): $(PC_DIR)/main.tex references.bib $(PC_TEX_SECTIONS) | $(PC_DIR)/build
+	@echo "[phantom_codes] compiling main.tex (pass 1)"
+	cd $(PC_DIR) && $(PDFLATEX) -interaction=nonstopmode -halt-on-error -output-directory=build main.tex >/dev/null
+	@echo "[phantom_codes] biber"
+	cd $(PC_DIR) && $(BIBER) --input-directory=build --output-directory=build main >/dev/null
+	@echo "[phantom_codes] compiling main.tex (pass 2)"
+	cd $(PC_DIR) && $(PDFLATEX) -interaction=nonstopmode -halt-on-error -output-directory=build main.tex >/dev/null
+	@echo "[phantom_codes] compiling main.tex (pass 3)"
+	cd $(PC_DIR) && $(PDFLATEX) -interaction=nonstopmode -halt-on-error -output-directory=build main.tex >/dev/null
+	@echo "[phantom_codes] ✓ $(PC_PDF)"
 
-build/sections/%.tex: sections/%.md | build/sections
-	@echo "[paper] pandoc: $< → $@"
+$(PC_DIR)/build/sections/%.tex: $(PC_DIR)/sections/%.md | $(PC_DIR)/build/sections
+	@echo "[phantom_codes] pandoc: $< → $@"
 	$(PANDOC) $(PANDOC_OPTS) $< -o $@
 
-# Supplementary PDF — same flow as the main PDF, separate input/output paths.
-$(SUPP_PDF): supplementary.tex references.bib $(TEX_SUPP_SECTIONS) | build
-	@echo "[supp] compiling supplementary.tex (pass 1 — collect citations)"
-	$(PDFLATEX) $(PDFLATEX_OPTS) supplementary.tex >/dev/null
-	@echo "[supp] running biber (resolve bibliography)"
-	$(BIBER) $(BIBER_OPTS) supplementary >/dev/null
-	@echo "[supp] compiling supplementary.tex (pass 2 — insert bibliography)"
-	$(PDFLATEX) $(PDFLATEX_OPTS) supplementary.tex >/dev/null
-	@echo "[supp] compiling supplementary.tex (pass 3 — finalize cross-refs)"
-	$(PDFLATEX) $(PDFLATEX_OPTS) supplementary.tex >/dev/null
-	@mv build/supplementary.pdf $(SUPP_PDF)
-	@echo "[supp] ✓ $(SUPP_PDF)"
+# ─── Phantom Codes supplement ──────────────────────────────────────────
+$(PC_SUPP_PDF): $(PC_DIR)/supplementary.tex references.bib $(PC_TEX_SUPP_SECTIONS) | $(PC_DIR)/build
+	@echo "[phantom_codes_supp] compiling supplementary.tex (pass 1)"
+	cd $(PC_DIR) && $(PDFLATEX) -interaction=nonstopmode -halt-on-error -output-directory=build supplementary.tex >/dev/null
+	@echo "[phantom_codes_supp] biber"
+	cd $(PC_DIR) && $(BIBER) --input-directory=build --output-directory=build supplementary >/dev/null
+	@echo "[phantom_codes_supp] compiling supplementary.tex (pass 2)"
+	cd $(PC_DIR) && $(PDFLATEX) -interaction=nonstopmode -halt-on-error -output-directory=build supplementary.tex >/dev/null
+	@echo "[phantom_codes_supp] compiling supplementary.tex (pass 3)"
+	cd $(PC_DIR) && $(PDFLATEX) -interaction=nonstopmode -halt-on-error -output-directory=build supplementary.tex >/dev/null
+	@echo "[phantom_codes_supp] ✓ $(PC_SUPP_PDF)"
 
-build/supp_sections/%.tex: supp_sections/%.md | build/supp_sections
-	@echo "[supp] pandoc: $< → $@"
+$(PC_DIR)/build/supp_sections/%.tex: $(PC_DIR)/supp_sections/%.md | $(PC_DIR)/build/supp_sections
+	@echo "[phantom_codes_supp] pandoc: $< → $@"
 	$(PANDOC) $(PANDOC_OPTS) $< -o $@
 
-# arXiv tech report — same flow as the main + supp PDFs, separate input/output paths.
-$(ARXIV_PDF): arxiv.tex references.bib $(TEX_ARXIV_SECTIONS) | build
-	@echo "[arxiv] compiling arxiv.tex (pass 1 — collect citations)"
-	$(PDFLATEX) $(PDFLATEX_OPTS) arxiv.tex >/dev/null
-	@echo "[arxiv] running biber (resolve bibliography)"
-	$(BIBER) $(BIBER_OPTS) arxiv >/dev/null
-	@echo "[arxiv] compiling arxiv.tex (pass 2 — insert bibliography)"
-	$(PDFLATEX) $(PDFLATEX_OPTS) arxiv.tex >/dev/null
-	@echo "[arxiv] compiling arxiv.tex (pass 3 — finalize cross-refs)"
-	$(PDFLATEX) $(PDFLATEX_OPTS) arxiv.tex >/dev/null
-	@mv build/arxiv.pdf $(ARXIV_PDF)
-	@echo "[arxiv] ✓ $(ARXIV_PDF)"
+# ─── PubMedBERT tech report ────────────────────────────────────────────
+$(PB_PDF): $(PB_DIR)/main.tex references.bib $(PB_TEX_SECTIONS) | $(PB_DIR)/build
+	@echo "[pubmedbert] compiling main.tex (pass 1)"
+	cd $(PB_DIR) && $(PDFLATEX) -interaction=nonstopmode -halt-on-error -output-directory=build main.tex >/dev/null
+	@echo "[pubmedbert] biber"
+	cd $(PB_DIR) && $(BIBER) --input-directory=build --output-directory=build main >/dev/null
+	@echo "[pubmedbert] compiling main.tex (pass 2)"
+	cd $(PB_DIR) && $(PDFLATEX) -interaction=nonstopmode -halt-on-error -output-directory=build main.tex >/dev/null
+	@echo "[pubmedbert] compiling main.tex (pass 3)"
+	cd $(PB_DIR) && $(PDFLATEX) -interaction=nonstopmode -halt-on-error -output-directory=build main.tex >/dev/null
+	@echo "[pubmedbert] ✓ $(PB_PDF)"
 
-build/arxiv_sections/%.tex: arxiv_sections/%.md | build/arxiv_sections
-	@echo "[arxiv] pandoc: $< → $@"
+$(PB_DIR)/build/sections/%.tex: $(PB_DIR)/sections/%.md | $(PB_DIR)/build/sections
+	@echo "[pubmedbert] pandoc: $< → $@"
 	$(PANDOC) $(PANDOC_OPTS) $< -o $@
 
-build:
-	@mkdir -p build
+# ─── Build directories (order-only prerequisites) ──────────────────────
+$(PC_DIR)/build:
+	@mkdir -p $(PC_DIR)/build
 
-build/sections:
-	@mkdir -p build/sections
+$(PC_DIR)/build/sections:
+	@mkdir -p $(PC_DIR)/build/sections
 
-build/supp_sections:
-	@mkdir -p build/supp_sections
+$(PC_DIR)/build/supp_sections:
+	@mkdir -p $(PC_DIR)/build/supp_sections
 
-build/arxiv_sections:
-	@mkdir -p build/arxiv_sections
+$(PB_DIR)/build:
+	@mkdir -p $(PB_DIR)/build
 
-clean:
-	@rm -rf build/
-	@echo "[paper] cleaned build/"
+$(PB_DIR)/build/sections:
+	@mkdir -p $(PB_DIR)/build/sections
 
-# Promote the latest build to the committed snapshot. Idempotent — safe to
-# re-run. We keep this manual rather than auto-copying on every `make pdf`
-# so the committed PDF only updates at meaningful checkpoints (per the
-# user's discretion), not on every transient rebuild.
-snapshot: $(PDF)
-	@cp $(PDF) paper.pdf
-	@echo "[paper] snapshot → paper/paper.pdf (commit when ready)"
+# ─── Snapshot promote (build PDF → committed snapshot at paper/) ───────
+# Each snapshot is manual rather than auto so the committed PDFs only
+# update at meaningful checkpoints, not on every transient rebuild.
 
-snapshot-supp: $(SUPP_PDF)
-	@cp $(SUPP_PDF) supplementary.pdf
-	@echo "[supp] snapshot → paper/supplementary.pdf (commit when ready)"
+snapshot-phantom_codes: $(PC_PDF)
+	@cp $(PC_PDF) phantom_codes.pdf
+	@echo "[phantom_codes] snapshot → paper/phantom_codes.pdf (commit when ready)"
 
-snapshot-arxiv: $(ARXIV_PDF)
-	@cp $(ARXIV_PDF) arxiv.pdf
-	@echo "[arxiv] snapshot → paper/arxiv.pdf (commit when ready)"
+snapshot-phantom_codes-supp: $(PC_SUPP_PDF)
+	@cp $(PC_SUPP_PDF) phantom_codes_supplementary.pdf
+	@echo "[phantom_codes_supp] snapshot → paper/phantom_codes_supplementary.pdf (commit when ready)"
 
-# Promote all three documents in one go.
-snapshot-all: snapshot snapshot-supp snapshot-arxiv
+snapshot-pubmedbert: $(PB_PDF)
+	@cp $(PB_PDF) pubmedbert_finetuning.pdf
+	@echo "[pubmedbert] snapshot → paper/pubmedbert_finetuning.pdf (commit when ready)"
+
+snapshot-all: snapshot-phantom_codes snapshot-phantom_codes-supp snapshot-pubmedbert
 	@echo "[paper] all three snapshots refreshed (commit when ready)"
 
-# Live-rebuild on any change. Requires `entr` (brew install entr).
+# ─── Cleanup ───────────────────────────────────────────────────────────
+clean:
+	@rm -rf $(PC_DIR)/build $(PB_DIR)/build
+	@echo "[paper] cleaned phantom_codes/build/ and pubmedbert/build/"
+
+# ─── Live rebuild ──────────────────────────────────────────────────────
 watch:
 	@command -v entr >/dev/null || { \
 		echo "entr not found. Install with: brew install entr"; exit 1; }
 	@echo "[paper] watching for changes — Ctrl+C to stop"
-	@find sections supp_sections arxiv_sections main.tex supplementary.tex arxiv.tex Makefile | entr -c make pdf supp arxiv
+	@find phantom_codes pubmedbert references.bib Makefile | entr -c make all
 
 deps:
 	@echo "Build requires pandoc + a LaTeX distribution + biblatex/biber."

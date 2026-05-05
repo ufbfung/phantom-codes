@@ -1,18 +1,20 @@
-% Phantom Codes — companion technical report (arXiv preprint).
+% PubMedBERT fine-tuning — companion technical report (planned arXiv preprint).
 %
 % Standalone tech report describing the trained PubMedBERT
 % classification arm in full. Originally appeared as Supplementary §S3
-% of the JAMIA paper (paper/main.tex); lifted into its own preprint
-% so the JAMIA paper can focus on the LLM hallucination evaluation
-% and the methodology has room to be presented properly.
+% of the Phantom Codes JAMIA paper (paper/phantom_codes/main.tex);
+% lifted into its own preprint so the JAMIA paper can focus on the LLM
+% hallucination evaluation and the methodology has room to be
+% presented properly.
 %
 % Build:
-%     cd paper && make arxiv
+%     cd paper && make pubmedbert
 %
-% Output: paper/build/arxiv.pdf
+% Output: paper/pubmedbert/build/main.pdf (snapshotted to
+%         paper/pubmedbert_finetuning.pdf via `make snapshot-pubmedbert`).
 %
 % Editing model:
-%   - Prose edits happen in arxiv_sections/*.md (markdown is canonical)
+%   - Prose edits happen in sections/*.md (markdown is canonical)
 %   - This file only changes when sections are added/removed/reordered.
 
 \documentclass[11pt]{article}
@@ -38,7 +40,7 @@
 % Shared references.bib with main.tex / supplementary.tex; same Vancouver
 % style so cross-references render consistently across the three documents.
 \usepackage[backend=biber, style=vancouver, sortlocale=en_US]{biblatex}
-\addbibresource{references.bib}
+\addbibresource{../references.bib}
 
 % ─── Links & references ────────────────────────────────────────────────
 \usepackage[colorlinks=true,
@@ -100,13 +102,13 @@ in place.
 \bigskip
 
 % ─── Body ──────────────────────────────────────────────────────────────
-\input{build/arxiv_sections/00_introduction}
-\input{build/arxiv_sections/01_data_and_compliance}
-\input{build/arxiv_sections/02_architecture}
-\input{build/arxiv_sections/03_hardware_and_optimization}
-\input{build/arxiv_sections/04_results}
-\input{build/arxiv_sections/05_discussion}
-\input{build/arxiv_sections/06_appendix}
+\input{build/sections/00_introduction}
+\input{build/sections/01_data_and_compliance}
+\input{build/sections/02_architecture}
+\input{build/sections/03_hardware_and_optimization}
+\input{build/sections/04_results}
+\input{build/sections/05_discussion}
+\input{build/sections/06_appendix}
 
 \bigskip
 \hrule

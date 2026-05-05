@@ -1,12 +1,13 @@
-% Phantom Codes — paper master file.
+% Phantom Codes — main paper master file (JAMIA submission).
 %
 % This is a thin LaTeX skeleton; the actual prose lives in markdown
 % files under sections/ and is converted to .tex via pandoc at build
 % time (see Makefile). To rebuild the PDF after editing any section:
 %
-%     cd paper && make pdf
+%     cd paper && make phantom_codes
 %
-% Output: paper/build/paper.pdf
+% Output: paper/phantom_codes/build/main.pdf (snapshotted to
+%         paper/phantom_codes.pdf via `make snapshot-phantom_codes`).
 %
 % Editing model:
 %   - All prose edits happen in sections/*.md (the markdown is canonical)
@@ -59,7 +60,7 @@
 % setting matches that convention. Switch by changing `style=` only;
 % .bib + markdown prose are style-agnostic.
 \usepackage[backend=biber, style=vancouver, sortlocale=en_US]{biblatex}
-\addbibresource{references.bib}
+\addbibresource{../references.bib}
 
 % ─── Links & references ────────────────────────────────────────────────
 \usepackage[colorlinks=true,

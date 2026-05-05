@@ -1,15 +1,17 @@
-% Phantom Codes — supplementary materials master file.
+% Phantom Codes — supplementary materials master file (JAMIA supplement).
 %
-% Mirrors paper/main.tex's preamble (same biblatex setup, same packages)
-% so prose conventions and citation rendering are identical between the
-% main manuscript and the supplement. The main difference: this file
-% \input{}'s build/supp_sections/*.tex (one per S1-Sn section) instead
-% of build/sections/*.tex.
+% Mirrors phantom_codes/main.tex's preamble (same biblatex setup, same
+% packages) so prose conventions and citation rendering are identical
+% between the main manuscript and the supplement. The main difference:
+% this file \input{}'s build/supp_sections/*.tex (one per S1-Sn section)
+% instead of build/sections/*.tex.
 %
 % Build:
-%     cd paper && make supp
+%     cd paper && make phantom_codes_supp
 %
-% Output: paper/build/supplementary.pdf
+% Output: paper/phantom_codes/build/supplementary.pdf (snapshotted to
+%         paper/phantom_codes_supplementary.pdf via
+%         `make snapshot-phantom_codes-supp`).
 %
 % Editing model:
 %   - Prose edits happen in supp_sections/*.md
@@ -35,7 +37,7 @@
 % biblatex with biber backend — matches main.tex; same Vancouver style
 % so cross-references between main + supplement render consistently.
 \usepackage[backend=biber, style=vancouver, sortlocale=en_US]{biblatex}
-\addbibresource{references.bib}
+\addbibresource{../references.bib}
 
 \usepackage[colorlinks=true,
             linkcolor=blue!60!black,

@@ -58,21 +58,17 @@ Each cell reports hallucination % / no\_prediction %.
 Within-model paired comparison (zero-shot → constrained, McNemar
 tests on discordant pairs) confirms the constrained-mode reduction
 is statistically significant for every Anthropic and OpenAI model
-that shows nonzero zero-shot hallucination at any mode. Gemini 2.5
-Pro under zero-shot exhibits a near-complete abstention pattern
-(95.2% no\_prediction at D4) with 0% fabrication — the model's
-failure mode under our wrapper settings is abstention, not
-fabrication. Constrained and RAG prompting cut the Gemini 2.5 Pro
-abstention rate substantially but do not eliminate it. Whether this
-reflects model behavior or a wrapper-level interaction with the
-reasoning-token budget is unresolved (see §Discussion limitations);
-the n=125 cohort is sufficient to surface the pattern but not
-attribute the cause. The Gemini 2.5 Flash and Gemini 3 Flash Preview
-zero-shot rows show roughly equal hallucination and no\_prediction
-rates because most of those rows are *both* — the model returns an
-empty array of predictions which is counted as no\_prediction, and
-when it does return a code it frequently fabricates one. The full
-27-LLM tables are in Supplementary §S2.2–S2.3.
+with nonzero zero-shot hallucination. Gemini 2.5 Pro zero-shot
+exhibits a near-complete abstention pattern (95.2% no\_prediction
+at D4) with 0% fabrication — failure mode is abstention, not
+fabrication; constrained and RAG cut but do not eliminate it.
+Whether this reflects model behavior or a wrapper-level
+interaction with the reasoning-token budget is unresolved (see
+§Discussion limitations). Gemini Flash zero-shot rows show roughly
+equal hallucination and no\_prediction rates because most rows are
+*both* — empty arrays counted as no\_prediction, and when a code
+is returned it is frequently fabricated. Full 27-LLM tables in
+Supplementary §S2.2–S2.3.
 
 ## Top-1 vs top-5 exact-match lift
 
@@ -107,36 +103,38 @@ top-5 when the model returns nothing).
 
 ## Cost per correct prediction
 
-Cost-per-correct-prediction (\$ per exact-match outcome) collapses
-per-call price and per-call accuracy into a single deployment-ready
-number:
+Cost-per-correct (\$ per exact-match outcome) collapses per-call
+price and accuracy into one deployment-ready number; the Top-1 and
+Halluc columns surface all three deployment dimensions in one
+row. Sorted by \$/correct ascending; n=500 per row.
 
-**Table 3.** Cost per correct prediction (selected configurations).
+**Table 3.** Cost per correct prediction across all three dimensions.
 
-| Model (mode) | Total cost | Exact matches | $/correct |
-|---|---|---|---|
-| gemini-2.5-flash (rag) | $0.03 | 423 | $0.0001 |
-| gemini-2.5-flash (zeroshot) | $0.03 | 377 | $0.0001 |
-| gpt-4o-mini (constrained) | $0.14 | 471 | $0.0003 |
-| gpt-4o-mini (zeroshot) | $0.07 | 426 | $0.0002 |
-| gemini-3-flash-preview (constrained) | $0.37 | 448 | $0.0008 |
-| claude-haiku-4-5 (constrained) | $2.14 | 484 | $0.0044 |
-| claude-haiku-4-5 (zeroshot) | $1.12 | 445 | $0.0025 |
-| claude-sonnet-4-6 (constrained) | $3.26 | 473 | $0.0069 |
-| gpt-5.5 (constrained) | $3.63 | 468 | $0.0078 |
-| claude-opus-4-7 (constrained) | $6.31 | 474 | $0.0133 |
-| gemini-2.5-pro (constrained) | $1.57 | 231 | $0.0068 |
+| Model (mode) | Top-1 | Halluc | Total cost | $ / correct |
+|---|---:|---:|---:|---:|
+| gemini-2.5-flash (rag) | 84.6% | 0.0% | $0.03 | $0.0001 |
+| gpt-4o-mini (zeroshot) | 85.2% | 7.6% | $0.07 | $0.0002 |
+| gpt-4o-mini (rag) | 90.4% | 0.0% | $0.09 | $0.0002 |
+| gemini-2.5-flash (constrained) | 88.4% | 0.0% | $0.09 | $0.0002 |
+| **gpt-4o-mini (constrained)** | **94.2%** | **0.0%** | **$0.14** | **$0.0003** |
+| gemini-3-flash-preview (constrained) | 89.6% | 0.0% | $0.37 | $0.0008 |
+| claude-haiku-4-5 (rag) | 90.6% | 0.0% | $1.22 | $0.0027 |
+| claude-haiku-4-5 (constrained) | 96.8% | 0.0% | $2.14 | $0.0044 |
+| claude-sonnet-4-6 (constrained) | 94.6% | 0.0% | $3.26 | $0.0069 |
+| gpt-5.5 (constrained) | 93.6% | 0.0% | $3.63 | $0.0078 |
+| gemini-2.5-pro (constrained) | 46.2% | 0.0% | $1.57 | $0.0068 |
+| claude-opus-4-7 (constrained) | 94.8% | 0.0% | $6.31 | $0.0133 |
 
-The cheapest reliable configuration on this cohort is GPT-4o-mini
-constrained at \$0.0003 per exact match (94.2% top-1, 0%
-hallucination). A 100×–250× cost spread separates the cheapest
-(Gemini 2.5 Flash at \$0.0001) from the most expensive (Claude Opus
-4.7 constrained at \$0.0133) for comparable top-1 accuracy at this
-cohort scale. The Gemini 2.5 Pro row's cost-per-correct distortion
-reflects its abstention behavior: 231 exact matches is roughly half
-of comparably-priced configurations (Sonnet constrained: 473), so
-per-correct cost is inflated relative to per-call cost. The full
-per-bucket cost decomposition is in Supplementary §S2.5.
+Read top-down: cheaper rows than GPT-4o-mini constrained are all
+4–19pp lower on top-1 accuracy or carry nonzero hallucination.
+**GPT-4o-mini constrained leads on deployment-relevance**: 94.2%
+top-1, 0% hallucination, \$0.0003 per correct — the cheapest config
+clearing a 94% accuracy floor. Claude Haiku 4.5 constrained adds
+2.6pp accuracy at ~14× cost; Claude Opus 4.7 constrained's 0.6pp
+edge over GPT-4o-mini does not justify its 44× cost — the largest
+frontier model is not the deployment-leader. Gemini 2.5 Pro's
+elevated \$/correct reflects abstention behavior. Full per-bucket
+cost decomposition is in Supplementary §S2.5.
 
 ## Outcome distribution under D4 abbreviation stress
 

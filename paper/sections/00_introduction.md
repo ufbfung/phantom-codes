@@ -1,191 +1,61 @@
 # Introduction
 
-> **Status:** Draft v0 (2026-05-01; updated 2026-05-02 to align training-
-> infrastructure description with §01_methodology and to switch to BibTeX
-> citations). Markdown stays canonical for prose; pandoc + biblatex resolve
-> `[@Key2024]` callouts against `paper/references.bib`.
-
----
-
-Clinical concept normalization — the task of mapping unstructured mentions of
-diagnoses, medications, labs, and procedures to identifiers in controlled
-vocabularies such as ICD-10-CM, LOINC, RxNorm, and SNOMED CT — sits at the
-foundation of healthcare data interoperability. Accurate normalization is
-required for billing, quality reporting, cohort definition for research,
-population-health analytics, and the increasing use of structured EHR data to
-power downstream machine-learning models. Errors propagate: a misassigned
-diagnosis code can shift a hospital's case-mix index, mis-stratify a research
-cohort, or quietly corrupt the training data of the next generation of models.
-
-For most of the last decade, the state of the art for automated coding came
-from supervised neural classifiers trained on labeled clinical text — most
-prominently CAML's hierarchical attention mechanism over MIMIC-III discharge
-summaries [@Mullenbach2018], and more recent transformer-based extensions
-that adapt domain-pretrained encoders such as PubMedBERT and RoBERTa-PM to
-the multi-label classification setting [@Huang2022]. These systems achieve
-strong micro-F1 on common codes but require large, labeled training corpora
-and degrade sharply on the long tail of rare diagnoses.
-
-The arrival of general-purpose large language models has changed the
-deployment economics. Foundation models such as GPT-4, Claude Sonnet, and
-Gemini Pro can in principle perform code prediction with no task-specific
-fine-tuning, no labeled training data, and no infrastructure beyond an API
-call. The question that motivated this work is not *whether* LLMs can predict
-medical codes — they can — but how they fail when they do, and whether those
-failures look qualitatively different from the failures of the systems they
-might replace.
-
-## The hallucination problem in clinical coding
+Clinical concept normalization — mapping unstructured mentions of diagnoses,
+medications, labs, and procedures to identifiers in controlled vocabularies
+such as ICD-10-CM, LOINC, and RxNorm — sits at the foundation of healthcare
+data interoperability. Errors propagate: a misassigned diagnosis code can
+shift a hospital's case-mix index, mis-stratify a research cohort, or
+quietly corrupt the training data of the next generation of models. For
+most of the last decade, the state of the art for automated coding came
+from supervised neural classifiers trained on labeled clinical text
+[@Mullenbach2018; @Huang2022]. The arrival of general-purpose large
+language models has changed the deployment economics: foundation models
+can in principle perform code prediction with no task-specific
+fine-tuning. The question that motivated this work is not *whether* LLMs
+can predict medical codes — they can — but how they fail when they do.
 
 A key concern with applying LLMs to coded clinical data is that they can
 fabricate codes that do not exist in the target vocabulary. Unlike a
 classifier trained on a closed label set, a generative model has no
 mechanical guarantee that its output is even a member of the controlled
-vocabulary it was asked to produce. This is the narrowest, most
-mechanically-checkable instance of the broader phenomenon of medical
-hallucination — defined by Kim et al. as model-generated output that is
-"factually incorrect, logically inconsistent, or unsupported by authoritative
-clinical evidence in ways that could alter clinical decisions"
-[@Kim2025]. Survey work documents that hallucination is a pervasive and
-under-measured failure mode across clinical NLP tasks [@Ji2023].
-
-Empirical evidence on how often this happens for code prediction
-specifically is sparse but uniformly cautionary. Soroush et al. benchmarked
-GPT-3.5, GPT-4, Gemini Pro, and Llama-2-70B on direct querying of medical
-codes and reported that the best model (GPT-4) achieved only 46% exact match
-on ICD-9, 34% on ICD-10, and 50% on CPT — with a substantial fraction of
+vocabulary it was asked to produce. This is the narrowest, mechanically-
+checkable instance of the broader phenomenon of medical hallucination
+[@Kim2025; @Ji2023]. Empirical evidence is sparse but cautionary: Soroush
+et al. reported that the best-performing model (GPT-4) achieved only 46%
+exact match on ICD-9 and 34% on ICD-10, with a substantial fraction of
 errors being non-existent codes rather than real-but-wrong assignments
 [@Soroush2024]. Goel et al. found that LLMs systematically struggle to
-distinguish real medical codes from plausibly-formatted fakes
-[@Goel2024]. Adversarial-prompt studies push these numbers higher: LLMs
-elaborate on planted fabrications in 50–82% of cases, with simple mitigation
-prompts only halving the rate [@Omiye2025]. A growing literature now treats
-LLM hallucination in clinical settings as a primary safety concern, not a
-peripheral one [@Kim2025; @Hatem2025].
+distinguish real codes from plausibly-formatted fakes [@Goel2024]. The
+field's response has largely been to constrain the LLM rather than to
+characterize its unconstrained behavior — through retrieval-grounded
+pipelines [@Sahaj2024; @Mahmoud2025], agentic walkers [@Motzfeldt2025],
+neuro-symbolic verifiers [@HybridCode2025], and broader benchmark
+expansions [@Almeida2025; @Bhatti2025; @Li2025; @Gershon2025]. Across
+this body of work, hallucination is rarely a first-class outcome,
+zero-shot vs. constrained is rarely a controlled within-model
+comparison, and degraded-input robustness is not systematically tested.
 
-## Existing benchmarks and their gaps
-
-The response from the field has largely been to constrain the LLM rather
-than to characterize its unconstrained behavior. Two-stage architectures
-combine an LLM proposer with a discriminative verifier [@Yang2023];
-extract-retrieve-rerank pipelines (MedCodER) ground predictions in retrieved
-candidates [@Sahaj2024]; generation-assisted vector search (GAVS) inverts
-the standard RAG flow by generating clinical entities first and then
-matching them against the coding ontology [@Mahmoud2025]; agentic systems
-walk the ICD index sequentially in imitation of human coders
-[@Motzfeldt2025]; and neuro-symbolic verifiers report driving Type-I
-hallucination rates to zero by refusing to emit codes that fail an existence
-check [@HybridCode2025]. Recent benchmarks expand coverage across
-vocabularies and clinical sub-domains: ICPC-2 in Brazilian Portuguese
-primary care [@Almeida2025], full-spectrum ICD-11 mapped from MIMIC-III
-[@Bhatti2025], and rationale-annotated MIMIC-IV/ICD-10 datasets for
-explainability evaluation [@Li2025]. A recent systematic review of 35
-LLM-ICD-coding studies through January 2025 finds that LLMs reliably handle
-common codes but degrade on rare diagnoses and lack external validation
-[@Gershon2025].
-
-What is conspicuously missing across this body of work:
-
-1. **Hallucination is rarely a first-class outcome.** Most benchmarks report
-   precision, recall, F1, or weighted variants thereof. When a model
-   predicts a non-existent code, that prediction is typically counted as
-   "wrong" — collapsing two distinct failure modes (real-but-wrong code vs.
-   fabricated code) into the same bucket and obscuring the pattern that
-   motivates the entire constrained-decoding research direction.
-2. **Zero-shot vs. constrained is rarely a controlled within-model
-   comparison.** Constrained-decoding papers report performance with the
-   constraint; unconstrained-LLM papers report performance without. Few
-   isolate the effect by holding the LLM, the input, and the task fixed and
-   varying only whether a candidate list is provided. Without that
-   comparison, it is unclear whether constrained-mode gains come from
-   eliminating hallucination, eliminating real-but-wrong predictions, or
-   both.
-3. **Inputs are taken as given.** Benchmarks evaluate models on clinical
-   notes as they appear in the dataset. None systematically test what
-   happens when the canonical lexical signals on which string-matching
-   baselines depend (display tokens, full clinical names) are deliberately
-   stripped while the underlying diagnosis is preserved.
-
-## This work
-
-We present **Phantom Codes**, a reproducible benchmark for clinical concept
-normalization that addresses these three gaps. Our primary contributions are
-methodological rather than architectural:
-
-- **A degradation pipeline that includes an abbreviation-stress mode
-  (D4_abbreviated)** which deliberately replaces canonical display tokens
-  with clinical jargon (T2DM, HTN, CKD, etc.) while preserving the
-  underlying diagnosis. D4 is the headline experiment: it is the condition
-  under which string-matching baselines collapse and under which any
-  remaining LLM advantage must come from genuine semantic retrieval rather
-  than lexical overlap. Three lower-stress modes (D1_full, D2_no_code,
-  D3_text_only) provide a controlled gradient of input information.
-- **A 6-way outcome taxonomy with hallucination and abstention as
-  explicit, mutually-exclusive buckets.** Every prediction lands in exactly
-  one of: exact_match, category_match, chapter_match, out_of_domain (real
-  ICD-10-CM code, no hierarchical relation to truth), no_prediction (model
-  returned no usable prediction — empty array, refusal, or transient API
-  failure), or hallucination (predicted code does not exist in ICD-10-CM,
-  mechanically checked against the CMS-published FY2026 tabular list).
-  Splitting no_prediction from hallucination matters for deployment safety:
-  an abstaining model is preferable to a confidently-wrong one because no
-  spurious code propagates downstream, even though both fail to produce a
-  usable prediction. This replaces the standard precision/recall framing
-  with a hierarchy-aware classification of failure modes that distinguishes
-  fabrication from abstention.
-- **A controlled within-model ablation between zero-shot and constrained
-  prompting.** The same LLM, the same input, varying only whether a
-  candidate list from the CMS ACCESS Model FHIR ValueSets is provided.
-  This isolates "wandering off the menu" from "genuine ignorance" and
-  quantifies the mechanism by which constrained decoding helps (or fails
-  to help) in code prediction.
-
-We adopt a deliberate separation of training and evaluation data flows.
-Our trained models — a PubMedBERT classification head and a frozen
-sentence-transformer retrieval baseline — are trained on the train/val
-splits of MIMIC-IV-FHIR v2.1, restricted to ICD-10-CM codes in the CMS
-ACCESS Model implementation guide (diabetes, atherosclerotic
-cardiovascular disease, CKD stage 3, hypertension, dyslipidemia,
-prediabetes, obesity). MIMIC is a credentialed dataset; we run all
-training and validation entirely on the corresponding author's own
-laptop hardware (Apple M1 MacBook Pro, 16 GB unified memory) using
-PyTorch's MPS backend, and MIMIC content never leaves that machine —
-not to any cloud GPU, hosted training service, telemetry endpoint, or
-LLM API. § Methods describes the training infrastructure in detail and
-explains why we chose local fine-tuning over cloud GPU even at the
-cost of ~3-5× longer wall-clock per run.
-
-The headline evaluation matrix runs against [Synthea](https://github.com/synthetichealth/synthea)-generated
-FHIR Bundles, an open synthetic patient dataset. Every model in the matrix
-— frontier LLMs (Claude Opus 4.7, Sonnet 4.6, Haiku 4.5; GPT-5.5 and a
-GPT-4-class economy comparator; Gemini 2.5 Pro and Flash) under three
-prompting modes (zero-shot, constrained, and RAG with per-record
-bi-encoder retrieval); the trained PubMedBERT classifier; the
-sentence-transformer retrieval baseline; and three constrained-only
-baselines (exact match, fuzzy token-set ratio, TF-IDF cosine) — is
-evaluated on identical Synthea-generated inputs.
-
-This separation has two intentional consequences. First, it ensures
-*compliance by construction* with PhysioNet's responsible-LLM-use policy
-[@PhysioNet2025], which prohibits sending credentialed data through
-third-party APIs: MIMIC remains on our own infrastructure throughout, and
-no patient-derived content reaches any commercial LLM endpoint. Second,
-it provides *full reproducibility*: the entire headline benchmark can be
-replicated by any researcher with Synthea (freely available, Apache-2.0)
-without going through PhysioNet credentialing. The trained models'
-evaluation on Synthea is also a stronger out-of-distribution test than
-in-distribution MIMIC test-set numbers would be, since Synthea's
-clinical text differs systematically from MIMIC's source notes.
-
-The empirical contribution we expect to surface is not a model-vs-model
-leaderboard — those exist already and are increasingly saturated. It is the
-shape of LLM failure under D4 conditions: how the hallucination bucket
-fills relative to the other four outcomes, how that distribution shifts
-between zero-shot and constrained prompting within the same model, and what
-that pattern implies for the safe deployment of LLMs in workflows where the
-output is consumed by downstream systems that assume code validity.
-
-The framework, taxonomy, and evaluation runner are designed to extend
-without architectural change to LOINC (laboratory observations) and RxNorm
-(medication requests) in subsequent work, with the same five-way outcome
-classes applied to the appropriate hierarchy and existence validator.
+We present **Phantom Codes**, a reproducible benchmark whose primary
+contributions are methodological rather than architectural. First, a
+**6-way outcome taxonomy** with hallucination and abstention as
+explicit, mutually-exclusive buckets — splitting `no_prediction` (model
+returned nothing) from `hallucination` (model returned a non-existent
+code) matters for deployment safety, since an abstaining model is
+preferable to a confidently-wrong one. Second, a **within-model
+zero-shot vs. constrained vs. RAG ablation** that holds the model and
+input fixed and varies only whether a candidate list is provided,
+isolating "wandering off the menu" from "genuine ignorance." Third, an
+**abbreviation-stress mode (D4)** that replaces canonical display
+strings with clinical jargon (T2DM, HTN, CKD-3) while preserving the
+underlying diagnosis — the condition under which string-matching
+baselines collapse and any remaining accuracy must come from genuine
+semantic mapping. We adopt a deliberate train/evaluate separation:
+trained models are fine-tuned locally on credentialed MIMIC-IV-FHIR
+v2.1 [@Bennett2024; @Bennett2023; @Johnson2023]; the headline
+evaluation matrix runs entirely against Synthea-generated FHIR Bundles
+[@Walonoski2018]. This is *compliance by construction* with PhysioNet's
+responsible-LLM-use policy [@PhysioNet2025] — credentialed data never
+reaches a third-party API — and gives full reproducibility without
+PhysioNet credentialing. The framework, taxonomy, and evaluation
+runner extend without architectural change to LOINC and RxNorm in
+subsequent work.

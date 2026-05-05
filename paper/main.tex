@@ -109,60 +109,51 @@
 
 \maketitle
 
-% Structured abstract — NEJM AI / AMA convention.
-% Target word count: 250-300 words across all four sections combined.
-% Numbers in *Results* stay TBD until the headline run completes; rest
-% of the abstract is settled (matches the introduction + methods).
+% Structured abstract — JAMIA convention.
+% Required headings: Objective / Materials and Methods / Results /
+% Discussion / Conclusion. Word limit: 250 prose words.
 \begin{abstract}
-\noindent\textbf{Background.} Large language models can perform
-clinical concept normalization (mapping unstructured clinical text to
-controlled-vocabulary identifiers such as ICD-10-CM) without
-task-specific fine-tuning, but they may fabricate codes that do not
-exist in the target vocabulary. Existing benchmarks treat such
-fabrications as ordinary errors, conflating two distinct failure
-modes (real-but-wrong code vs.\ non-existent code) and obscuring the
-mechanism by which constrained-decoding mitigations help.
+\noindent\textbf{Objective.} To characterize how large language
+models (LLMs) fail at clinical concept normalization — specifically
+ICD-10-CM coding — and to separate fabrication of non-existent
+codes from abstention, two failure modes typically conflated in
+existing benchmarks.
 
-\noindent\textbf{Methods.} We introduce \emph{Phantom Codes}, a
-reproducible benchmark that evaluates frontier LLMs (Claude Opus 4.7,
-Sonnet 4.6, Haiku 4.5; GPT-5.5 and a GPT-4-class economy comparator;
-Gemini 2.5 Pro and Flash) under three prompting modes (zero-shot,
-constrained, retrieval-augmented) against a fine-tuned PubMedBERT
-classifier head, a sentence-transformer retrieval baseline, and three
-constrained-only string-matching baselines. Inputs span four
-degradation modes ranging from full FHIR Conditions to
-abbreviation-only one-sentence summaries. Every prediction is
-assigned to one of five mutually exclusive outcome buckets:
-\emph{exact match}, \emph{category match}, \emph{chapter match},
-\emph{out of domain}, and \emph{hallucination} (predicted code does
-not exist in CMS-published ICD-10-CM). Trained models are fine-tuned
-locally on credentialed MIMIC-IV-FHIR data; the evaluation matrix
-runs entirely against Synthea-generated synthetic FHIR Bundles,
-ensuring full compliance with PhysioNet's responsible-LLM-use policy
-and full reproducibility without credentialed-data access.
+\noindent\textbf{Materials and Methods.} We introduce
+\emph{Phantom Codes}, a reproducible benchmark evaluating eight
+frontier LLMs (Claude, GPT, Gemini families) under three prompting
+modes (zero-shot, constrained, retrieval-augmented) against a
+fine-tuned PubMedBERT classifier and string-matching baselines.
+Inputs span four degradation modes from full FHIR Conditions to
+abbreviation-only summaries. Every prediction is assigned to one of
+six buckets: \emph{exact}, \emph{category}, \emph{chapter},
+\emph{out of domain}, \emph{no\_prediction} (abstention), or
+\emph{hallucination} (code does not exist in CMS-published
+ICD-10-CM). Trained models are fine-tuned locally on credentialed
+MIMIC-IV-FHIR; the LLM matrix runs against Synthea-generated
+synthetic FHIR Bundles.
 
 \noindent\textbf{Results.} On 125 unique Synthea Conditions $\times$
 4 degradation modes, fabrication was rare (median per-cell
-hallucination = 0\%) and constrained prompting eliminated it
-entirely for every Anthropic and OpenAI model with any nonzero
-zero-shot hallucination. Claude Haiku 4.5, Sonnet 4.6, and Opus
-4.7 each registered 0\% hallucination across all degradation
-modes under constrained prompting. Abstention
-(\emph{no\_prediction}) emerged as the more consequential failure
+hallucination = 0\%); constrained prompting eliminated it entirely
+for every Anthropic and OpenAI model showing nonzero zero-shot
+hallucination. Abstention emerged as a more consequential failure
 mode for some models — notably Gemini 2.5 Pro at 88\% empty-
-prediction rate under zero-shot D4\_abbreviated, distinct from
-fabrication. Cost-per-correct-prediction ranged 270$\times$ across
-the matrix; GPT-4o-mini in constrained mode at \$0.0003 per
-exact-match was the cost-frontier configuration.
+prediction rate under zero-shot D4. Cost-per-correct ranged
+270$\times$; GPT-4o-mini constrained at \$0.0003 per exact-match was
+the cost-frontier configuration.
 
-\noindent\textbf{Conclusions.} Hallucination is a controllable
-property of the prompting setup rather than a fixed model
-limitation; constrained decoding eliminates it for modern
-frontier LLMs in this domain at our cohort scale. Abstention is
-methodologically distinct from fabrication and should be reported
-separately in clinical-AI evaluations. Cost-per-correct
-collapses the deployment choice to a small number of cost-
-frontier configurations.
+\noindent\textbf{Discussion.} Hallucination is a controllable
+property of the prompting setup, not a fixed model limitation;
+abstention is methodologically distinct and should be reported
+separately. The compliance-by-construction (MIMIC-trained,
+Synthea-evaluated) pattern is reproducible without PhysioNet
+credentialing.
+
+\noindent\textbf{Conclusion.} The 6-way taxonomy, within-model
+ablation, and abbreviation-stress mode generalize to LOINC and
+RxNorm and surface deployment-relevant patterns invisible to
+top-1-accuracy framing.
 \end{abstract}
 
 \tableofcontents

@@ -1,13 +1,22 @@
-# Paper writing + NEJM AI submission scope
+# Paper writing + JAMIA submission scope
 
-> **Status (2026-05-03):** Plan drafted and approved. Execution
-> deferred until Brian's headline evaluation run completes. After
-> headline run finishes, revisit this file to discuss next steps
-> before kicking off Phase 1.
+> **Status (2026-05-04):** Venue switched from NEJM AI to **JAMIA
+> Research and Applications** after discovering NEJM AI's Original
+> Article word limit is 3,000 words (too tight for our 24-LLM ×
+> 4-mode × 6-bucket evaluation matrix without gutting the
+> contribution). JAMIA Research and Applications limits: ≤4,000
+> words main text, ≤250-word structured abstract (Objective /
+> Materials and Methods / Results / Discussion / Conclusion), 4
+> tables, 6 figures, unlimited references, no MI-CLAIM checklist
+> required.
+> [Source: academic.oup.com/jamia/pages/General_Instructions](https://academic.oup.com/jamia/pages/General_Instructions).
 >
-> **This is a temporary planning document.** Once the paper-writing
-> scope kicks off, phase progress moves into BACKLOG.md (or its own
-> dedicated tracker) and this file can be deleted.
+> The JAMIA refactor (executed 2026-05-04) is documented in
+> [`/Users/briankfung/.claude/plans/im-very-concerned-that-floofy-comet.md`](/Users/briankfung/.claude/plans/im-very-concerned-that-floofy-comet.md).
+>
+> **This is a temporary planning document.** Once submission
+> finalizes, phase progress moves into BACKLOG.md and this file can
+> be deleted.
 
 ---
 
@@ -26,34 +35,31 @@ Synthea-eval scope (which already absorbed too much scope creep):
    completing.
 2. **Figures and tables** — `paper/figures/` and `paper/tables/` are
    empty. There's no figure-generation code anywhere in the repo.
-   NEJM AI Original Articles typically run with 4-6 figures.
-3. **Word-count overage** — current 9,235 words exceeds NEJM AI's
-   5,000-8,000 main-text budget by 1,200-4,200 words.
-   `02_cost_economics.md` alone is 3,268 words and is the natural
-   candidate for moving the bulk of its content to supplementary.
-4. **No supplementary materials structure** — no `supplementary.tex`,
-   no place for full prompt templates, MI-CLAIM checklist, extended
-   results, or the reproducibility appendix.
-5. **No reporting-checklist compliance** — NEJM AI strongly
-   recommends MI-CLAIM (Minimum Information about Clinical AI
-   Modeling) for AI-method papers.
+   JAMIA permits up to 4 tables and 6 figures.
+3. **Word-count overage** — historical 9,235 words exceeded JAMIA's
+   4,000-word budget. After the 2026-05-04 JAMIA refactor, main
+   text fits within budget; supplementary absorbs overflow.
+4. **No supplementary materials structure** — `supplementary.tex`
+   and `supp_sections/` were added 2026-05-04 to absorb prompt
+   templates, extended results, and the reproducibility appendix.
+5. **MI-CLAIM checklist** — JAMIA does not require it; the S4
+   skeleton remains as optional supplementary material.
 6. **No Statistical Analysis subsection** in Methods — Wilson 95%
    CIs are computed in `report.py` but the methodology section
-   never declares this.
-7. **No LLM-use disclosure** — current submission norms (incl. NEJM
-   AI) require a statement of any AI assistance in manuscript
-   preparation. Phantom Codes has been developed with Claude Code;
-   this needs explicit disclosure.
+   never declares this. (Resolved in JAMIA refactor.)
+7. **No LLM-use disclosure** — current submission norms require a
+   statement of any AI assistance in manuscript preparation.
+   Phantom Codes has been developed with Claude Code; this needs
+   explicit disclosure.
 8. **No cover letter, plain-language summary, suggested-reviewer
    list, ORCID setup, or arXiv-prep artifacts**.
 9. **No CHANGELOG.md** to formally lock the methodology with a
    timestamp once the headline run completes.
 
-The intended outcome of this scope: a complete NEJM AI submission
-package — main manuscript PDF (≤8,000 words, lineno + double-spacing
-on, all figures/tables in place, no `[TBD]` markers, MI-CLAIM
-checklist as supplementary, statistical-analysis declaration in
-Methods, LLM-use disclosure, cover letter, plain-language summary,
+The intended outcome of this scope: a complete JAMIA submission
+package — main manuscript PDF (≤4,000 words, lineno + double-spacing
+on, all figures/tables in place, no `[TBD]` markers, statistical-
+analysis declaration in Methods, LLM-use disclosure, cover letter,
 ORCID-linked author block — plus a same-week arXiv preprint posting.
 
 ## Decisions confirmed (2026-05-03)
@@ -65,7 +71,7 @@ Settled before this scope kicks off, so phases run without re-litigation:
   cost-per-correct table in main. Drives Phase 3.
 - **MI-CLAIM scope**: full 16-item checklist as supplementary
   appendix (S4). Drives Phase 5, item 2.
-- **arXiv timing**: same week as NEJM AI submission. Drives Phase 8,
+- **arXiv timing**: same week as JAMIA submission. Drives Phase 8,
   item 3.
 - **Statistical analysis**: 95% Wilson CIs only across the matrix
   (no NHST), with McNemar as a single secondary paired test for the
@@ -206,7 +212,7 @@ command), `paper/sections/03_results.md` (insert figure refs).
 
 ### Phase 3 — Word-count compliance + supplementary materials structure
 
-Cut from 9,235 to ≤7,500 words main text (leaves headroom for
+Cut from 9,235 to ≤4,000 words main text (leaves headroom for
 reviewer-requested additions). ~3-5 hours.
 
 1. Create `paper/supplementary.tex` — separate document, same
@@ -239,7 +245,7 @@ reviewer-requested additions). ~3-5 hours.
    Introduction (target ~10-15% reduction).
 5. Update `paper/Makefile` to add `make supp` target producing
    `paper/build/supplementary.pdf`.
-6. Re-measure: `wc -w paper/sections/*.md`. Target ≤ 7,500 words.
+6. Re-measure: `wc -w paper/sections/*.md`. Target ≤ 4,000 words.
 
 **Files created:** `paper/supplementary.tex`,
 `paper/supp_sections/{S1..S5}_*.md`.
@@ -265,7 +271,7 @@ Write from the §3 numbers Phase 1 produced. ~4-6 hours.
 3. `paper/main.tex`:
    - Abstract Results block (line 144) — fill with headline numbers.
    - Abstract Conclusions block (line 150) — three sentences.
-   - Verify combined abstract ≤ 300 words (NEJM AI convention).
+   - Verify abstract ≤ 250 prose words (JAMIA Research and Applications limit; structured headings: Objective / Materials and Methods / Results / Discussion / Conclusion).
 
 **Files modified:** `paper/sections/04_discussion.md`,
 `paper/sections/05_conclusion.md`, `paper/main.tex`.

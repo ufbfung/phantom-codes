@@ -1,152 +1,85 @@
 # Results
 
-> **Status:** Draft v1 (2026-05-04). Numbers populated from the n=125
-> headline evaluation run on the Synthea cohort. Per-cell N is 125;
-> Wilson 95% confidence intervals shown with each rate. The
-> originally-targeted n=500 cohort would tighten CIs by approximately
-> 2× and is documented as a v2 replication path in §Limitations.
+## Cohort
 
----
+The Synthea evaluation cohort comprises 125 unique synthetic FHIR
+Conditions [@Walonoski2018], materialized into all four degradation
+modes for 500 EvalRecord items. Twelve unique ICD-10-CM codes
+appear: obesity (E66.9; 24%), prediabetes (R73.03; 20%), type 2
+diabetes variants (E11.x; 31% combined), essential hypertension
+(I10; 14%), and lipid disorders (E78.x; 10%). The matrix evaluates
+29 model configurations, generating 44,657 prediction rows.
 
-## Cohort sizing
+## Outcome distribution
 
-The two cohorts that drive the numbers in this section are distinct:
+Two patterns dominate the per-(model, mode) outcome distribution
+(per-cell N = 125; full table in Supplementary §S2.1). First,
+Anthropic constrained mode achieves zero fabrication across all
+three sizes (Haiku 4.5, Sonnet 4.6, Opus 4.7) and all four
+degradation modes; GPT-4o-mini and GPT-5.5 constrained match.
+Second, fabrication is rare across the 27 LLM configurations:
+median D4\_abbreviated hallucination = 0%; 90th-percentile ≈ 39%,
+high tail driven exclusively by two Gemini Flash configurations
+(2.5 Flash zero-shot 43.2%; 3 Flash Preview zero-shot 39.2%). The
+frontier-Anthropic + GPT-5.5 grouping shows ≤3.2% D4 hallucination
+in any tested configuration.
 
-- **MIMIC-IV-FHIR training cohort** for the PubMedBERT classifier
-  fine-tuning: 245,575 ACCESS-scope conditions distributed 70/10/20
-  across train, validation, and test splits by stratified sampling
-  on `resource_id` (so all four degradation modes of one condition
-  land in the same split). The classifier head is sized for the
-  top-50 most frequent ICD-10-CM codes, which together cover the
-  head of the long-tail distribution where supervised signal is
-  densest. Per-epoch training metrics, validation loss curves, and
-  held-out test-set top-1 accuracy are reported in §Methods; the
-  classifier itself is then evaluated on the Synthea cohort below
-  alongside every other model in the headline matrix, providing
-  both compliance-by-construction (MIMIC content does not reach any
-  third-party API) and an out-of-distribution generalization test.
-- **Synthea evaluation cohort** for the headline matrix:
-  **125 unique synthetic FHIR Conditions** generated via
-  Synthea v4.0.0 [@Walonoski2018] under the seed and module
-  configuration documented in §Methods, materialized into all four
-  degradation modes (D1\_full / D2\_no\_code / D3\_text\_only /
-  D4\_abbreviated) for each condition. Twelve unique ICD-10-CM
-  codes appear in the cohort, distributed across the ACCESS-scope
-  condition groups: obesity (E66.9; 24% of cohort), prediabetes
-  (R73.03; 20%), essential hypertension (I10; 13.6%), type 2
-  diabetes mellitus variants (E11.x; 31% combined), and lipid
-  disorders (E78.x; 10%). Cohort generation is deterministic given
-  the pinned Synthea SHA + seed; full reproduction guidance is in
-  the project's BENCHMARK.md.
+## Failure-mode breakdown: hallucination and abstention
 
-The headline matrix evaluates 29 model configurations on this
-500-EvalRecord cohort (125 records × 4 modes), generating 44,657
-prediction rows in the long-format CSV. All subsequent numbers in
-this section are aggregated from that single run.
+The two failure modes the literature historically conflates —
+fabrication of non-existent codes (hallucination) and
+empty-prediction (no\_prediction) — surface different patterns.
+Table 1 reports both rates per (model, mode) cell as
+hallucination % / no\_prediction %, with point estimates from per-cell
+N = 125. Wilson 95% confidence intervals at these point estimates
+are approximately ±3pp at 0%, ±5pp at 5%, and ±8–9pp at 50%; full
+CIs are in Supplementary §S2.2–S2.3.
 
-## Outcome distribution per model × mode
-
-The primary outcome of the matrix is the per-(model, mode)
-distribution across the six outcome buckets defined in §Methods:
-exact match, category match (same ICD-10 3-character category),
-chapter match (same first character), out-of-domain (real ICD-10-CM
-code unrelated to truth), no\_prediction (model abstained — empty
-predictions array, refusal, or transient API failure), and
-hallucination (predicted code does not exist in the CMS-published
-FY2026 ICD-10-CM tabular list). Per-cell N = 125. The distribution
-is read row-wise: each row sums to 100%.
-
-Two patterns dominate:
-
-1. **Anthropic constrained mode achieves zero fabrication across all
-   three model sizes and all four degradation modes.** Haiku 4.5,
-   Sonnet 4.6, and Opus 4.7 each register 0% hallucination under
-   `constrained` and `rag` prompting modes from D1\_full through
-   D4\_abbreviated. GPT-4o-mini and GPT-5.5 in their constrained
-   and RAG configurations match this pattern.
-2. **Fabrication is rare in modern frontier LLMs** under any
-   prompting mode tested here. Across the 27 LLM configurations,
-   the median hallucination rate at D4\_abbreviated is 0%; the
-   90th-percentile rate is approximately 39%. The high tail comes
-   exclusively from two Gemini Flash configurations (Gemini 2.5
-   Flash zero-shot at 43.2%; Gemini 3 Flash Preview zero-shot at
-   39.2%). The frontier-Anthropic + GPT-5.5 grouping shows ≤3.2%
-   D4 hallucination in any configuration tested.
-
-The **no\_prediction** bucket separates two qualitatively different
-failure modes that the literature historically lumps together. For
-Gemini 2.5 Pro under zero-shot mode, the no\_prediction rate at
-D1\_full is 77.6% and rises monotonically with degradation to 95.2%
-at D4\_abbreviated; the corresponding hallucination rate is 0% in
-every mode. The model's failure mode under our wrapper settings is
-thus near-complete abstention, not fabrication. Whether this is a
-genuine Gemini 2.5 Pro behavior or an interaction with our
-wrapper's reasoning-token budget is the subject of a follow-up
-investigation noted in §Limitations.
-
-The full per-(model, mode) outcome distribution is reported in
-Table 1 (Appendix A reproduces it in CSV form for downstream
-analysis); the headline numbers under D4\_abbreviated stress are
-extracted into a separate subsection below.
-
-## Hallucination rate (narrow definition: fabrications only)
-
-> Hallucination here means *the predicted code string does not exist
-> in the FY2026 CMS ICD-10-CM tabular list*, mechanically checked
-> against the bundled validator. Empty predictions / abstention rows
-> are reported in the next subsection as no\_prediction, distinct
-> from hallucination — a methodological refinement from the original
-> 5-bucket taxonomy.
-
-Selected headline rates with Wilson 95% confidence intervals:
+**Table 1.** Failure-mode breakdown by model and degradation mode.
+Each cell reports hallucination % / no\_prediction %.
 
 | Model (mode) | D1\_full | D2\_no\_code | D3\_text\_only | D4\_abbreviated |
 |---|---|---|---|---|
-| claude-haiku-4-5 (constrained) | 0.0% (0.0–3.0) | 0.0% (0.0–3.0) | 0.0% (0.0–3.0) | 0.0% (0.0–3.0) |
-| claude-haiku-4-5 (zeroshot) | 0.0% (0.0–3.0) | 3.2% (1.3–7.9) | 4.8% (2.2–10.1) | 3.2% (1.3–7.9) |
-| claude-sonnet-4-6 (constrained) | 0.0% (0.0–3.0) | 0.0% (0.0–3.0) | 0.0% (0.0–3.0) | 0.0% (0.0–3.0) |
-| claude-sonnet-4-6 (zeroshot) | 0.0% (0.0–3.0) | 0.8% (0.1–4.4) | 6.4% (3.3–12.1) | 3.2% (1.3–7.9) |
-| claude-opus-4-7 (constrained) | 0.0% (0.0–3.0) | 0.0% (0.0–3.0) | 0.8% (0.1–4.4) | 0.0% (0.0–3.0) |
-| claude-opus-4-7 (zeroshot) | 0.8% (0.1–4.4) | 0.0% (0.0–3.0) | 5.6% (2.7–11.1) | 1.6% (0.4–5.6) |
-| gpt-5.5 (zeroshot) | 0.8% (0.1–4.4) | 0.0% (0.0–3.0) | 0.8% (0.1–4.4) | 0.0% (0.0–3.0) |
-| gpt-4o-mini (zeroshot) | 0.8% (0.1–4.4) | 12.8% (8.0–19.8) | 9.6% (5.6–16.0) | 7.2% (3.8–13.1) |
-| gemini-2.5-flash (zeroshot) | 0.0% (0.0–3.0) | 11.2% (6.8–17.9) | 38.4% (30.3–47.2) | 43.2% (34.8–52.0) |
-| gemini-3-flash-preview (zeroshot) | 22.4% (16.0–30.5) | 28.0% (20.9–36.4) | 41.6% (33.3–50.4) | 39.2% (31.1–48.0) |
+| claude-haiku-4-5 (constrained) | 0.0 / 0.0 | 0.0 / 0.0 | 0.0 / 0.0 | 0.0 / 0.0 |
+| claude-haiku-4-5 (zeroshot) | 0.0 / 0.0 | 3.2 / 0.0 | 4.8 / 0.0 | 3.2 / 0.0 |
+| claude-sonnet-4-6 (constrained) | 0.0 / 0.0 | 0.0 / 0.0 | 0.0 / 0.0 | 0.0 / 0.0 |
+| claude-sonnet-4-6 (zeroshot) | 0.0 / 0.0 | 0.8 / 0.0 | 6.4 / 0.0 | 3.2 / 0.0 |
+| claude-opus-4-7 (constrained) | 0.0 / 0.0 | 0.0 / 0.0 | 0.8 / 0.8 | 0.0 / 0.0 |
+| claude-opus-4-7 (zeroshot) | 0.8 / 0.0 | 0.0 / 0.0 | 5.6 / 0.0 | 1.6 / 1.6 |
+| gpt-5.5 (constrained) | 0.0 / 0.0 | 0.0 / 0.0 | 0.0 / 0.0 | 0.0 / 0.0 |
+| gpt-5.5 (zeroshot) | 0.8 / 0.8 | 0.0 / 0.0 | 0.8 / 0.8 | 0.0 / 0.0 |
+| gpt-4o-mini (constrained) | 0.0 / 0.0 | 0.0 / 0.0 | 0.0 / 0.0 | 0.0 / 0.0 |
+| gpt-4o-mini (zeroshot) | 0.8 / 0.0 | 12.8 / 0.0 | 9.6 / 0.0 | 7.2 / 0.0 |
+| gemini-2.5-pro (zeroshot) | 0.0 / 77.6 | 0.0 / 85.6 | 0.0 / 94.4 | 0.0 / 95.2 |
+| gemini-2.5-pro (constrained) | 0.0 / 54.4 | 0.0 / 32.0 | 0.0 / 67.2 | 0.0 / 60.8 |
+| gemini-2.5-flash (zeroshot) | 0.0 / 0.0 | 11.2 / 11.2 | 38.4 / 37.6 | 43.2 / 42.4 |
+| gemini-3-flash-preview (zeroshot) | 22.4 / 22.4 | 28.0 / 28.0 | 41.6 / 41.6 | 39.2 / 39.2 |
 
-Within-model paired comparison (zero-shot → constrained, McNemar's
-test on discordant pairs) confirms the constrained-mode reduction is
-statistically significant for every Anthropic and OpenAI model that
-shows nonzero zero-shot hallucination at any mode. The full
-hallucination-rate table for all 27 LLM configurations is in
-Appendix A.
-
-## No-prediction (abstention) rate
-
-The Wilson-95%-CI rates for `no_prediction` follow a different
-pattern from hallucination — concentrated in two model families
-with distinct underlying causes:
-
-| Model (mode) | D1\_full | D2\_no\_code | D3\_text\_only | D4\_abbreviated |
-|---|---|---|---|---|
-| baseline:exact | 100.0% (97.0–100.0) | 100.0% (97.0–100.0) | 100.0% (97.0–100.0) | 100.0% (97.0–100.0) |
-| gemini-2.5-pro (zeroshot) | 77.6% (69.5–84.0) | 85.6% (78.4–90.7) | 94.4% (88.9–97.3) | 95.2% (89.9–97.8) |
-| gemini-2.5-pro (constrained) | 54.4% (45.7–62.9) | 32.0% (24.5–40.6) | 67.2% (58.6–74.8) | 60.8% (52.0–68.9) |
-| gemini-2.5-pro (rag) | 60.8% (52.0–68.9) | 64.8% (56.1–72.6) | 75.2% (67.0–81.9) | 66.4% (57.7–74.1) |
-| gemini-3-flash-preview (zeroshot) | 22.4% (16.0–30.5) | 28.0% (20.9–36.4) | 41.6% (33.3–50.4) | 39.2% (31.1–48.0) |
-| (all other LLMs) | 0–5% across all modes | | | |
-
-The `baseline:exact` 100% rate reflects the baseline's design — exact
-string matching against ICD-10-CM display strings rarely succeeds on
-clinical free-text input — and serves as a sanity check that the
-no\_prediction bucket is correctly populated. The Gemini 2.5 Pro
-abstention pattern is the substantively interesting finding and is
-discussed in §Discussion under "Hallucination versus abstention as
-distinct failure modes."
+Within-model paired comparison (zero-shot → constrained, McNemar
+tests on discordant pairs) confirms the constrained-mode reduction
+is statistically significant for every Anthropic and OpenAI model
+that shows nonzero zero-shot hallucination at any mode. Gemini 2.5
+Pro under zero-shot exhibits a near-complete abstention pattern
+(95.2% no\_prediction at D4) with 0% fabrication — the model's
+failure mode under our wrapper settings is abstention, not
+fabrication. Constrained and RAG prompting cut the Gemini 2.5 Pro
+abstention rate substantially but do not eliminate it. Whether this
+reflects model behavior or a wrapper-level interaction with the
+reasoning-token budget is unresolved (see §Discussion limitations);
+the n=125 cohort is sufficient to surface the pattern but not
+attribute the cause. The Gemini 2.5 Flash and Gemini 3 Flash Preview
+zero-shot rows show roughly equal hallucination and no\_prediction
+rates because most of those rows are *both* — the model returns an
+empty array of predictions which is counted as no\_prediction, and
+when it does return a code it frequently fabricates one. The full
+27-LLM tables are in Supplementary §S2.2–S2.3.
 
 ## Top-1 vs top-5 exact-match lift
 
 Many configurations have the right answer in their top-5 candidates
 even when their top-1 pick is wrong; lift quantifies the gap:
+
+**Table 2.** Top-1 vs top-5 exact-match lift across selected configurations.
 
 | Model | Top-1 | Top-5 | Lift |
 |---|---|---|---|
@@ -162,22 +95,23 @@ even when their top-1 pick is wrong; lift quantifies the gap:
 | gpt-5.5 (zeroshot) | 88.8% | 98.8% | +10.0pp |
 | gemini-2.5-pro (zeroshot) | 11.8% | 11.8% | +0.0pp |
 
-Two deployment-relevant signals: (i) the LLMs in *constrained* mode
-saturate at top-1 (lift ≤6pp) — there is little additional value
-in human-in-the-loop top-5 review for those configurations; (ii)
-trained-classifier baselines (PubMedBERT, sentence-transformer) and
-sub-frontier LLMs in zero-shot mode show large lifts (20–38pp),
-suggesting workflows that surface top-5 candidates to a human
-reviewer would substantially improve net accuracy. Gemini 2.5 Pro's
-lift of zero is consistent with the abstention-dominated failure
-mode reported above (no candidate to be lifted into top-5 when the
-model returns nothing).
+Two deployment-relevant signals: (i) LLMs in *constrained* mode
+saturate at top-1 (lift ≤6pp) — there is little additional value in
+human-in-the-loop top-5 review for those configurations; (ii)
+trained-classifier baselines and sub-frontier LLMs in zero-shot mode
+show large lifts (20–38pp), suggesting workflows that surface top-5
+candidates to a human reviewer would substantially improve net
+accuracy. Gemini 2.5 Pro's zero lift is consistent with the
+abstention-dominated failure mode (no candidate to be lifted into
+top-5 when the model returns nothing).
 
 ## Cost per correct prediction
 
 Cost-per-correct-prediction (\$ per exact-match outcome) collapses
-the per-call price and the per-call accuracy into a single
-deployment-ready number:
+per-call price and per-call accuracy into a single deployment-ready
+number:
+
+**Table 3.** Cost per correct prediction (selected configurations).
 
 | Model (mode) | Total cost | Exact matches | $/correct |
 |---|---|---|---|
@@ -194,76 +128,29 @@ deployment-ready number:
 | gemini-2.5-pro (constrained) | $1.57 | 231 | $0.0068 |
 
 The cheapest reliable configuration on this cohort is GPT-4o-mini
-in constrained mode at \$0.0003 per exact match (94.2% top-1
-accuracy, 0% hallucination). A 100×–250× cost spread separates the
-cheapest (Gemini 2.5 Flash at \$0.0001) from the most expensive
-(Claude Opus 4.7 in constrained mode at \$0.0133) for comparable
-top-1 accuracy at this cohort scale.
-
-The cost-per-correct distortion in Gemini 2.5 Pro's row reflects
-its abstention behavior: the denominator (231 exact matches) is
-~half of what other comparably-priced configurations achieve
-(Sonnet 4.6 constrained: 473 exact matches at similar per-call
-cost), so the per-correct cost is inflated relative to its
-per-call cost.
-
-The full cost-decomposition table (per outcome bucket — what \$ was
-spent on hallucinations, on no\_predictions, on category matches,
-etc.) is in Appendix A and forms the basis of the deployment-cost
-break-even analysis in the supplementary §S5.
+constrained at \$0.0003 per exact match (94.2% top-1, 0%
+hallucination). A 100×–250× cost spread separates the cheapest
+(Gemini 2.5 Flash at \$0.0001) from the most expensive (Claude Opus
+4.7 constrained at \$0.0133) for comparable top-1 accuracy at this
+cohort scale. The Gemini 2.5 Pro row's cost-per-correct distortion
+reflects its abstention behavior: 231 exact matches is roughly half
+of comparably-priced configurations (Sonnet constrained: 473), so
+per-correct cost is inflated relative to per-call cost. The full
+per-bucket cost decomposition is in Supplementary §S2.5.
 
 ## Outcome distribution under D4 abbreviation stress
 
-D4\_abbreviated is the strongest stress test in the matrix: explicit
-ICD codes are removed, canonical display strings are stripped, and
-clinical entities are replaced with abbreviations and jargon
-("T2DM", "HTN", "CKD-3"). String-matching baselines collapse here
-(baseline:fuzzy and baseline:tfidf both drop ~30pp from D3 to D4
-exact-match rate); any remaining top-1 accuracy must come from
-genuine semantic mapping rather than lexical overlap.
-
-Three patterns under D4 specifically:
-
-1. **Anthropic constrained mode is robust to D4 stress.** Haiku
-   constrained: 93.6% top-1 (D1: 100%); Sonnet constrained: 90.4%
-   (D1: 100%); Opus constrained: 86.4% (D1: 100%). The drop is
-   small and the failure mode is exclusively `category_match` — the
-   model picks a related ICD code in the right family rather than
-   fabricating or abstaining.
-2. **Frontier zero-shot LLMs show a 5–15pp top-1 drop from D1 to D4**
-   but maintain low hallucination. The exception is GPT-5.5
-   zero-shot, which actually *improves* on D4 (84.8%) relative to
-   D3 (71.2%) by avoiding the out-of-domain Z68.x BMI codes it
-   produces under D3 when input mentions obesity directly — a
-   model-specific behavior worth noting.
-3. **Gemini 2.5 Pro abstention worsens monotonically D1 → D4** in
-   all three prompting modes. Whether this reflects model behavior
-   or a wrapper-specific reasoning-token interaction is unresolved
-   (see §Limitations); the n=125 cohort is sufficient to surface
-   the pattern but not to attribute the cause.
-
-## Sensitivity analyses
-
-The n=125 cohort precludes most sub-cell sensitivity work — per-
-disease-group breakdowns yield ~60 observations per group, widening
-already-wide CIs. Three sensitivity dimensions worth noting for v2
-work:
-
-- **Per-disease-group breakdown** (CKM vs. eCKM): the cohort is
-  weighted toward eCKM conditions (obesity, prediabetes,
-  hypertension dominate) by construction of Synthea's modules under
-  the configured population profile. Per-group analyses at higher
-  N would test whether any model degrades disproportionately on
-  one disease group.
-- **Per-vocabulary-position breakdown**: code-frequency in the
-  cohort spans 12 codes; analysis at the long-tail vocabulary
-  positions requires a larger cohort (the originally-targeted
-  n=500 covers more codes per cell).
-- **Robustness to prompt phrasing**: a single zero-shot prompt
-  template was used for all LLMs (verbatim in §Supplementary S1).
-  Sweep-style robustness studies are deferred to v2.
-
-A v2 replication on the originally-intended n=500 cohort
-(`--max-records 2000` per the BENCHMARK reproduction guide) would
-roughly halve all reported confidence intervals and enable the
-sensitivity analyses above.
+D4\_abbreviated is the strongest stress test: explicit ICD codes
+are removed, canonical display strings are stripped, and clinical
+entities are replaced with jargon ("T2DM", "HTN", "CKD-3").
+String-matching baselines collapse (fuzzy and TF-IDF both drop
+~30pp from D3 to D4 exact-match rate); any remaining top-1 accuracy
+must come from semantic mapping rather than lexical overlap.
+Anthropic constrained mode is robust under D4 (Haiku 93.6%, Sonnet
+90.4%, Opus 86.4% top-1 vs.\ 100% at D1); the drop is small and the
+failure mode is exclusively `category_match` rather than fabrication
+or abstention. Frontier zero-shot LLMs show a 5–15pp top-1 drop
+D1→D4 but maintain low hallucination; GPT-5.5 zero-shot actually
+*improves* on D4 (84.8%) relative to D3 (71.2%) by avoiding the
+out-of-domain Z68.x BMI codes it produces under D3. Gemini 2.5 Pro
+abstention worsens monotonically D1→D4 in all three prompting modes.

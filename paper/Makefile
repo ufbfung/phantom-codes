@@ -43,6 +43,7 @@ PANDOC_OPTS := \
 	--to latex \
 	--top-level-division=section \
 	--wrap=preserve \
+	--no-highlight \
 	--biblatex
 
 PDFLATEX_OPTS := \

@@ -71,3 +71,30 @@ cohorts, the curation cycle re-runs. Each entry should record:
 The `confidence` field gates the validator: `needs_review` causes the
 `test_no_remaining_needs_review_after_signoff` test to xfail, signaling
 that curation is incomplete.
+
+## License and provenance
+
+The curation logic in this directory (the `access_group`,
+`confidence`, `source`, `notes` fields, the exclusion rationales,
+and the inventory script that produced these files) is original
+work, MIT-licensed under the project [LICENSE](../../LICENSE).
+
+The **SNOMED CT concept identifiers** (e.g., `44054006`) are facts
+and are not copyrightable. The **SNOMED CT display strings**
+(e.g., "Diabetes mellitus type 2 (disorder)") propagated into
+these files via Synthea's generated output, which itself relies on
+a fair-use posture for SNOMED CT documented in Synthea's NOTICE
+file. The IHTSDO Affiliate License governs broader use of SNOMED
+CT — it is free in IHTSDO Member territories including the United
+States. The full attribution and SNOMED CT compliance text
+required by Apache 2.0 §4(d) is reproduced in the project
+[NOTICE](../../NOTICE) file at the repo root.
+
+The **ICD-10-CM codes and descriptions** in
+`snomed_to_icd10cm.json` are CMS-published public-domain US
+government work; no attribution is legally required.
+
+This directory does not redistribute Synthea source code or
+binaries (Synthea is cloned on demand into the gitignored
+`tools/synthea/` directory by `scripts/setup_synthea.sh`) and does
+not redistribute MIMIC-IV-FHIR or any MIMIC-derivative content.

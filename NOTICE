@@ -1,0 +1,108 @@
+Phantom Codes
+Copyright 2026 Brian K. Fung
+
+This product is licensed under the MIT License (see LICENSE).
+
+
+================================================================================
+Third-party attributions
+================================================================================
+
+This repository incorporates material from third-party sources whose
+licenses require attribution. The notices below are reproduced for
+compliance with those licenses; they describe upstream sources, not
+the licensing of this project's own code (which is MIT — see LICENSE).
+
+
+--------------------------------------------------------------------------------
+Synthea (https://github.com/synthetichealth/synthea)
+--------------------------------------------------------------------------------
+
+This project orchestrates Synthea (a synthetic patient generator) and
+incorporates SNOMED CT concept display strings sourced from Synthea's
+generated output into curation artifacts under data/synthea/. Synthea
+source code and binaries are NOT redistributed by this repository
+(scripts/setup_synthea.sh clones Synthea on demand into the gitignored
+tools/synthea/ directory).
+
+  Synthea
+  Copyright 2017-2025 The MITRE Corporation
+  Licensed under the Apache License, Version 2.0
+  http://www.apache.org/licenses/LICENSE-2.0
+
+The following attributions from Synthea's NOTICE file
+(https://github.com/synthetichealth/synthea/blob/master/NOTICE) apply
+to material that propagates through this repository (specifically, the
+SNOMED CT concept identifiers and display strings observed in
+Synthea's output and committed under data/synthea/snomed_to_icd10cm.json,
+data/synthea/snomed_excluded.json, and data/synthea/snomed_inventory_pilot.json):
+
+  This material contains content from SNOMED CT and constitutes a fair
+  use of such copyrighted material as provided for in section 107 of
+  the US Copyright Law for the purposes of research and nonprofit
+  educational purposes.
+
+  SNOMED CT is a comprehensive clinical terminology, originally created
+  by the College of American Pathologists (CAP) and, as of April 2007,
+  is owned, maintained, and distributed by the International Health
+  Terminology Standards Development Organisation (IHTSDO)
+  (http://www.ihtsdo.org), a not-for-profit association.
+
+  Use of SNOMED CT is subject to the IHTSDO Affiliate license provisions
+  and is free in IHTSDO Member territories including the United States,
+  in low income countries, and for Qualifying Research Projects in any
+  country. To learn more, please see the IHTSDO SNOMED CT and Licensing
+  page (https://www.snomed.org/snomed-ct/get-snomed-ct).
+
+The Synthea-related portions of Synthea's NOTICE concerning RxNorm,
+LOINC, and SBSCL are not reproduced here because this repository does
+not redistribute RxNorm, LOINC, or SBSCL content. If a future version
+extends to LOINC (planned for v2 — see project roadmap) or RxNorm
+(planned for v3), the corresponding NOTICE entries will be added at
+that time.
+
+Citation:
+  Walonoski J, Kramer M, Nichols J, et al. Synthea: An approach,
+  method, and software mechanism for generating synthetic patients and
+  the synthetic electronic health care record. J Am Med Inform Assoc.
+  2018;25(3):230-238. doi:10.1093/jamia/ocx079
+
+
+--------------------------------------------------------------------------------
+ICD-10-CM (CMS-published, public domain)
+--------------------------------------------------------------------------------
+
+This project bundles the FY2026 ICD-10-CM tabular list under
+src/phantom_codes/data/icd10cm/ for use by the hallucination validator,
+and the CMS ACCESS Model FHIR ValueSets under
+src/phantom_codes/data/access_valuesets/ for cohort scope filtering.
+Both are public-domain US government works published by the Centers
+for Medicare & Medicaid Services. No attribution is legally required;
+provenance is recorded here for transparency.
+
+  ICD-10-CM is published by the National Center for Health Statistics
+  and CMS, available at:
+  https://www.cms.gov/medicare/coding-billing/icd-10-codes
+
+  CMS ACCESS Model FHIR Implementation Guide v0.9.6:
+  https://dsacms.github.io/cmmi-access-model/
+
+
+--------------------------------------------------------------------------------
+PhysioNet / MIMIC-IV-FHIR (NOT redistributed)
+--------------------------------------------------------------------------------
+
+This repository does NOT redistribute MIMIC-IV-FHIR data or any
+MIMIC-derivative content (parquet splits, trained model checkpoints).
+MIMIC-IV-FHIR is distributed by PhysioNet under the Credentialed Health
+Data License and requires PhysioNet credentialing for access. See:
+https://physionet.org/content/mimic-iv-fhir/2.1/
+
+Per PhysioNet's responsible-LLM-use policy
+(https://physionet.org/news/post/llm-responsible-use/, effective
+2025-09-24), credentialed data may not be sent through commercial LLM
+APIs. This project's compliance posture is described in detail in the
+top-level README.md and CLAUDE.md.
+
+If you reproduce this work, you are responsible for ensuring your own
+use complies with PhysioNet's DUA and current policy.

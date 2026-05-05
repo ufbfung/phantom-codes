@@ -388,11 +388,16 @@ And the underlying dependencies:
 
 ## License
 
-This repository is MIT-licensed (see [LICENSE](LICENSE)). Synthea
-itself is Apache 2.0. The CMS ACCESS Model ValueSets are public-domain
-US government work. The curated SNOMED→ICD-10-CM map is original work
-under MIT — both SNOMED concept IDs and ICD-10-CM codes themselves are
-public information; the lookup table is not a UMLS redistribution.
+This repository is MIT-licensed (see [LICENSE](LICENSE)). Third-party
+attributions required by upstream licenses are reproduced in
+[NOTICE](NOTICE) — including the full Synthea (Apache 2.0, MITRE
+Corporation 2017-2025) and IHTSDO SNOMED CT compliance text that
+propagates through SNOMED display strings sourced from Synthea's
+generated output. Synthea itself is Apache 2.0. The CMS ACCESS Model
+ValueSets are public-domain US government work. The curated
+SNOMED→ICD-10-CM map is original work under MIT — both SNOMED concept
+IDs and ICD-10-CM codes themselves are public information; the lookup
+table is not a UMLS redistribution.
 
 For MIMIC-derived components (the trained PubMedBERT classifier and
 its training data), see PhysioNet's Credentialed Health Data License.

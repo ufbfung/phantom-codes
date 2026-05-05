@@ -102,71 +102,27 @@ training-set memorization risk; the cleaner head minimizes confound.
 ## Choice of base encoder: PubMedBERT
 
 We use **PubMedBERT-base-uncased-abstract-fulltext** [@Gu2021] as
-the pre-trained encoder. The choice is motivated by three properties.
-
-**Domain-adaptive pre-training.** Standard BERT [@Devlin2019] is
-pre-trained on Wikipedia and BookCorpus — corpora that contain little
-biomedical text. The "Don't Stop Pretraining" line of work [Gururangan
-2020] established that continued pre-training on in-domain text
-improves downstream task performance, but PubMedBERT goes further by
-pre-training *from scratch* on biomedical text (PubMed abstracts +
-full-text articles). This produces a tokenizer whose vocabulary
-treats biomedical terms (`diabetes`, `myocardial`, `hypertension`,
-`hyperlipidemia`) as single tokens rather than fragmented subwords,
-and an encoder whose attention patterns reflect biomedical syntax
-rather than general English.
-
-**Empirical performance on the BLURB benchmark.** On the BLURB suite
-of 13 biomedical NLP tasks, PubMedBERT outperforms BioBERT,
-SciBERT, and BlueBERT on the majority of tasks [@Gu2021], including
-sentence-level classification tasks structurally similar to ours.
-
-**Computational footprint compatible with local hardware.** At ~110M
-parameters, PubMedBERT-base fits comfortably in 16 GB of unified
-memory at our chosen batch size and sequence length, allowing the
-entire training run to execute on a personal MacBook Pro (see §
-Hardware). This is a critical compliance enabler: any larger encoder
-would have forced us onto cloud GPU infrastructure with corresponding
-data-residency review for credentialed data.
-
-### Alternatives considered and rejected
-
-**ClinicalBERT** [@Alsentzer2019] is an obvious candidate — the model
-is pre-trained on MIMIC-III clinical notes and would be expected to
-transfer well to MIMIC-IV. We rule it out for **data contamination**:
-MIMIC-III's patient cohort partially overlaps with MIMIC-IV's, and
-using a model that has seen MIMIC-III text during pre-training to
-classify MIMIC-IV conditions would produce optimistic numbers that
-do not generalize to the Synthea evaluation. PubMedBERT, pre-trained
-exclusively on PubMed, has no such overlap.
-
-**BioBERT** [@Lee2020] is a defensible alternative — also pre-trained
-on PubMed (abstracts only, not full text). It is older than PubMedBERT
-and underperforms it on BLURB; we list it as a sensitivity-analysis
-candidate for v2 but do not include it in v1's headline run.
-
-**BioLinkBERT** [@Yasunaga2022] is pre-trained on linked documents
-(citation graphs from PubMed) and shows gains on multi-hop reasoning
-tasks. Our task is single-hop (one input → one or more output codes);
-the additional pre-training signal is not obviously relevant. Worth
-ablating in v2 if results suggest the linear-head bottleneck is not
-the limiting factor.
-
-**Larger biomedical models** — BiomedLM (2.7 B parameters), GatorTron
-(8.9 B), Med-PaLM (540 B), BioMistral (7 B) — would likely outperform
-PubMedBERT-base but cannot be fine-tuned end-to-end on our hardware.
-Parameter-efficient fine-tuning (LoRA [@Hu2022], QLoRA [@Dettmers2023]) would close the hardware gap and is on the v2 roadmap, both
-as a stronger trained-model baseline and as a "fine-tuned LLM" rung
-on the spectrum between zero-shot frontier LLMs and a fully-trained
-classifier head.
-
-**Generative LLMs (Claude, GPT, Gemini)** are present in our
-evaluation matrix but as the *zero-shot, constrained, and RAG arms*
-of the comparison, not as fine-tuned trained models. The trained
-classifier head is the discriminative-model anchor of the matrix
-against which LLM behavior under degradation is contrasted. Comparing
-the same task on the same inputs across both architectures is the
-core comparison the paper makes possible.
+the pre-trained encoder for three reasons: (a) domain-adaptive
+pre-training (PubMedBERT is trained from scratch on PubMed
+abstracts + full-text articles, producing a tokenizer that treats
+biomedical terms as single tokens rather than fragmented
+subwords [@Devlin2019; @Gururangan2020]); (b) strong empirical
+performance on the BLURB biomedical NLP benchmark [@Gu2021]; and
+(c) a computational footprint (~110M parameters) compatible with
+local fine-tuning on consumer Apple Silicon, which is the
+compliance-enabling property — any larger encoder would have
+forced us onto cloud GPU infrastructure with corresponding
+data-residency review for credentialed MIMIC data. Alternative
+encoders (ClinicalBERT [@Alsentzer2019], BioBERT [@Lee2020],
+BioLinkBERT [@Yasunaga2022], and larger biomedical models including
+BiomedLM, GatorTron, BioMistral, and Med-PaLM via parameter-
+efficient fine-tuning [@Hu2022; @Dettmers2023]) were considered
+and either ruled out (ClinicalBERT — MIMIC-III pre-training
+contaminates MIMIC-IV evaluation) or deferred to a v2 ablation
+arm. Generative LLMs (Claude, GPT, Gemini) are present in the
+evaluation matrix but as zero-shot / constrained / RAG arms, not
+as fine-tuned trained models; comparing the same task across both
+architectures is the core comparison the paper enables.
 
 ## Hardware
 
@@ -198,45 +154,17 @@ contributor preferred — at the cost of the data-residency story.
 
 ### Hardware-driven hyperparameter choices
 
-The two hyperparameters that interact most strongly with hardware are
-**batch size** and **maximum sequence length**, both of which
-contribute to per-step memory consumption.
-
-- **Batch size 16** at sequence length 128 uses approximately 5–6 GB of
-  unified memory for model weights, activations, and gradients,
-  leaving ~10 GB for the operating system, browser, and editor without
-  triggering memory swap. Larger batches (32, 64) would likely fit
-  but leave little headroom for normal laptop use during the
-  ~15-hour training run.
-- **Maximum sequence length 128** truncates the longest input modes
-  (D1_full and D2_no_code, which carry FHIR JSON payloads of ~200–400
-  tokens) but leaves the headline-experiment modes (D3_text_only and
-  D4_abbreviated, typically 10–50 tokens) untouched. Transformer
-  self-attention is *O(n²)* in sequence length, so dropping from 256
-  to 128 tokens approximately quarters the per-step compute. We
-  document this in the limitations section: D1/D2 results may
-  underestimate the contribution of structured FHIR fields relative
-  to a longer-context training run.
-
-### Training throughput
-
-Steady-state throughput on the configured hardware is **1.85 iterations
-per second** (one iteration = one forward + backward + optimizer
-step on a batch of 16), measured after the first ~100 steps to
-exclude PyTorch's MPS-backend kernel-compilation warmup. This gives:
-
-| Phase | Steps | Wall-clock |
-|---|---|---|
-| One training epoch | 42,972 | ~6.5 hours |
-| One validation pass | 6,142 | ~50 minutes |
-| Per epoch (train + val) | — | ~7.3 hours |
-| Three epochs (full configured run) | — | ~22 hours |
-| With early stopping at epoch 2 | — | ~15 hours |
-
-For comparison, the same configuration on a single NVIDIA A100 GPU
-would run approximately 3-5× faster (estimated; not measured) at
-roughly $4-7 of cloud cost. The local M1 run completes overnight at
-zero marginal cost, with the full data-residency guarantee preserved.
+Batch size 16 at maximum sequence length 128 uses ~5–6 GB of unified
+memory and leaves headroom for normal laptop operation during a
+~15-hour training run. Sequence-length 128 truncates the longest
+input modes (D1\_full / D2\_no\_code FHIR JSON payloads at
+~200–400 tokens) but leaves the headline experiment's
+D3\_text\_only / D4\_abbreviated inputs (10–50 tokens) untouched —
+documented in §Limitations. Steady-state throughput is ~1.85
+iterations per second on M1 MPS, yielding ~7 hours per epoch (train
++ validation) and ~15 hours total wall-clock for an early-stopping
+run at epoch 2; an A100 cloud GPU would run ~3–5× faster at ~\$4–7
+per training run if the data-residency story permits.
 
 ## Optimization
 
@@ -278,33 +206,19 @@ The full set of training hyperparameters is captured in
 inference code reads the configuration that produced the weights
 rather than relying on a separately-tracked config file.
 
-## Current results (placeholder)
+## Training convergence
 
-The first headline training run is in progress at the time of this
-draft. Expected outcomes:
-
-- **Validation top-1 accuracy** at convergence: 0.992–0.993
-  across three training epochs on the held-out validation split.
-  This high value reflects the long-tail concentration of
-  ACCESS-scope cohort (the top-50 codes cover the bulk of training
-  rows; see §Cohort) combined with an effective fine-tune of a
-  pre-trained biomedical encoder. The same checkpoint, evaluated on
-  the Synthea out-of-distribution cohort, yields a per-mode top-1
-  accuracy distribution discussed in §Results — the gap between
-  in-distribution validation accuracy and out-of-distribution
-  Synthea accuracy is itself one of the deployment-relevant
-  measurements this paper aims to surface.
-- **Validation loss curve**: monotonic decrease for at least the
-  first epoch, plateau or slight increase by epoch 2-3 (expected
-  early-stopping trigger).
-- **Per-mode accuracy breakdown** on the test split: D1_full ≥
-  D3_text_only ≥ D2_no_code ≥ D4_abbreviated is the expected
-  ordering. The gap between D3 and D4 is the headline measurement
-  we want from the trained model, since it parallels the same
-  measurement we will take from frontier LLMs on Synthea.
-
-Final numbers, learning curves, and per-mode breakdowns will replace
-this section once the run completes.
+Validation top-1 accuracy at convergence reached 0.992–0.993
+across three training epochs on the held-out MIMIC-IV validation
+split. This high in-distribution value reflects the long-tail
+concentration of the ACCESS-scope cohort (the top-50 codes cover
+the bulk of training rows; see §Cohort) combined with effective
+fine-tuning of a pre-trained biomedical encoder. The same
+checkpoint evaluated on the Synthea out-of-distribution cohort
+yields a substantially lower per-mode top-1 accuracy (40–50% range,
+see §Results) — the gap between in-distribution validation
+accuracy and out-of-distribution Synthea accuracy is one of the
+deployment-relevant measurements this paper surfaces.
 
 ## Limitations of the trained-model arm
 

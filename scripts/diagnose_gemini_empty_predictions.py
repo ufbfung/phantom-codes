@@ -195,9 +195,9 @@ def main() -> int:
     config_results: dict[str, list[dict]] = {name: [] for name, _ in configs}
 
     for ci, (cfg_name, cfg_kwargs) in enumerate(configs, 1):
-        print(f"=" * 78)
+        print("=" * 78)
         print(f"[Config {ci}/{len(configs)}: {cfg_name}]")
-        print(f"=" * 78)
+        print("=" * 78)
         cfg = _make_config(system_prompt=sys_zeroshot, **cfg_kwargs)
 
         for rec in records:

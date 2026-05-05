@@ -20,12 +20,17 @@
 #   - Generated build/ is gitignored
 
 # ─── Inputs ────────────────────────────────────────────────────────────
-# All markdown sections, in lexicographic order. Add a new section by
-# dropping a sections/NN_name.md file and appending an \input{} line
-# in main.tex; the Makefile picks it up automatically.
+# Main manuscript: sections/*.md → build/sections/*.tex → build/paper.pdf
+# Supplement:     supp_sections/*.md → build/supp_sections/*.tex → build/supplementary.pdf
+# Same pandoc-driven flow for both; biblatex resolves citations against
+# the shared references.bib.
 MD_SECTIONS := $(sort $(wildcard sections/*.md))
 TEX_SECTIONS := $(patsubst sections/%.md,build/sections/%.tex,$(MD_SECTIONS))
 PDF := build/paper.pdf
+
+MD_SUPP_SECTIONS := $(sort $(wildcard supp_sections/*.md))
+TEX_SUPP_SECTIONS := $(patsubst supp_sections/%.md,build/supp_sections/%.tex,$(MD_SUPP_SECTIONS))
+SUPP_PDF := build/supplementary.pdf
 
 # ─── Tools ─────────────────────────────────────────────────────────────
 PANDOC := pandoc
@@ -50,9 +55,10 @@ BIBER_OPTS := \
 	--output-directory=build
 
 # ─── Targets ───────────────────────────────────────────────────────────
-.PHONY: pdf snapshot clean watch deps
+.PHONY: pdf supp snapshot clean watch deps
 
 pdf: $(PDF)
+supp: $(SUPP_PDF)
 
 $(PDF): main.tex references.bib $(TEX_SECTIONS) | build
 	@echo "[paper] compiling main.tex (pass 1 — collect citations)"
@@ -70,11 +76,31 @@ build/sections/%.tex: sections/%.md | build/sections
 	@echo "[paper] pandoc: $< → $@"
 	$(PANDOC) $(PANDOC_OPTS) $< -o $@
 
+# Supplementary PDF — same flow as the main PDF, separate input/output paths.
+$(SUPP_PDF): supplementary.tex references.bib $(TEX_SUPP_SECTIONS) | build
+	@echo "[supp] compiling supplementary.tex (pass 1 — collect citations)"
+	$(PDFLATEX) $(PDFLATEX_OPTS) supplementary.tex >/dev/null
+	@echo "[supp] running biber (resolve bibliography)"
+	$(BIBER) $(BIBER_OPTS) supplementary >/dev/null
+	@echo "[supp] compiling supplementary.tex (pass 2 — insert bibliography)"
+	$(PDFLATEX) $(PDFLATEX_OPTS) supplementary.tex >/dev/null
+	@echo "[supp] compiling supplementary.tex (pass 3 — finalize cross-refs)"
+	$(PDFLATEX) $(PDFLATEX_OPTS) supplementary.tex >/dev/null
+	@mv build/supplementary.pdf $(SUPP_PDF)
+	@echo "[supp] ✓ $(SUPP_PDF)"
+
+build/supp_sections/%.tex: supp_sections/%.md | build/supp_sections
+	@echo "[supp] pandoc: $< → $@"
+	$(PANDOC) $(PANDOC_OPTS) $< -o $@
+
 build:
 	@mkdir -p build
 
 build/sections:
 	@mkdir -p build/sections
+
+build/supp_sections:
+	@mkdir -p build/supp_sections
 
 clean:
 	@rm -rf build/
@@ -93,7 +119,7 @@ watch:
 	@command -v entr >/dev/null || { \
 		echo "entr not found. Install with: brew install entr"; exit 1; }
 	@echo "[paper] watching for changes — Ctrl+C to stop"
-	@find sections main.tex Makefile | entr -c make pdf
+	@find sections supp_sections main.tex supplementary.tex Makefile | entr -c make pdf supp
 
 deps:
 	@echo "Build requires pandoc + a LaTeX distribution + biblatex/biber."

@@ -141,18 +141,28 @@ runs entirely against Synthea-generated synthetic FHIR Bundles,
 ensuring full compliance with PhysioNet's responsible-LLM-use policy
 and full reproducibility without credentialed-data access.
 
-\noindent\textbf{Results.} [TBD — populated from headline run on
-Synthea cohort. Will report per-model and per-mode outcome
-distributions across all five buckets, with hallucination rates as
-the primary outcome and cost-per-correct-prediction as a secondary
-deployment-relevance metric.]
+\noindent\textbf{Results.} On 125 unique Synthea Conditions $\times$
+4 degradation modes, fabrication was rare (median per-cell
+hallucination = 0\%) and constrained prompting eliminated it
+entirely for every Anthropic and OpenAI model with any nonzero
+zero-shot hallucination. Claude Haiku 4.5, Sonnet 4.6, and Opus
+4.7 each registered 0\% hallucination across all degradation
+modes under constrained prompting. Abstention
+(\emph{no\_prediction}) emerged as the more consequential failure
+mode for some models — notably Gemini 2.5 Pro at 88\% empty-
+prediction rate under zero-shot D4\_abbreviated, distinct from
+fabrication. Cost-per-correct-prediction ranged 270$\times$ across
+the matrix; GPT-4o-mini in constrained mode at \$0.0003 per
+exact-match was the cost-frontier configuration.
 
-\noindent\textbf{Conclusions.} [TBD — three sentences once results
-are in; current expectation is that hallucination rates differ
-substantially across prompting modes within the same model, that
-constrained decoding reduces but does not eliminate hallucination,
-and that the trained classifier head sets a clean comparison floor
-on a closed vocabulary.]
+\noindent\textbf{Conclusions.} Hallucination is a controllable
+property of the prompting setup rather than a fixed model
+limitation; constrained decoding eliminates it for modern
+frontier LLMs in this domain at our cohort scale. Abstention is
+methodologically distinct from fabrication and should be reported
+separately in clinical-AI evaluations. Cost-per-correct
+collapses the deployment choice to a small number of cost-
+frontier configurations.
 \end{abstract}
 
 \tableofcontents

@@ -1,0 +1,94 @@
+% Phantom Codes — supplementary materials master file.
+%
+% Mirrors paper/main.tex's preamble (same biblatex setup, same packages)
+% so prose conventions and citation rendering are identical between the
+% main manuscript and the supplement. The main difference: this file
+% \input{}'s build/supp_sections/*.tex (one per S1-Sn section) instead
+% of build/sections/*.tex.
+%
+% Build:
+%     cd paper && make supp
+%
+% Output: paper/build/supplementary.pdf
+%
+% Editing model:
+%   - Prose edits happen in supp_sections/*.md
+%   - This file only changes when you add/remove/reorder sections,
+%     change document class, or restyle the title.
+
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{microtype}
+\usepackage{parskip}
+
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{caption}
+\usepackage{calc}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% biblatex with biber backend — matches main.tex; same Vancouver style
+% so cross-references between main + supplement render consistently.
+\usepackage[backend=biber, style=vancouver, sortlocale=en_US]{biblatex}
+\addbibresource{references.bib}
+
+\usepackage[colorlinks=true,
+            linkcolor=blue!60!black,
+            citecolor=blue!60!black,
+            urlcolor=blue!60!black]{hyperref}
+\usepackage{xurl}
+
+\usepackage{xcolor}
+\usepackage{fancyvrb}
+\usepackage{framed}
+\usepackage{csquotes}
+
+% Pandoc compatibility shims (same as main.tex)
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\providecommand{\pandocbounded}[1]{#1}
+
+\title{%
+  Supplementary Materials \\
+  \large Phantom Codes: Hallucination in LLM-Based Clinical Concept Normalization}
+\author{%
+  Brian K. Fung \\[2pt]
+  \small Independent Researcher \\[2pt]
+  \small\href{mailto:brian@briankfung.com}{\texttt{brian@briankfung.com}}}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\noindent
+This supplement accompanies the main manuscript. References cite the
+shared bibliography (\texttt{paper/references.bib}); section labels use
+the prefix S1--Sn for cross-reference from the main text.
+
+\tableofcontents
+\bigskip
+
+% ─── Body ──────────────────────────────────────────────────────────────
+% Each S* section is generated from supp_sections/*.md via pandoc; see
+% Makefile. Add a new section by: (1) creating supp_sections/SN_name.md
+% and (2) appending an \input{build/supp_sections/SN_name} line below.
+
+\input{build/supp_sections/S1_prompt_templates}
+\input{build/supp_sections/S2_extended_results}
+\input{build/supp_sections/S3_reproducibility}
+\input{build/supp_sections/S4_miclaim}
+\input{build/supp_sections/S5_cost_economics_extended}
+
+\bigskip
+\hrule
+\bigskip
+
+\printbibliography[heading=bibintoc, title={References}]
+
+\end{document}

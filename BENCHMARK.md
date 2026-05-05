@@ -58,7 +58,7 @@ entry in [`configs/models.yaml`](configs/models.yaml).
 | Synthea cohort generation (one-time) | 5–10 min | $0 |
 | Inference dataset preparation | 2–5 min | $0 |
 | Smoke validation (recommended before headline) | 2–5 min | <$1 |
-| **Headline evaluation run** | **24–36 hours** | **$80–300 typical, $500 hard cap** |
+| **Headline evaluation run** | **24–36 hours** | **~$50 realized at the n=125 default; $80–300 projected at n=500; $500 hard cap** |
 | Report generation | <1 min | $0 |
 
 LLM API pricing fluctuates; figures above reflect 2026-Q2 rates with
@@ -200,13 +200,21 @@ uv run phantom-codes evaluate \
     --max-cost-usd 500
 ```
 
-This is the paper's headline experiment — every model in the matrix
-evaluated on 500 records × 4 modes (~2000 prediction rows per model;
-29 entries in `headline_set` including the trained classifier if its
-checkpoint is present, otherwise 28). 24–36 hours wall-clock at
-typical provider rate limits (≈15–25 records/hr on the slowest LLM
-when iterating through all 3 prompting modes per record); $80–300
-typical cost.
+This reproduces the v1 paper's headline experiment.
+
+> **`--max-records` semantics — important.** The flag counts
+> long-format cohort rows (one row per resource × degradation mode),
+> **not** unique resources. `--max-records 500` therefore yields
+> **125 unique resources × 4 modes = 500 EvalRecord items** — this
+> matches the v1 paper's headline n=125 cohort. To run on n=500
+> unique resources (4× the rows, ~4× the cost), pass
+> `--max-records 2000`.
+
+Every model in the matrix is evaluated on the cohort (29 entries in
+`headline_set` including the trained classifier if its checkpoint is
+present, otherwise 28). At the `--max-records 500` default: 24–36
+hours wall-clock at typical provider rate limits, ~\$50 realized
+cost (the v1 published numbers).
 
 Output (timestamped):
 - `results/raw/headline_<utc>.csv` — per-prediction long-format CSV
@@ -259,17 +267,20 @@ for the full check list and trigger thresholds.
 uv run phantom-codes report --csv results/raw/headline_*.csv
 ```
 
-Produces five tables in `results/summary/<run-id>/`:
+Produces six tables in `results/summary/<run-id>/`:
 
-- **`headline.csv`** — outcome distribution per (model, mode) — the §3
-  Results centerpiece
-- **`hallucination.csv`** — per-mode hallucination rate by model with
-  Wilson 95% confidence intervals
+- **`headline.csv`** — outcome distribution per (model, mode) across
+  the 6-way taxonomy — the §3 Results centerpiece
+- **`hallucination.csv`** — per-mode hallucination rate (narrow:
+  fabrications only) by model with Wilson 95% confidence intervals
+- **`no_prediction.csv`** — per-mode abstention rate by model with
+  Wilson 95% CIs (split out from hallucination 2026-05-04 with the
+  6-way taxonomy refinement)
 - **`top_k_lift.csv`** — top-1 vs top-5 exact-match comparison
 - **`cost_per_correct.csv`** — $ per correct prediction by model
 - **`per_bucket_cost.csv`** — cost decomposition by outcome bucket
 
-Plus a combined `headline.md` markdown report with all five tables
+Plus a combined `headline.md` markdown report with all tables
 formatted side-by-side for direct paste into the paper.
 
 ## Reproducibility checklist
@@ -360,7 +371,8 @@ adding new entries is a ~30-minute manual process per code.
 If you use this benchmark in published work, please cite:
 
 > Fung, B. K. (2026). *Phantom Codes: Hallucination in LLM-Based
-> Clinical Concept Normalization*. [paper venue + DOI when published]
+> Clinical Concept Normalization*. JAMIA Research and Applications.
+> [DOI when published]
 
 And the underlying dependencies:
 

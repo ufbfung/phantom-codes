@@ -6,7 +6,7 @@ A reproducible benchmark for evaluating how well LLMs and trained models map deg
 
 **Clinical concept normalization** is the task of mapping mentions of clinical entities (diagnoses, labs, medications) to identifiers in controlled vocabularies (ICD-10-CM, LOINC, RxNorm, etc.). It's a foundational task for healthcare data integration, billing, research cohort construction, and AI-assisted documentation.
 
-**Status:** Phase 0 complete for diagnoses. Degradation pipeline, 6-way outcome taxonomy, ICD-10-CM validator, LLM module (Claude + GPT + Gemini in zero-shot + constrained + RAG modes), bi-encoder retrieval baseline, constrained-only baselines (exact / fuzzy / TF-IDF), token + cost tracking, run-manifest sidecars for reproducibility, blinded `--infra-only` smoke-test mode, and end-to-end eval runner are implemented and tested. Real MIMIC ingestion is wired (with MIMIC-FHIR URI/code normalization) and the PubMedBERT classifier head + local PyTorch MPS training loop are implemented; the first headline training run is in progress on M1 hardware.
+**Status:** v1 complete for diagnoses. Degradation pipeline, 6-way outcome taxonomy, ICD-10-CM validator, LLM module (Claude + GPT + Gemini in zero-shot + constrained + RAG modes), bi-encoder retrieval baseline, constrained-only baselines (exact / fuzzy / TF-IDF), token + cost tracking, run-manifest sidecars, blinded `--infra-only` smoke-test mode, and end-to-end eval runner are implemented and tested. PubMedBERT classifier fine-tuned locally on MIMIC-IV-FHIR via PyTorch MPS. Headline n=125 Synthea evaluation completed 2026-05-04 (per-(model, mode) aggregates in [results/summary/n125_run_v2/](results/summary/n125_run_v2/)). Paper draft submission-ready for **JAMIA Research and Applications**.
 
 **v1 scope:** diagnoses (ICD-10-CM). v2+ extends to labs (LOINC) and medications (RxNorm) using the same framework.
 
@@ -16,7 +16,7 @@ Take a coded FHIR Condition (e.g., one bearing ICD-10 `E11.9` "Type 2 diabetes m
 
 The benchmark compares:
 
-- **LLMs** — Claude (Opus 4.7, Sonnet 4.6, Haiku 4.5), GPT (5.5, 4-class), Gemini 2.5 (Pro, Flash). Three prompting modes: **zero-shot** (no menu, primary experiment), **constrained** (fixed candidate list, hallucination control), and **RAG** (per-record retrieved candidates).
+- **LLMs** — Claude (Opus 4.7, Sonnet 4.6, Haiku 4.5), GPT (5.5, 4o-mini), Gemini (2.5 Pro, 2.5 Flash, 3 Flash Preview). Three prompting modes: **zero-shot** (no menu, primary experiment), **constrained** (fixed candidate list, hallucination control), and **RAG** (per-record retrieved candidates).
 - **Trained models** — sentence-transformer retrieval (FAISS) and PubMedBERT classification head.
 - **Baselines** — exact, fuzzy (rapidfuzz), TF-IDF nearest neighbor.
 
@@ -57,7 +57,7 @@ ValueSets bundled at [src/phantom_codes/data/access_valuesets/](src/phantom_code
 ## Data
 
 - **Primary:** [MIMIC-IV-FHIR v2.1](https://physionet.org/content/mimic-iv-fhir/2.1/) — credentialed access via PhysioNet. Cannot be redistributed; this repo only contains code and synthetic fixtures.
-- **Open benchmark:** [Synthea](https://github.com/synthetichealth/synthea)-generated FHIR Bundles. Released as `benchmarks/synthetic_v1/` once that phase lands.
+- **Open benchmark:** [Synthea](https://github.com/synthetichealth/synthea)-generated FHIR Bundles. Cohort lives at `benchmarks/synthetic_v1/conditions.ndjson` (deterministic given pinned Synthea SHA + `seed=42`); regenerable from `./scripts/generate_synthea_cohort.sh` + `phantom-codes prepare-synthea`.
 
 ### Compliance: PhysioNet's responsible-LLM-use policy
 
@@ -175,13 +175,22 @@ rm -rf benchmarks/synthetic_v1/raw       # frees disk; bundles regenerable
 uv run phantom-codes evaluate \
     --models-set smoke_test_set --max-records 50 --max-cost-usd 5
 
-# Headline run (~1–2 hours, $150–300 typical, $500 hard cap)
+# Headline run — reproduces the v1 paper's n=125 cohort
+# (~24-36 hr wall clock at provider rate limits; ~$50 realized cost)
 uv run phantom-codes evaluate \
     --models-set headline_set --max-records 500 --max-cost-usd 500
 
 # Generate paper-ready tables
 uv run phantom-codes report --csv results/raw/headline_*.csv
 ```
+
+> **`--max-records` semantics:** The flag counts long-format cohort
+> rows (one row per resource × degradation mode), not unique
+> resources. `--max-records 500` therefore yields **125 unique
+> resources × 4 modes = 500 EvalRecord items** — this matches the v1
+> paper's headline. To run on n=500 unique resources, pass
+> `--max-records 2000`. See [BENCHMARK.md](BENCHMARK.md) for the full
+> reproduction guide.
 
 **Full reproduction guide**: see [BENCHMARK.md](BENCHMARK.md) for
 prerequisites, expected costs/runtimes, the SNOMED→ICD-10-CM
@@ -219,15 +228,23 @@ scripts/        # demo_minimal_training.py (synthetic-fixture end-to-end demo)
 tests/          # unit tests + synthetic fixtures (205 tests, ruff clean)
 benchmarks/     # released open benchmark (Synthea — TBD)
 paper/
-  sections/     # markdown drafts: 00_introduction.md, references.md;
-                #   future: methods, results, discussion (TBD)
-  figures/      # generated figures (TBD)
-  tables/       # generated tables (TBD)
+  sections/         # §0–§5 markdown drafts (introduction, methods,
+                    #   cost economics, results, discussion, conclusion)
+  supp_sections/    # S1–S5 supplementary markdown (prompts,
+                    #   extended results, reproducibility appendix,
+                    #   MI-CLAIM, extended cost economics)
+  main.tex          # main manuscript master file
+  supplementary.tex # supplementary master file
+  references.bib    # shared bibliography (biblatex Vancouver)
+  Makefile          # `make pdf` (main) / `make supp` / `make snapshot`
+  figures/          # generated figures (TBD)
+  tables/           # generated tables (TBD)
+  paper.pdf         # committed snapshot of the latest build
 ```
 
 ## Roadmap
 
-- **v1**: diagnoses (ICD-10-CM) — in progress
+- **v1**: diagnoses (ICD-10-CM) — paper draft complete; under JAMIA submission prep
 - **v2**: + labs (LOINC), via Observation resources
 - **v3**: + medications (RxNorm), via MedicationRequest resources
 

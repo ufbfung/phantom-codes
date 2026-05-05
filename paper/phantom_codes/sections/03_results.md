@@ -27,13 +27,11 @@ in any tested configuration.
 ## Failure-mode breakdown: hallucination and abstention
 
 The two failure modes the literature historically conflates —
-fabrication of non-existent codes (hallucination) and
-empty-prediction (no\_prediction) — surface different patterns.
-Table 1 reports both rates per (model, mode) cell as
-hallucination % / no\_prediction %, with point estimates from per-cell
-N = 125. Wilson 95% confidence intervals at these point estimates
-are approximately ±3pp at 0%, ±5pp at 5%, and ±8–9pp at 50%; full
-CIs are in Supplementary §S2.2–S2.3.
+fabrication of non-existent codes (hallucination) and abstention
+(no\_prediction) — surface different patterns. Table 1 reports
+both rates per cell as hallucination % / no\_prediction %; per-cell
+N = 125, Wilson 95% CIs are ±3pp at 0%, ±5pp at 5%, ±8–9pp at 50%
+(full CIs in §S2.2–S2.3).
 
 **Table 1.** Failure-mode breakdown by model and degradation mode.
 Each cell reports hallucination % / no\_prediction %.
@@ -108,34 +106,32 @@ price and accuracy into one deployment-ready number; the Top-1 and
 Halluc columns surface all three deployment dimensions in one
 row. Sorted by \$/correct ascending; n=500 per row.
 
-**Table 3.** Cost per correct prediction across three deployment
-dimensions. Mode: C=constrained, R=RAG, Z=zero-shot. Total cost in
-§S2.5; API model IDs in §Methods.
+**Table 3.** Cost per correct prediction. *constr.* = constrained.
+API model IDs in §Methods.
 
-| Model                  | Mode | Top-1 | Halluc | $ / correct |
-|:-----------------------|:-----|------:|-------:|------------:|
-| Gemini 2.5 Flash       | R    | 84.6% |   0.0% |     $0.0001 |
-| GPT-4o-mini            | Z    | 85.2% |   7.6% |     $0.0002 |
-| GPT-4o-mini            | R    | 90.4% |   0.0% |     $0.0002 |
-| Gemini 2.5 Flash       | C    | 88.4% |   0.0% |     $0.0002 |
-| **GPT-4o-mini**        | **C**| **94.2%** | **0.0%** | **$0.0003** |
-| Gemini 3 Flash Preview | C    | 89.6% |   0.0% |     $0.0008 |
-| Claude Haiku 4.5       | R    | 90.6% |   0.0% |     $0.0027 |
-| Claude Haiku 4.5       | C    | 96.8% |   0.0% |     $0.0044 |
-| Claude Sonnet 4.6      | C    | 94.6% |   0.0% |     $0.0069 |
-| GPT-5.5                | C    | 93.6% |   0.0% |     $0.0078 |
-| Gemini 2.5 Pro         | C    | 46.2% |   0.0% |     $0.0068 |
-| Claude Opus 4.7        | C    | 94.8% |   0.0% |     $0.0133 |
+| Model                          | Mode     | Top-1 | Halluc | Total | $/correct |
+|:-------------------------------|:---------|------:|-------:|------:|----------:|
+| Gemini 2.5 Flash               | rag      | 84.6% |   0.0% | $0.03 |   $0.0001 |
+| GPT-4o-mini                    | zeroshot | 85.2% |   7.6% | $0.07 |   $0.0002 |
+| GPT-4o-mini                    | rag      | 90.4% |   0.0% | $0.09 |   $0.0002 |
+| Gemini 2.5 Flash               | constr.  | 88.4% |   0.0% | $0.09 |   $0.0002 |
+| **GPT-4o-mini**                | **constr.** | **94.2%** | **0.0%** | **$0.14** | **$0.0003** |
+| Gemini 3 Flash Preview         | constr.  | 89.6% |   0.0% | $0.37 |   $0.0008 |
+| Claude Haiku 4.5               | rag      | 90.6% |   0.0% | $1.22 |   $0.0027 |
+| Claude Haiku 4.5               | constr.  | 96.8% |   0.0% | $2.14 |   $0.0044 |
+| Claude Sonnet 4.6              | constr.  | 94.6% |   0.0% | $3.26 |   $0.0069 |
+| GPT-5.5                        | constr.  | 93.6% |   0.0% | $3.63 |   $0.0078 |
+| Gemini 2.5 Pro                 | constr.  | 46.2% |   0.0% | $1.57 |   $0.0068 |
+| Claude Opus 4.7                | constr.  | 94.8% |   0.0% | $6.31 |   $0.0133 |
 
-Read top-down: cheaper rows than GPT-4o-mini constrained are all
-4–19pp lower on top-1 accuracy or carry nonzero hallucination.
-**GPT-4o-mini constrained leads on deployment-relevance**: 94.2%
-top-1, 0% hallucination, \$0.0003 per correct — the cheapest config
-clearing a 94% accuracy floor. Claude Haiku 4.5 constrained adds
-2.6pp accuracy at ~14× cost; Claude Opus 4.7 constrained's 0.6pp
-edge over GPT-4o-mini does not justify its 44× cost — the largest
-frontier model is not the deployment-leader. Gemini 2.5 Pro's
-elevated \$/correct reflects abstention behavior.
+Read top-down: cheaper rows are all 4–19pp lower on top-1 or carry
+nonzero hallucination. **GPT-4o-mini constrained leads on
+deployment-relevance**: 94.2% top-1, 0% hallucination, \$0.0003 per
+correct — the cheapest config at ≥94% top-1. Claude Haiku 4.5
+constrained adds 2.6pp accuracy at ~14× cost; Claude Opus 4.7
+constrained's 0.6pp accuracy edge does not justify its 44× cost —
+the largest frontier model is not the deployment-leader. Gemini
+2.5 Pro's elevated \$/correct reflects abstention behavior.
 
 ## Outcome distribution under D4 abbreviation stress
 

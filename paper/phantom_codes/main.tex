@@ -145,10 +145,11 @@ text are needed to establish the true effect size.
 \noindent\textbf{Conclusion.} Zero-shot LLM prompting is unsafe
 for clinical concept normalization; constrained or retrieval-
 augmented grounding is required to eliminate fabrication. Among
-grounded configurations, cost-per-correct (not accuracy alone)
-drives deployment selection: Claude Haiku 4.5 constrained leads at
-96.8\% top-1 / \$0.0044 per correct, beating the largest frontier
-model (Opus 4.7) at one-third the cost.
+grounded configurations, cost-per-correct drives deployment
+selection: GPT-4o-mini constrained leads at 94.2\% top-1 /
+\$0.0003 per correct; Claude Haiku 4.5 constrained is the
+higher-accuracy alternative (96.8\% / \$0.0044). Both dominate the
+largest frontier model (Opus 4.7, \$0.0133).
 \end{abstract}
 
 \tableofcontents

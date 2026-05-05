@@ -29,9 +29,10 @@ zero-shot, and constrained or retrieval-augmented grounding is
 required to eliminate it. Second, among grounded configurations,
 **cost-per-correct rather than accuracy alone should drive
 selection**: clinical coding errors are downstream-costly, and the
-cheaper model can win on the combined metric. Claude Haiku 4.5
-constrained leads on this cohort at 96.8% top-1 / \$0.0044 per
-correct, beating Claude Opus 4.7 constrained (94.8%, \$0.0133) at
-one-third the cost; the largest frontier model is not the
-deployment-leader. The supported workflow is LLM-augmented coding
-with terminologist review, not autonomous coding.
+cheaper model can win on the combined metric. The deployment
+frontier: **GPT-4o-mini constrained** (94.2% top-1,
+\$0.0003/correct — cheapest at ≥94% accuracy) and **Claude
+Haiku 4.5 constrained** (96.8%, \$0.0044 — +2.6pp accuracy at
+~14× cost). Both dominate the largest frontier model (Opus 4.7
+constrained, 94.8% / \$0.0133). Supported workflow:
+LLM-augmented coding with terminologist review.

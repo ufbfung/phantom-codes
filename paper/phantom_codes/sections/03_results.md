@@ -108,24 +108,24 @@ price and accuracy into one deployment-ready number; the Top-1 and
 Halluc columns surface all three deployment dimensions in one
 row. Sorted by \$/correct ascending; n=500 per row.
 
-**Table 3.** Cost per correct prediction across all three deployment
-dimensions. Total cost in Supplementary §S2.5; API model IDs in
-§Methods.
+**Table 3.** Cost per correct prediction across three deployment
+dimensions. Mode: C=constrained, R=RAG, Z=zero-shot. Total cost in
+§S2.5; API model IDs in §Methods.
 
-| Model | Mode | Top-1 | Halluc | $ / correct |
-|---|---|---:|---:|---:|
-| Gemini 2.5 Flash | rag | 84.6% | 0.0% | $0.0001 |
-| GPT-4o-mini | zeroshot | 85.2% | 7.6% | $0.0002 |
-| GPT-4o-mini | rag | 90.4% | 0.0% | $0.0002 |
-| Gemini 2.5 Flash | constrained | 88.4% | 0.0% | $0.0002 |
-| **GPT-4o-mini** | **constrained** | **94.2%** | **0.0%** | **$0.0003** |
-| Gemini 3 Flash Preview | constrained | 89.6% | 0.0% | $0.0008 |
-| Claude Haiku 4.5 | rag | 90.6% | 0.0% | $0.0027 |
-| Claude Haiku 4.5 | constrained | 96.8% | 0.0% | $0.0044 |
-| Claude Sonnet 4.6 | constrained | 94.6% | 0.0% | $0.0069 |
-| GPT-5.5 | constrained | 93.6% | 0.0% | $0.0078 |
-| Gemini 2.5 Pro | constrained | 46.2% | 0.0% | $0.0068 |
-| Claude Opus 4.7 | constrained | 94.8% | 0.0% | $0.0133 |
+| Model                  | Mode | Top-1 | Halluc | $ / correct |
+|:-----------------------|:-----|------:|-------:|------------:|
+| Gemini 2.5 Flash       | R    | 84.6% |   0.0% |     $0.0001 |
+| GPT-4o-mini            | Z    | 85.2% |   7.6% |     $0.0002 |
+| GPT-4o-mini            | R    | 90.4% |   0.0% |     $0.0002 |
+| Gemini 2.5 Flash       | C    | 88.4% |   0.0% |     $0.0002 |
+| **GPT-4o-mini**        | **C**| **94.2%** | **0.0%** | **$0.0003** |
+| Gemini 3 Flash Preview | C    | 89.6% |   0.0% |     $0.0008 |
+| Claude Haiku 4.5       | R    | 90.6% |   0.0% |     $0.0027 |
+| Claude Haiku 4.5       | C    | 96.8% |   0.0% |     $0.0044 |
+| Claude Sonnet 4.6      | C    | 94.6% |   0.0% |     $0.0069 |
+| GPT-5.5                | C    | 93.6% |   0.0% |     $0.0078 |
+| Gemini 2.5 Pro         | C    | 46.2% |   0.0% |     $0.0068 |
+| Claude Opus 4.7        | C    | 94.8% |   0.0% |     $0.0133 |
 
 Read top-down: cheaper rows than GPT-4o-mini constrained are all
 4–19pp lower on top-1 accuracy or carry nonzero hallucination.

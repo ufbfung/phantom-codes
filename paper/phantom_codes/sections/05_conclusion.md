@@ -21,12 +21,14 @@ vocabulary and more realistic clinical text (e.g., discharge
 summaries, ED notes) is needed to establish the true effect size
 of fabrication risk in production-relevant inputs.
 
-For deployment, the comparison among configurations that already
-achieve near-zero hallucination is not "lowest hallucination" but
-**cost-per-correct sustainability**. GPT-4o-mini constrained at
-\$0.0003 per exact match dominates every more expensive
-configuration tested at this cohort's accuracy ceiling; production
+For deployment, the empirically-supported pattern is
+**LLM-augmented coding with terminologist or clinical-informaticist
+review** — not autonomous LLM coding. Within that pattern, the
+comparison among configurations that already achieve near-zero
+hallucination is not "lowest hallucination" but cost-per-correct
+sustainability: GPT-4o-mini constrained at \$0.0003 per exact match
+dominates every more expensive configuration tested at this cohort's
+accuracy ceiling, and that is the comparison that production
 deployment selection at population-coding scale should be anchored
-in this sustainable-cost framing rather than in marginal safety
-differences between configurations that are already at the floor
-on fabrication.
+on rather than marginal safety differences between configurations
+already at the floor on fabrication.

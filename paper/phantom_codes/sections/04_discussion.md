@@ -49,18 +49,28 @@ hallucinated code (downstream systems silently mishandle it,
 propagating into billing, research, and quality reporting) is
 qualitatively different from a near-miss within the correct ICD
 chapter (corrected by a reviewer in seconds) and from an abstention
-(re-coding from scratch, but emitting no spurious artifact). For
-constrained-mode Anthropic and OpenAI configurations (0%
-hallucination, ~5% category-match, ~0% abstention), the QA fraction
-is dominated by fast category-match review; per the cost break-even
-framework (Supplementary §S5), this beats human-only coding across
-all sensitivity-sweep parameter ranges considered. The compliance-
-by-construction framing — training on credentialed MIMIC,
-evaluating LLMs on freely-redistributable Synthea — is itself
-deployment-relevant: PhysioNet's responsible-LLM-use policy
-\autocite{PhysioNet2025} prohibits sending credentialed data through
-commercial LLM APIs, so clinical LLM-coder deployments necessarily
-face the same train/evaluate separation.
+(re-coding from scratch, but emitting no spurious artifact).
+
+The empirically-supported deployment pattern is therefore
+**LLM-augmented coding with terminologist or clinical-informaticist
+review**, not autonomous LLM coding. Two findings concretely
+support this. First, for constrained-mode Anthropic and OpenAI
+configurations (0% hallucination, ~5% category-match, ~0%
+abstention), the QA fraction is dominated by fast category-match
+adjudication — a clinically straightforward task an experienced
+coder can resolve in seconds — and beats human-only coding across
+all sensitivity-sweep parameter ranges considered (Supplementary
+§S5). Second, the top-1 vs top-5 lift table (§3) shows that
+trained-classifier and sub-frontier zero-shot LLM workflows
+(top-1 in the 45–75% range) benefit substantially from surfacing
+top-5 candidates to a reviewer, lifting net accuracy 20–38
+percentage points; constrained-mode frontier LLMs already saturate
+top-1 (lift ≤6pp) and shift the reviewer's role from candidate
+selection to category-match adjudication. Either architecture
+keeps a terminologist or informaticist in the decision loop where
+accuracy matters most — appropriate for clinical settings where
+coding accuracy directly drives downstream billing, research
+cohort definition, and quality measurement.
 
 ## Limitations
 

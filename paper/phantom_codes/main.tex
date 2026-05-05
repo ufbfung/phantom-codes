@@ -140,18 +140,17 @@ prediction rate under zero-shot D4. Cost-per-correct ranged
 the cost-frontier configuration.
 
 \noindent\textbf{Discussion.} Hallucination appears more
-controllable than prior literature suggested at this scale and
-scope, but the small cohort, narrow ACCESS-Model vocabulary, and
-abbreviation-substitution stress are imperfect proxies for
-real-world hallucination triggers; larger cohorts with more
-realistic clinical text are needed to establish the true effect
-size of fabrication risk.
+controllable than prior literature suggested at this scale, but
+the small cohort and abbreviation-substitution stress are imperfect
+proxies for real-world triggers; larger cohorts with more realistic
+clinical text are needed to establish the true effect size.
 
-\noindent\textbf{Conclusion.} Among constrained-mode configurations
-that eliminate hallucination on this cohort, deployment selection
-is dominated by cost-per-correct sustainability — GPT-4o-mini
-constrained at \$0.0003 per exact match — rather than marginal
-safety differences.
+\noindent\textbf{Conclusion.} The empirically-supported deployment
+pattern is LLM-augmented coding with terminologist or informaticist
+review, not autonomous coding. Among configurations that eliminate
+hallucination, selection is dominated by cost-per-correct
+sustainability (GPT-4o-mini constrained: \$0.0003/exact-match),
+not marginal safety differences.
 \end{abstract}
 
 \tableofcontents

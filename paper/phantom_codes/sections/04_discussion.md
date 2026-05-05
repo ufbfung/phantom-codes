@@ -67,10 +67,8 @@ top-5 candidates to a reviewer, lifting net accuracy 20–38
 percentage points; constrained-mode frontier LLMs already saturate
 top-1 (lift ≤6pp) and shift the reviewer's role from candidate
 selection to category-match adjudication. Either architecture
-keeps a terminologist or informaticist in the decision loop where
-accuracy matters most — appropriate for clinical settings where
-coding accuracy directly drives downstream billing, research
-cohort definition, and quality measurement.
+keeps a clinical adjudicator in the decision loop where accuracy
+matters most.
 
 ## Limitations
 

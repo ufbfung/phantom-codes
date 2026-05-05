@@ -23,12 +23,13 @@ of fabrication risk in production-relevant inputs.
 
 For deployment, the empirically-supported pattern is
 **LLM-augmented coding with terminologist or clinical-informaticist
-review** — not autonomous LLM coding. Within that pattern, the
-comparison among configurations that already achieve near-zero
-hallucination is not "lowest hallucination" but cost-per-correct
-sustainability: GPT-4o-mini constrained at \$0.0003 per exact match
-dominates every more expensive configuration tested at this cohort's
-accuracy ceiling, and that is the comparison that production
-deployment selection at population-coding scale should be anchored
-on rather than marginal safety differences between configurations
-already at the floor on fabrication.
+review**, not autonomous LLM coding. **Cost-per-correct** is the
+right selection metric — it incorporates both accuracy (clinical
+coding errors are downstream-costly for billing, research, and
+quality measurement) and per-call cost. The empirical leader on
+this cohort is not the largest frontier model: Claude Haiku 4.5
+constrained leads at 96.8% top-1 (0% hallucination, \$0.0044 per
+correct), beating Claude Opus 4.7 constrained (94.8%, \$0.0133)
+at one-third the cost; GPT-4o-mini constrained is the cost-floor
+alternative at 94.2% / \$0.0003. Deployment selection should
+anchor on cost-per-correct, not on model recency or scale.

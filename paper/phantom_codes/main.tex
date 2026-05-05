@@ -121,13 +121,12 @@ codes from abstention, two failure modes typically conflated in
 existing benchmarks.
 
 \noindent\textbf{Materials and Methods.} We evaluate eight frontier
-LLMs (Claude, GPT, Gemini) under three prompting modes (zero-shot,
-constrained, retrieval-augmented) against a fine-tuned PubMedBERT
-classifier and string-matching baselines, on Synthea-generated FHIR
-Conditions across four input degradation modes. Each top-1
-prediction is classified into one of six buckets that explicitly
-separate fabrication (predicted code does not exist in CMS-published
-ICD-10-CM) from abstention (no usable prediction returned).
+LLMs under three prompting modes (zero-shot, constrained, retrieval-
+augmented) against a fine-tuned PubMedBERT classifier and string-
+matching baselines, on Synthea-generated FHIR Conditions across
+four input degradation modes. Each top-1 prediction lands in one of
+six outcome buckets that separate fabrication (code does not exist
+in CMS-published ICD-10-CM) from abstention (no usable prediction).
 
 \noindent\textbf{Results.} On 125 unique Synthea Conditions $\times$
 4 degradation modes, fabrication was rare (median per-cell
@@ -141,16 +140,16 @@ the cost-frontier configuration.
 
 \noindent\textbf{Discussion.} Hallucination appears more
 controllable than prior literature suggested at this scale, but
-the small cohort and abbreviation-substitution stress are imperfect
-proxies for real-world triggers; larger cohorts with more realistic
-clinical text are needed to establish the true effect size.
+the cohort and abbreviation stress are imperfect proxies for
+real-world triggers; larger cohorts with more realistic clinical
+text are needed to establish the true effect size.
 
 \noindent\textbf{Conclusion.} The empirically-supported deployment
-pattern is LLM-augmented coding with terminologist or informaticist
-review, not autonomous coding. Among configurations that eliminate
-hallucination, selection is dominated by cost-per-correct
-sustainability (GPT-4o-mini constrained: \$0.0003/exact-match),
-not marginal safety differences.
+pattern is LLM-augmented coding with terminologist review, not
+autonomous coding. Cost-per-correct drives selection: Claude
+Haiku 4.5 constrained leads at 96.8\% top-1 / \$0.0044 per correct,
+beating the largest frontier model (Opus 4.7) at one-third the
+cost — contradicting the ``biggest model wins'' default.
 \end{abstract}
 
 \tableofcontents

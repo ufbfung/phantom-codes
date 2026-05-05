@@ -22,15 +22,16 @@ vocabulary and more realistic clinical text (e.g., discharge
 summaries, ED notes) is needed to establish the true effect size
 of fabrication risk in production-relevant inputs.
 
-For deployment, the empirically-supported pattern is
-**LLM-augmented coding with terminologist or clinical-informaticist
-review**, not autonomous LLM coding. **Cost-per-correct** is the
-right selection metric — it incorporates both accuracy (clinical
-coding errors are downstream-costly for billing, research, and
-quality measurement) and per-call cost. The empirical leader on
-this cohort is not the largest frontier model: Claude Haiku 4.5
-constrained leads at 96.8% top-1 (0% hallucination, \$0.0044 per
-correct), beating Claude Opus 4.7 constrained (94.8%, \$0.0133)
-at one-third the cost; GPT-4o-mini constrained is the cost-floor
-alternative at 94.2% / \$0.0003. Deployment selection should
-anchor on cost-per-correct, not on model recency or scale.
+For deployment, two prescriptions emerge. First,
+**zero-shot LLM prompting is unsafe for clinical concept
+normalization** — every fabrication observed occurred under
+zero-shot, and constrained or retrieval-augmented grounding is
+required to eliminate it. Second, among grounded configurations,
+**cost-per-correct rather than accuracy alone should drive
+selection**: clinical coding errors are downstream-costly, and the
+cheaper model can win on the combined metric. Claude Haiku 4.5
+constrained leads on this cohort at 96.8% top-1 / \$0.0044 per
+correct, beating Claude Opus 4.7 constrained (94.8%, \$0.0133) at
+one-third the cost; the largest frontier model is not the
+deployment-leader. The supported workflow is LLM-augmented coding
+with terminologist review, not autonomous coding.

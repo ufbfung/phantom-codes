@@ -115,8 +115,7 @@
 % Discussion / Conclusion. Word limit: 250 prose words.
 \begin{abstract}
 \noindent\textbf{Objective.} To characterize how large language
-models (LLMs) fail at clinical concept normalization — specifically
-ICD-10-CM coding — and to separate fabrication of non-existent
+models (LLMs) fail at clinical concept normalization and to separate fabrication of non-existent
 codes from abstention, two failure modes typically conflated in
 existing benchmarks.
 
@@ -143,12 +142,13 @@ the cohort and abbreviation stress are imperfect proxies for
 real-world triggers; larger cohorts with more realistic clinical
 text are needed to establish the true effect size.
 
-\noindent\textbf{Conclusion.} The empirically-supported deployment
-pattern is LLM-augmented coding with terminologist review, not
-autonomous coding. Cost-per-correct drives selection: Claude
-Haiku 4.5 constrained leads at 96.8\% top-1 / \$0.0044 per correct,
-beating the largest frontier model (Opus 4.7) at one-third the
-cost — contradicting the ``biggest model wins'' default.
+\noindent\textbf{Conclusion.} Zero-shot LLM prompting is unsafe
+for clinical concept normalization; constrained or retrieval-
+augmented grounding is required to eliminate fabrication. Among
+grounded configurations, cost-per-correct (not accuracy alone)
+drives deployment selection: Claude Haiku 4.5 constrained leads at
+96.8\% top-1 / \$0.0044 per correct, beating the largest frontier
+model (Opus 4.7) at one-third the cost.
 \end{abstract}
 
 \tableofcontents

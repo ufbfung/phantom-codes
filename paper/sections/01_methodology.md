@@ -2,69 +2,48 @@
 
 ## Data and policy compliance
 
-Trained models are fine-tuned on MIMIC-IV-FHIR v2.1 [@Bennett2024;
-@Bennett2023; @Johnson2023] under PhysioNet credentialed access. To
-remain compliant with PhysioNet's responsible-LLM-use policy
-[@PhysioNet2025], which prohibits sending credentialed data through
-third-party APIs, all training and validation runs execute entirely on
-the corresponding author's own hardware (Apple M1 MacBook Pro). MIMIC
-content does not traverse any network beyond the initial PhysioNet
-download, is not committed to version control, and is not used as
-input to any cloud service. The headline evaluation matrix runs
-against Synthea-generated FHIR Bundles [@Walonoski2018], a
-freely-redistributable synthetic patient dataset. The trained
-classifier is evaluated on the same Synthea inputs as the LLMs,
-providing both compliance-by-construction and an out-of-distribution
-generalization test (Synthea's clinical text differs systematically
-from MIMIC's source notes).
+The headline evaluation matrix runs entirely against
+Synthea-generated FHIR Bundles [@Walonoski2018], a freely-
+redistributable synthetic patient dataset, ensuring full compliance
+with PhysioNet's responsible-LLM-use policy [@PhysioNet2025] (which
+prohibits sending credentialed data through third-party APIs) and
+full reproducibility without PhysioNet credentialing. The PubMedBERT
+classifier baseline (see *Models evaluated* below) was fine-tuned
+locally on credentialed MIMIC-IV-FHIR v2.1 [@Bennett2024;
+@Bennett2023; @Johnson2023] on the corresponding author's own
+hardware (Apple M1 MacBook Pro); MIMIC content does not traverse
+any network beyond the initial PhysioNet download and is not used
+as input to any cloud service. Training methodology, hyperparameters,
+and convergence behavior for the PubMedBERT arm are reported in a
+companion technical report [@FungPubMedBERT2026].
 
 ## Cohort and label space
 
-We restrict the cohort to ICD-10-CM codes in the CMS ACCESS Model FHIR
-Implementation Guide v0.9.6 [@CMS2026], comprising two disease groups:
-**CKM** (cardiometabolic — diabetes, atherosclerotic cardiovascular
-disease, CKD stage 3) and **eCKM** (extended cardiometabolic —
-hypertension, dyslipidemia, prediabetes, obesity). MIMIC source codes
-are normalized at the extraction boundary to canonical dotted form and
-canonical HL7 system URIs. After ICD-10-CM and ACCESS-scope filtering,
-the MIMIC cohort comprises 245,575 unique conditions split 70/10/20
-across train, validation, and test by stratified sampling on
-`resource_id` (so all four degradation modes of one condition land in
-the same split); 178 unique ICD-10-CM codes appear in the train split.
-Each condition is materialized into four rows — one per degradation
-mode (D1_full, D2_no_code, D3_text_only, D4_abbreviated).
-
-## Trained-model arm
-
-A PubMedBERT-base classification head [@Gu2021] sized for the top-50
-most frequent ICD-10-CM codes is fine-tuned on the MIMIC training
-split using PyTorch's MPS backend on consumer Apple Silicon (≈15 hr
-wall-clock for an early-stopping run at epoch 2). The architectural,
-encoder-rationale, hyperparameter, and training-convergence details
-are reported in **Supplementary §S3** (reproducibility appendix).
-
-## Evaluation cohort
-
-The headline matrix is evaluated on a single Synthea-generated cohort
-of **125 unique FHIR Conditions**, each materialized into the four
-degradation modes for a total of 500 EvalRecord items. Cohort
-generation is fully deterministic: Synthea v4.0.0 [@Walonoski2018] is
-run at a pinned commit SHA with `seed=42`, producing patient bundles
-whose Conditions are extracted, deduplicated per (patient, ICD code),
-and filtered to ACCESS-scope codes via the same value-set definitions
-used for MIMIC training. Twelve unique ICD-10-CM codes appear in the
-cohort, distributed across the ACCESS-scope groups (obesity ~24%;
-prediabetes ~20%; type 2 diabetes variants ~31%; essential
-hypertension ~14%; lipid disorders ~10%).
+We restrict the cohort to ICD-10-CM codes in the CMS ACCESS Model
+FHIR Implementation Guide v0.9.6 [@CMS2026], comprising two disease
+groups: **CKM** (cardiometabolic — diabetes, atherosclerotic
+cardiovascular disease, CKD stage 3) and **eCKM** (extended
+cardiometabolic — hypertension, dyslipidemia, prediabetes, obesity).
+The headline matrix is evaluated on a single Synthea-generated
+cohort of **125 unique FHIR Conditions**, each materialized into
+four degradation modes for a total of 500 EvalRecord items. Cohort
+generation is fully deterministic: Synthea v4.0.0 [@Walonoski2018]
+is run at a pinned commit SHA with `seed=42`, producing patient
+bundles whose Conditions are extracted, deduplicated per (patient,
+ICD code), and filtered to ACCESS-scope codes via bundled
+value-set definitions. Twelve unique ICD-10-CM codes appear in the
+cohort (obesity ~24%; prediabetes ~20%; type 2 diabetes variants
+~31%; essential hypertension ~14%; lipid disorders ~10%).
 
 ## Models evaluated
 
 The headline matrix comprises 29 model configurations: three
 string-matching baselines (exact, fuzzy, TF-IDF), one frozen
-sentence-transformer retrieval baseline, the fine-tuned PubMedBERT
-classifier, and 24 frontier LLM configurations across three providers
-and three prompting modes. Each LLM appears in `zeroshot`,
-`constrained`, and `rag` configurations:
+sentence-transformer retrieval baseline, a fine-tuned PubMedBERT
+classifier baseline (training methodology in
+[@FungPubMedBERT2026]), and 24 frontier LLM configurations across
+three providers and three prompting modes. Each LLM appears in
+`zeroshot`, `constrained`, and `rag` configurations:
 
 - **Anthropic** (3 × 3): Claude Haiku 4.5, Sonnet 4.6, Opus 4.7
 - **OpenAI** (2 × 3): GPT-5.5 (`gpt-5.5-2026-04-23`) and GPT-4o-mini

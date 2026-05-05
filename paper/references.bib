@@ -689,3 +689,35 @@
   note         = {Accessed 2026-05-03},
   url          = {https://ai.google.dev/gemini-api/docs/pricing}
 }
+
+% Why we cite: companion technical report describing the trained
+% PubMedBERT classification arm in full detail (architecture, encoder
+% rationale, hardware, optimization, reproducibility, training
+% convergence). Demoted from §1 of the JAMIA paper to its own
+% standalone preprint so the JAMIA paper can focus on the LLM
+% hallucination evaluation. Cited from §1 (Models evaluated) and §4
+% (Limitations) of the JAMIA paper.
+@misc{FungPubMedBERT2026,
+  author       = {Fung, Brian K.},
+  title        = {Local Fine-Tuning of {PubMedBERT} for {ACCESS}-Scope
+                  {ICD-10-CM} Classification under {PhysioNet} Compliance
+                  Constraints},
+  year         = {2026},
+  howpublished = {arXiv preprint},
+  note         = {arXiv:TBD; companion technical report to {Phantom Codes}}
+}
+
+% Why we cite: companion main paper (this is the JAMIA-track
+% submission). Cited from the arXiv technical report
+% (paper/arxiv_sections/) so the trained-model report can reference
+% the LLM-evaluation work that uses its checkpoint as a baseline.
+% Both papers share this references.bib via biblatex.
+@misc{FungPhantomCodes2026,
+  author       = {Fung, Brian K.},
+  title        = {Phantom Codes: Hallucination in {LLM}-Based Clinical
+                  Concept Normalization},
+  year         = {2026},
+  howpublished = {Manuscript submitted for publication, JAMIA Research
+                  and Applications},
+  note         = {Companion paper to {FungPubMedBERT2026}}
+}

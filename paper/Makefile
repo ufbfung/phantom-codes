@@ -20,10 +20,11 @@
 #   - Generated build/ is gitignored
 
 # ─── Inputs ────────────────────────────────────────────────────────────
-# Main manuscript: sections/*.md → build/sections/*.tex → build/paper.pdf
-# Supplement:     supp_sections/*.md → build/supp_sections/*.tex → build/supplementary.pdf
-# Same pandoc-driven flow for both; biblatex resolves citations against
-# the shared references.bib.
+# Three documents share references.bib via biblatex, all built from
+# markdown via pandoc:
+#   Main manuscript (JAMIA): sections/*.md → build/sections/*.tex → build/paper.pdf
+#   Supplement     (JAMIA): supp_sections/*.md → build/supp_sections/*.tex → build/supplementary.pdf
+#   arXiv tech report:      arxiv_sections/*.md → build/arxiv_sections/*.tex → build/arxiv.pdf
 MD_SECTIONS := $(sort $(wildcard sections/*.md))
 TEX_SECTIONS := $(patsubst sections/%.md,build/sections/%.tex,$(MD_SECTIONS))
 PDF := build/paper.pdf
@@ -31,6 +32,10 @@ PDF := build/paper.pdf
 MD_SUPP_SECTIONS := $(sort $(wildcard supp_sections/*.md))
 TEX_SUPP_SECTIONS := $(patsubst supp_sections/%.md,build/supp_sections/%.tex,$(MD_SUPP_SECTIONS))
 SUPP_PDF := build/supplementary.pdf
+
+MD_ARXIV_SECTIONS := $(sort $(wildcard arxiv_sections/*.md))
+TEX_ARXIV_SECTIONS := $(patsubst arxiv_sections/%.md,build/arxiv_sections/%.tex,$(MD_ARXIV_SECTIONS))
+ARXIV_PDF := build/arxiv.pdf
 
 # ─── Tools ─────────────────────────────────────────────────────────────
 PANDOC := pandoc
@@ -56,10 +61,11 @@ BIBER_OPTS := \
 	--output-directory=build
 
 # ─── Targets ───────────────────────────────────────────────────────────
-.PHONY: pdf supp snapshot clean watch deps
+.PHONY: pdf supp arxiv snapshot snapshot-supp snapshot-arxiv snapshot-all clean watch deps
 
 pdf: $(PDF)
 supp: $(SUPP_PDF)
+arxiv: $(ARXIV_PDF)
 
 $(PDF): main.tex references.bib $(TEX_SECTIONS) | build
 	@echo "[paper] compiling main.tex (pass 1 — collect citations)"
@@ -94,6 +100,23 @@ build/supp_sections/%.tex: supp_sections/%.md | build/supp_sections
 	@echo "[supp] pandoc: $< → $@"
 	$(PANDOC) $(PANDOC_OPTS) $< -o $@
 
+# arXiv tech report — same flow as the main + supp PDFs, separate input/output paths.
+$(ARXIV_PDF): arxiv.tex references.bib $(TEX_ARXIV_SECTIONS) | build
+	@echo "[arxiv] compiling arxiv.tex (pass 1 — collect citations)"
+	$(PDFLATEX) $(PDFLATEX_OPTS) arxiv.tex >/dev/null
+	@echo "[arxiv] running biber (resolve bibliography)"
+	$(BIBER) $(BIBER_OPTS) arxiv >/dev/null
+	@echo "[arxiv] compiling arxiv.tex (pass 2 — insert bibliography)"
+	$(PDFLATEX) $(PDFLATEX_OPTS) arxiv.tex >/dev/null
+	@echo "[arxiv] compiling arxiv.tex (pass 3 — finalize cross-refs)"
+	$(PDFLATEX) $(PDFLATEX_OPTS) arxiv.tex >/dev/null
+	@mv build/arxiv.pdf $(ARXIV_PDF)
+	@echo "[arxiv] ✓ $(ARXIV_PDF)"
+
+build/arxiv_sections/%.tex: arxiv_sections/%.md | build/arxiv_sections
+	@echo "[arxiv] pandoc: $< → $@"
+	$(PANDOC) $(PANDOC_OPTS) $< -o $@
+
 build:
 	@mkdir -p build
 
@@ -102,6 +125,9 @@ build/sections:
 
 build/supp_sections:
 	@mkdir -p build/supp_sections
+
+build/arxiv_sections:
+	@mkdir -p build/arxiv_sections
 
 clean:
 	@rm -rf build/
@@ -115,12 +141,24 @@ snapshot: $(PDF)
 	@cp $(PDF) paper.pdf
 	@echo "[paper] snapshot → paper/paper.pdf (commit when ready)"
 
+snapshot-supp: $(SUPP_PDF)
+	@cp $(SUPP_PDF) supplementary.pdf
+	@echo "[supp] snapshot → paper/supplementary.pdf (commit when ready)"
+
+snapshot-arxiv: $(ARXIV_PDF)
+	@cp $(ARXIV_PDF) arxiv.pdf
+	@echo "[arxiv] snapshot → paper/arxiv.pdf (commit when ready)"
+
+# Promote all three documents in one go.
+snapshot-all: snapshot snapshot-supp snapshot-arxiv
+	@echo "[paper] all three snapshots refreshed (commit when ready)"
+
 # Live-rebuild on any change. Requires `entr` (brew install entr).
 watch:
 	@command -v entr >/dev/null || { \
 		echo "entr not found. Install with: brew install entr"; exit 1; }
 	@echo "[paper] watching for changes — Ctrl+C to stop"
-	@find sections supp_sections main.tex supplementary.tex Makefile | entr -c make pdf supp
+	@find sections supp_sections arxiv_sections main.tex supplementary.tex arxiv.tex Makefile | entr -c make pdf supp arxiv
 
 deps:
 	@echo "Build requires pandoc + a LaTeX distribution + biblatex/biber."

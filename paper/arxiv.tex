@@ -1,0 +1,166 @@
+% Phantom Codes — companion technical report (arXiv preprint).
+%
+% Standalone tech report describing the trained PubMedBERT
+% classification arm in full. Originally appeared as Supplementary §S3
+% of the JAMIA paper (paper/main.tex); lifted into its own preprint
+% so the JAMIA paper can focus on the LLM hallucination evaluation
+% and the methodology has room to be presented properly.
+%
+% Build:
+%     cd paper && make arxiv
+%
+% Output: paper/build/arxiv.pdf
+%
+% Editing model:
+%   - Prose edits happen in arxiv_sections/*.md (markdown is canonical)
+%   - This file only changes when sections are added/removed/reordered.
+
+\documentclass[11pt]{article}
+
+% ─── Layout & typography ───────────────────────────────────────────────
+\usepackage[margin=1in]{geometry}
+\usepackage{microtype}
+\usepackage{parskip}
+
+% ─── Tables, figures, lists ────────────────────────────────────────────
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{caption}
+\usepackage{calc}
+
+% ─── Math ──────────────────────────────────────────────────────────────
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% ─── Bibliography ──────────────────────────────────────────────────────
+% Shared references.bib with main.tex / supplementary.tex; same Vancouver
+% style so cross-references render consistently across the three documents.
+\usepackage[backend=biber, style=vancouver, sortlocale=en_US]{biblatex}
+\addbibresource{references.bib}
+
+% ─── Links & references ────────────────────────────────────────────────
+\usepackage[colorlinks=true,
+            linkcolor=blue!60!black,
+            citecolor=blue!60!black,
+            urlcolor=blue!60!black]{hyperref}
+\usepackage{xurl}
+
+% ─── Code & quotes ─────────────────────────────────────────────────────
+\usepackage{xcolor}
+\usepackage{fancyvrb}
+\usepackage{framed}
+\usepackage{csquotes}
+
+% ─── Pandoc compatibility shims ────────────────────────────────────────
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\providecommand{\pandocbounded}[1]{#1}
+
+% ─── Title block ───────────────────────────────────────────────────────
+\title{%
+  Local Fine-Tuning of PubMedBERT for ACCESS-Scope ICD-10-CM
+  Classification under PhysioNet Compliance Constraints \\
+  \large A Companion Technical Report to \emph{Phantom Codes}}
+\author{%
+  Brian K. Fung \\[2pt]
+  \small Independent Researcher \\[2pt]
+  \small\href{mailto:brian@briankfung.com}{\texttt{brian@briankfung.com}}}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+\noindent We document a fully-local fine-tuning pipeline for
+PubMedBERT-base on MIMIC-IV-FHIR v2.1 restricted to ICD-10-CM codes
+in the CMS ACCESS Model FHIR Implementation Guide. Every step from
+data loading through training through checkpoint persistence runs on
+consumer Apple Silicon (M1 MacBook Pro, 16 GB unified memory) via
+PyTorch's MPS backend, with no MIMIC content uploaded to any cloud
+service, training platform, or telemetry endpoint. The classifier
+attains 0.992--0.993 validation top-1 accuracy on the held-out
+MIMIC-IV split and 40--50\% top-1 on a Synthea-generated
+out-of-distribution evaluation cohort, with 0\% hallucination by
+construction (the head emits one of 50 known ICD-10-CM codes). This
+trained checkpoint serves as the non-LLM baseline in the companion
+paper \emph{Phantom Codes} \autocite{FungPhantomCodes2026}, which
+evaluates frontier LLMs on the same Synthea cohort under a 6-way
+hallucination-aware outcome taxonomy. The contribution of this
+report is methodological: research-grade clinical-classifier
+fine-tuning is reachable on consumer hardware, the data-residency
+story is dramatically simpler than cloud GPU paths, and the same
+code path supports CUDA backends if cloud-compute authorization is
+in place.
+\end{abstract}
+
+\tableofcontents
+\bigskip
+
+% ─── Body ──────────────────────────────────────────────────────────────
+\input{build/arxiv_sections/00_introduction}
+\input{build/arxiv_sections/01_data_and_compliance}
+\input{build/arxiv_sections/02_architecture}
+\input{build/arxiv_sections/03_hardware_and_optimization}
+\input{build/arxiv_sections/04_results}
+\input{build/arxiv_sections/05_discussion}
+\input{build/arxiv_sections/06_appendix}
+
+\bigskip
+\hrule
+\bigskip
+
+% ─── Back-matter ───────────────────────────────────────────────────────
+\section*{Funding}
+\addcontentsline{toc}{section}{Funding}
+This work received no external funding. Compute resources for
+trained-model fine-tuning were supplied by the corresponding
+author's personal hardware (Apple M1 MacBook Pro).
+
+\section*{Data availability}
+\addcontentsline{toc}{section}{Data availability}
+\textbf{MIMIC-IV-FHIR v2.1} is a credentialed dataset distributed by
+PhysioNet under their Credentialed Health Data License; access
+requires PhysioNet credentialing and CITI training. We do not
+redistribute MIMIC data, MIMIC-derivative parquet splits, or model
+weights fine-tuned on MIMIC. \textbf{Source code} (data-preparation
+pipeline, training script, configuration files) is publicly
+available at the project repository under the MIT License.
+Aggregate per-epoch training metrics
+(\texttt{models/metrics/*.json}) are available on request;
+per-record predictions are not, in keeping with PhysioNet's
+responsible-LLM-use policy.
+
+\section*{Code availability}
+\addcontentsline{toc}{section}{Code availability}
+All source code, configuration files, and the manuscript source are
+publicly available at the project's GitHub repository under the MIT
+License. The repository includes the full training pipeline; a
+credentialed reader can train a byte-similar checkpoint by
+following the recipe in §A.1.
+
+\section*{Author contributions}
+\addcontentsline{toc}{section}{Author contributions}
+B.K.F.\ designed the pipeline, implemented the codebase, conducted
+the training run, and wrote the manuscript.
+
+\section*{Competing interests}
+\addcontentsline{toc}{section}{Competing interests}
+The author declares no competing interests.
+
+\section*{Acknowledgments}
+\addcontentsline{toc}{section}{Acknowledgments}
+The author gratefully acknowledges the PhysioNet team and the
+developers of MIMIC-IV-on-FHIR v2.1 for making this dataset
+available to the research community
+\autocite{Bennett2024,Bennett2023,Johnson2023,Goldberger2000}.
+
+\bigskip
+\hrule
+\bigskip
+
+\printbibliography[heading=bibintoc, title={References}]
+
+\end{document}

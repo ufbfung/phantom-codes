@@ -1,0 +1,88 @@
+# Data and Compliance Posture
+
+## Source data
+
+The classifier is fine-tuned on **MIMIC-IV-FHIR v2.1**
+[@Bennett2024; @Bennett2023; @Johnson2023] under PhysioNet
+credentialed access. MIMIC-IV-FHIR is a FHIR R4 representation of
+MIMIC-IV produced by the MIMIC team, distributed by PhysioNet under
+their Credentialed Health Data License. We use three resource
+types from this dataset:
+
+- `MimicCondition.ndjson` — diagnoses encoded as FHIR `Condition`
+  resources with ICD-9-CM and ICD-10-CM codings under
+  MIMIC-namespaced `CodeSystem` URIs.
+- `MimicPatient.ndjson` — patient demographics for split-stratification
+  metadata (not used as model input).
+- `MimicEncounter.ndjson` — encounter context for joining conditions
+  to encounters when needed by downstream code paths.
+
+## Compliance posture
+
+PhysioNet's responsible-LLM-use policy [@PhysioNet2025] explicitly
+prohibits sharing credentialed data with third parties, including
+"sending it through APIs." We adopt a **strictly local** posture:
+
+- MIMIC content is downloaded directly from PhysioNet to the
+  corresponding author's own laptop (Apple M1 MacBook Pro, 16 GB
+  unified memory) via authenticated `wget`. Files live under a
+  gitignored `data/mimic/raw/` directory.
+- The training pipeline reads parquet derivatives produced by a
+  local preparation step. Both raw and derivative files remain on
+  the laptop.
+- The training module sets defensive environment variables at
+  import time to disable cloud telemetry libraries (wandb,
+  mlflow, comet) so accidental imports cannot leak training metrics.
+- Trained checkpoints persist to a gitignored `models/checkpoints/`
+  directory. Per PhysioNet policy, MIMIC-derivative weights are
+  not redistributed via this repository, HuggingFace Hub, or any
+  cloud bucket.
+- The evaluation runner that consumes the trained model reads
+  predictions only from synthetic Synthea inputs (see
+  [@FungPhantomCodes2026]), so the trained classifier never produces
+  predictions on MIMIC content that would then traverse a cloud
+  endpoint.
+
+The same code path supports CUDA and CPU backends; using either
+would require an independent compliance review of the host
+environment (e.g., Vertex AI Workbench, AWS EC2 with appropriate
+BAAs). The local MPS path is the reference implementation because
+it requires no such review.
+
+## Cohort and label space
+
+We restrict the cohort to ICD-10-CM codes in the CMS ACCESS Model
+FHIR Implementation Guide v0.9.6 [@CMS2026], comprising two disease
+groups:
+
+- **CKM** (cardiometabolic): diabetes (E08/E09/E11/E13),
+  atherosclerotic cardiovascular disease, chronic kidney disease
+  stage 3.
+- **eCKM** (extended cardiometabolic): hypertension, dyslipidemia,
+  prediabetes, obesity.
+
+The MIMIC-IV-FHIR v2.1 source contains conditions coded under both
+ICD-9-CM and ICD-10-CM, using MIMIC-namespaced FHIR `CodeSystem`
+URIs (e.g.,
+`http://mimic.mit.edu/fhir/mimic/CodeSystem/mimic-diagnosis-icd10`)
+rather than the canonical HL7 URIs, and using undotted code
+formats (`E1110` rather than `E11.10`). We normalize both at the
+extraction boundary: codes are converted to the canonical dotted
+form (decimal point inserted after position 3 for codes longer
+than three characters), and system URIs are mapped to the
+canonical `http://hl7.org/fhir/sid/icd-10-cm` so that the rest of
+the pipeline operates on a single canonical representation
+regardless of source.
+
+After ICD-10-CM filtering and ACCESS-scope filtering, the cohort
+comprises **245,575 unique conditions** distributed 70/10/20
+across train, validation, and test splits by stratified sampling
+on `resource_id` (ensuring all four degradation modes of a single
+condition land in the same split). **178 unique ICD-10-CM codes**
+appear in the train split. Each condition is materialized into
+four rows — one per degradation mode (D1\_full, D2\_no\_code,
+D3\_text\_only, D4\_abbreviated) — yielding **687,552 train rows,
+98,272 validation rows, and 196,476 test rows**. The
+classification head is sized for the **top-50** most frequent
+codes, which together cover the head of the long-tail distribution
+where supervised signal is densest.

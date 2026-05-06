@@ -56,7 +56,12 @@ Each cell reports hallucination % / no\_prediction %.
 | gemini-2.5-flash (zeroshot) | 0.0 / 0.0 | 0.0 / 11.2 | 0.8 / 37.6 | 0.8 / 42.4 |
 | gemini-3-flash-preview (zeroshot) | 0.0 / 22.4 | 0.0 / 28.0 | 0.0 / 41.6 | 0.0 / 39.2 |
 
-![Hallucination rate (%) by model, prompting mode, and degradation mode. Each row is one (LLM, prompting mode) configuration; columns are the four degradation modes. Cell color encodes the percentage of D-mode predictions that were fabricated codes (predictions that do not exist in the FY2026 CMS-published ICD-10-CM tabular list). Constrained and RAG rows are uniformly zero across all Anthropic and OpenAI models. Zero-shot fabrication concentrates in sub-flagship models, peaking at 12.8% for GPT-4o-mini under D2.](../figures/figure1_hallucination_heatmap.pdf){#fig:halluc width=85%}
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=0.75\textwidth,keepaspectratio]{../figures/figure1_hallucination_heatmap.pdf}
+\caption{Hallucination rate (\%) by model, prompting mode, and degradation mode. Each row is one (LLM, prompting mode) configuration; columns are the four degradation modes. Cell color encodes the percentage of D-mode predictions that were fabricated codes (predictions that do not exist in the FY2026 CMS-published ICD-10-CM tabular list). Constrained and RAG rows are uniformly zero across all Anthropic and OpenAI models. Zero-shot fabrication concentrates in sub-flagship models, peaking at 12.8\% for GPT-4o-mini under D2.}
+\label{fig:halluc}
+\end{figure}
 
 Within-model paired comparison (zero-shot versus constrained,
 McNemar tests on discordant pairs) confirms the constrained-mode
@@ -114,7 +119,12 @@ and Halluc columns surface all three deployment dimensions in one
 row. Plotted as a Pareto frontier in Figure 2 and tabulated in
 Table 3 below. Sorted by \$/correct ascending; n=500 per row.
 
-![Cost per correct prediction (USD, log scale) versus top-1 accuracy for every (LLM, prompting mode) configuration in the headline matrix. Color encodes provider; marker shape encodes prompting mode. The dashed line traces the Pareto frontier (configurations not dominated on both cost and accuracy). GPT-4o-mini constrained and Claude Haiku 4.5 constrained sit on the deployment frontier; Claude Opus 4.7 constrained is dominated despite competitive accuracy because its per-correct cost is 30 to 40 times higher.](../figures/figure2_cost_frontier.pdf){#fig:cost width=95%}
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=0.7\textwidth,keepaspectratio]{../figures/figure2_cost_frontier.pdf}
+\caption{Cost per 1,000 correct predictions (USD, log scale) versus top-1 accuracy for every (LLM, prompting mode) configuration achieving \(\geq\)75\% top-1 accuracy. Color encodes provider; marker shape encodes prompting mode. Pareto-optimal configurations are drawn with a heavy black border. GPT-4o-mini constrained and Claude Haiku 4.5 constrained sit on the deployment frontier; Claude Opus 4.7 constrained is dominated despite competitive accuracy because its per-correct cost is 30 to 40 times higher.}
+\label{fig:cost}
+\end{figure}
 
 **Table 3.** Cost per correct prediction. *constr.* = constrained.
 
@@ -163,4 +173,9 @@ monotonically from D1 to D4 across all three prompting modes.
 Figure 3 shows the full six-bucket outcome distribution per
 configuration under D4 stress.
 
-![Outcome distribution per (model, prompting mode) configuration under D4 abbreviation stress. Each horizontal bar sums to 100% across the six outcome buckets defined in §2.5; bars are ordered by exact_match share descending. Anthropic and OpenAI constrained configurations cluster at the top, dominated by exact_match with a small category_match remainder. Gemini 2.5 Pro at the bottom is dominated by no_prediction (abstention), distinct from the hallucination-heavy string-matching baselines (`baseline:fuzzy`, `baseline:tfidf`) below it.](../figures/figure3_d4_outcome_stack.pdf){#fig:d4stack width=95%}
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=0.75\textwidth,keepaspectratio]{../figures/figure3_d4_outcome_stack.pdf}
+\caption{Outcome distribution per (model, prompting mode) configuration under D4 abbreviation stress. Each horizontal bar sums to 100\% across the six outcome buckets defined in \S2.5; bars are ordered by exact\_match share descending. Anthropic and OpenAI constrained configurations cluster at the top, dominated by exact\_match with a small category\_match remainder. Gemini 2.5 Pro at the bottom is dominated by no\_prediction (abstention), distinct from the hallucination-heavy string-matching baselines (\texttt{baseline:fuzzy}, \texttt{baseline:tfidf}) below it.}
+\label{fig:d4stack}
+\end{figure}

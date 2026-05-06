@@ -97,7 +97,7 @@ def render() -> None:
     df = load()
     pareto = pareto_mask(df)
 
-    fig, ax = plt.subplots(figsize=(7.5, 5.0))
+    fig, ax = plt.subplots(figsize=(5.8, 3.8))
 
     # Plot all points; Pareto-optimal get a heavier border.
     for _, row in df.iterrows():

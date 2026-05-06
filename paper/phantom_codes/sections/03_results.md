@@ -13,27 +13,28 @@ diabetes variants (E11.x; 31% combined), essential hypertension
 ## Outcome distribution
 
 Two patterns dominate (per-cell N = 125; full table in
-Supplementary §S2.1). First, **Anthropic constrained and RAG modes
-achieve zero fabrication** across all sizes and all four
-degradation modes; GPT-4o-mini and GPT-5.5 constrained / RAG match.
-Second, **fabrication concentrates in zero-shot prompting and
-varies by model tier**: flagship (Opus 4.7, GPT-5.5, Gemini 2.5
-Pro) ranges 0–5.6% across all cells (max from Opus zero-shot D3);
-sub-flagship (Sonnet 4.6, Haiku 4.5, GPT-4o-mini, Gemini Flash
-variants) ranges 0–12.8% (max from GPT-4o-mini zero-shot D2). A
-pooled median understates the spread (D1/D2 expose the source code;
-constrained / RAG cells are 0% by design). Gemini 2.5 Pro's 0% is
-from abstention (95.2% no\_prediction at D4 zero-shot), not safe
-answering.
+Supplementary §S2.1). Anthropic constrained and RAG modes achieve
+zero fabrication across all sizes and all four degradation modes,
+and GPT-4o-mini and GPT-5.5 in constrained or RAG mode match.
+Fabrication concentrates instead in zero-shot prompting and varies
+by model tier. Flagship models (Opus 4.7, GPT-5.5, Gemini 2.5 Pro)
+range from 0% to 5.6% across all cells, with the maximum from Opus
+zero-shot D3. Sub-flagship models (Sonnet 4.6, Haiku 4.5,
+GPT-4o-mini, Gemini Flash variants) range from 0% to 12.8%, with
+the maximum from GPT-4o-mini zero-shot D2. A pooled median
+understates the spread, because D1 and D2 inputs expose the source
+code and constrained or RAG cells are 0% by design. Gemini 2.5
+Pro's 0% fabrication rate comes from abstention (95.2%
+no\_prediction at D4 zero-shot), not safe answering.
 
 ## Failure-mode breakdown: hallucination and abstention
 
-The two failure modes the literature historically conflates —
+The literature historically conflates two failure modes:
 fabrication of non-existent codes (hallucination) and abstention
-(no\_prediction) — surface different patterns. Table 1 reports
-both rates per cell as hallucination % / no\_prediction %; per-cell
-N = 125, Wilson 95% CIs are ±3pp at 0%, ±5pp at 5%, ±8–9pp at 50%
-(full CIs in §S2.2–S2.3).
+(no\_prediction). They surface different patterns. Table 1 reports
+both rates per cell as hallucination % / no\_prediction %. Per-cell
+N = 125; Wilson 95% CIs are ±3pp at 0%, ±5pp at 5%, and ±8 to ±9pp
+at 50% (full CIs in §S2.2 to §S2.3).
 
 **Table 1.** Failure-mode breakdown by model and degradation mode.
 Each cell reports hallucination % / no\_prediction %.
@@ -55,25 +56,26 @@ Each cell reports hallucination % / no\_prediction %.
 | gemini-2.5-flash (zeroshot) | 0.0 / 0.0 | 11.2 / 11.2 | 38.4 / 37.6 | 43.2 / 42.4 |
 | gemini-3-flash-preview (zeroshot) | 22.4 / 22.4 | 28.0 / 28.0 | 41.6 / 41.6 | 39.2 / 39.2 |
 
-Within-model paired comparison (zero-shot → constrained, McNemar
-tests on discordant pairs) confirms the constrained-mode reduction
-is statistically significant for every Anthropic and OpenAI model
-with nonzero zero-shot hallucination. Gemini 2.5 Pro zero-shot
-exhibits a near-complete abstention pattern (95.2% no\_prediction
-at D4) with 0% fabrication — failure mode is abstention, not
-fabrication; constrained and RAG cut but do not eliminate it.
-Whether this reflects model behavior or a wrapper-level
-interaction with the reasoning-token budget is unresolved (see
-§Discussion limitations). Gemini Flash zero-shot rows show roughly
-equal hallucination and no\_prediction rates because most rows are
-*both* — empty arrays counted as no\_prediction, and when a code
-is returned it is frequently fabricated. Full 24-LLM tables in
-Supplementary §S2.2–S2.3.
+Within-model paired comparison (zero-shot versus constrained,
+McNemar tests on discordant pairs) confirms the constrained-mode
+reduction is statistically significant for every Anthropic and
+OpenAI model with nonzero zero-shot hallucination. Gemini 2.5 Pro
+zero-shot exhibits a near-complete abstention pattern (95.2%
+no\_prediction at D4) with 0% fabrication. The failure mode is
+abstention, not fabrication, and constrained and RAG cut but do
+not eliminate it. Whether this reflects model behavior or a
+wrapper-level interaction with the reasoning-token budget is
+unresolved (see §Discussion limitations). Gemini Flash zero-shot
+rows show roughly equal hallucination and no\_prediction rates
+because most rows are *both*: empty arrays count as
+no\_prediction, and when a code is returned it is frequently
+fabricated. Full 24-LLM tables in Supplementary §S2.2 to §S2.3.
 
 ## Top-1 vs top-5 exact-match lift
 
-Many configurations have the right answer in their top-5 candidates
-even when their top-1 pick is wrong; lift quantifies the gap:
+Many configurations have the right answer in their top-5
+candidates even when their top-1 pick is wrong. Lift quantifies
+the gap.
 
 **Table 2.** Top-1 vs top-5 exact-match lift across selected configurations.
 
@@ -90,21 +92,21 @@ even when their top-1 pick is wrong; lift quantifies the gap:
 | gpt-5.5 (zeroshot) | 88.8% | 98.8% | +10.0pp |
 | gemini-2.5-pro (zeroshot) | 11.8% | 11.8% | +0.0pp |
 
-Two deployment-relevant signals: (i) LLMs in *constrained* mode
-saturate at top-1 (lift ≤6pp) — there is little additional value in
-human-in-the-loop top-5 review for those configurations; (ii)
-non-LLM baselines and sub-frontier LLMs in zero-shot mode show
-large lifts (20–38pp), suggesting workflows that surface top-5
-candidates to a human reviewer would substantially improve net
-accuracy. Gemini 2.5 Pro's zero lift is consistent with the
-abstention-dominated failure mode (no candidate to be lifted into
-top-5 when the model returns nothing).
+Two deployment-relevant signals emerge. LLMs in *constrained* mode
+saturate at top-1 (lift ≤6pp), so there is little additional value
+in human-in-the-loop top-5 review for those configurations.
+Non-LLM baselines and sub-frontier LLMs in zero-shot mode show
+much larger lifts (20 to 38pp), suggesting that workflows
+surfacing top-5 candidates to a human reviewer would substantially
+improve net accuracy. Gemini 2.5 Pro's zero lift is consistent
+with the abstention-dominated failure mode, since there is no
+candidate to be lifted into top-5 when the model returns nothing.
 
 ## Cost per correct prediction
 
 Cost-per-correct (\$ per exact-match outcome) collapses per-call
-price and accuracy into one deployment-ready number; the Top-1 and
-Halluc columns surface all three deployment dimensions in one
+price and accuracy into one deployment-ready number; the Top-1
+and Halluc columns surface all three deployment dimensions in one
 row. Sorted by \$/correct ascending; n=500 per row.
 
 **Table 3.** Cost per correct prediction. *constr.* = constrained.
@@ -124,28 +126,30 @@ row. Sorted by \$/correct ascending; n=500 per row.
 | Gemini 2.5 Pro\*               | constr.  | 46.2% |   0.0% | $1.57 |   $0.0068 |
 | Claude Opus 4.7                | constr.  | 94.8% |   0.0% | $6.31 |   $0.0133 |
 
-\*Reflects abstention pattern, not error rate; see §4.3 (Failure-mode
-breakdown).
+\*Reflects abstention pattern, not error rate; see §4.3
+(Failure-mode breakdown).
 
-Read top-down: cheaper rows are all 4–19pp lower on top-1 or carry
-nonzero hallucination. **GPT-4o-mini constrained leads on
-deployment-relevance**: 94.2% top-1, 0% hallucination, \$0.0003 per
-correct — the cheapest config at ≥94% top-1. Claude Haiku 4.5
-constrained adds 2.6pp accuracy at ~14× cost; Claude Opus 4.7
-constrained's 0.6pp accuracy edge does not justify its 44× cost —
-the largest frontier model is not the deployment-leader. Gemini
-2.5 Pro's elevated \$/correct reflects abstention behavior.
+Reading the table top-down, the cheaper rows are all 4 to 19pp
+lower on top-1 or carry nonzero hallucination. **GPT-4o-mini
+constrained leads on deployment-relevance**: 94.2% top-1, 0%
+hallucination, \$0.0003 per correct, the cheapest configuration
+that achieves ≥94% top-1. Claude Haiku 4.5 constrained adds 2.6pp
+accuracy at roughly 14× the cost. Claude Opus 4.7 constrained's
+0.6pp accuracy edge does not justify its 44× cost: the largest
+frontier model is not the deployment leader. Gemini 2.5 Pro's
+elevated \$/correct reflects abstention behavior, not a normal
+cost-accuracy tradeoff.
 
 ## Outcome distribution under D4 abbreviation stress
 
-D4\_abbreviated is the strongest stress test: explicit ICD codes
-and canonical display strings are stripped, and clinical entities
-are replaced with jargon ("T2DM", "HTN", "CKD-3"). String-matching
-baselines collapse (fuzzy and TF-IDF both drop ~30pp from D3 to
-D4); remaining top-1 accuracy must come from semantic mapping.
-Anthropic constrained mode is robust under D4 (Haiku 93.6%,
-Sonnet 90.4%, Opus 86.4% top-1 vs.\ 100% at D1); failure mode is
-exclusively `category_match`. Frontier zero-shot LLMs show a
-5–15pp top-1 drop D1→D4 but maintain low hallucination. Gemini
-2.5 Pro abstention worsens monotonically D1→D4 in all three
-prompting modes.
+D4\_abbreviated is the strongest stress test in the matrix.
+Explicit ICD codes and canonical display strings are stripped,
+and clinical entities are replaced with jargon ("T2DM", "HTN",
+"CKD-3"). String-matching baselines collapse (fuzzy and TF-IDF
+both drop ~30pp from D3 to D4), so remaining top-1 accuracy must
+come from semantic mapping. Anthropic constrained mode is robust
+under D4 (Haiku 93.6%, Sonnet 90.4%, Opus 86.4% top-1, versus
+100% at D1), and the failure mode is exclusively `category_match`.
+Frontier zero-shot LLMs show a 5 to 15pp top-1 drop from D1 to D4
+but maintain low hallucination. Gemini 2.5 Pro abstention worsens
+monotonically from D1 to D4 across all three prompting modes.

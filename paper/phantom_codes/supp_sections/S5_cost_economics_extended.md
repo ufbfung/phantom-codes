@@ -1,4 +1,4 @@
-# S5 — Cost economics: extended analysis
+# S5: Cost economics: extended analysis
 
 This supplement extends §2 of the main manuscript. The headline
 per-call costs and cost-per-correct numbers from the n=125 Synthea
@@ -11,7 +11,7 @@ analysis, (f) qualitative deployment considerations (caching
 threshold quirks, reliability cost), and (g) the full version of the
 framing caveats summarized briefly in main §2.
 
-## S5.1 — Full cost table (24 LLM configurations × 4 modes)
+## S5.1: Full cost table (24 LLM configurations × 4 modes)
 
 The full per-(model, prompting-mode) cost breakdown is in
 `results/summary/n125_run_v2/cost_per_correct.csv`. The headline
@@ -25,7 +25,7 @@ the n=125 cohort = \$49.65, dominated by Claude
 Opus (\$18.18 across its 3 modes) and the GPT-5.5 / Sonnet 4.6
 groupings.
 
-## S5.2 — Per-bucket cost decomposition
+## S5.2: Per-bucket cost decomposition
 
 For each (model, outcome bucket) cell, total \$ spent on that
 bucket = count × per-call cost. The full table is in
@@ -37,17 +37,17 @@ went to exact-match outcomes, ~5% to category-match outcomes, and
 zeroshot, by contrast, ~32% of spend went to exact-match outcomes
 and ~67% to no\_prediction (the model's empty-array responses still
 incur input-token cost via the prompt, though output tokens are
-zero or near-zero — see §S5.6 for the wrapper-level investigation
+zero or near-zero; see §S5.6 for the wrapper-level investigation
 this surfaced). Spend on hallucination outcomes was negligible
 across the matrix (consistent with the rare-fabrication finding in
 §Results).
 
-## S5.3 — Original metric framework (M3 + M4)
+## S5.3: Original metric framework (M3 + M4)
 
 ### M3: Hallucination tax
 
 For each (model, mode), the marginal cost of a hallucinated
-prediction is not just the API call — it's the API call plus the
+prediction is not just the API call. It is the API call plus the
 downstream QA time required to catch and correct the bad code:
 
 $$
@@ -71,7 +71,7 @@ annually for a single deployment.
 For each model, find the configuration (zero-shot vs. constrained
 vs. RAG) that achieves accuracy ≥ X% and report cost. Allows
 comparison of LLM zero-shot vs. RAG-LLM vs. trained-classifier at
-iso-accuracy — the question a deployment team actually asks. From
+iso-accuracy, which is the question a deployment team actually asks. From
 the n=125 headline data:
 
 - At the 90% top-1 accuracy floor: GPT-4o-mini constrained
@@ -88,7 +88,7 @@ These floors are interpretive only at n=125 with Wilson 95% CI
 half-widths of ±5pp; replication at the originally-targeted n=500
 would tighten the comparison.
 
-## S5.4 — Production-deployment cost projections
+## S5.4: Production-deployment cost projections
 
 A production deployment looks very different from the headline
 benchmark because organizations choose ONE configuration (not the
@@ -154,13 +154,13 @@ LLM cost extrapolations above.
   pricing.
 - Provider availability is non-uniform. The Gemini 2.5 Pro
   abstention pattern observed in our headline run (88% empty
-  responses on zero-shot calls — see main §Results and
+  responses on zero-shot calls, see main §Results and
   §Limitations) implies a deployment-relevant overhead not modeled
   in this section.
 
-## S5.5 — Comparison to human-coder cost (rough magnitude)
+## S5.5: Comparison to human-coder cost (rough magnitude)
 
-For order-of-magnitude grounding only — a precise break-even
+For order-of-magnitude grounding only; a precise break-even
 analysis follows in §S5.6:
 
 - Median U.S. medical-coder salary ≈ \$60,000/year fully loaded
@@ -173,11 +173,11 @@ analysis follows in §S5.6:
 
 LLM API spend alone is **60×–600× cheaper per encounter** than a
 human coder's loaded cost, depending on model choice. This is NOT
-the deployment break-even — actual deployment cost includes QA on
+the deployment break-even, since actual deployment cost includes QA on
 flagged predictions and exception handling. §S5.6 computes that
 properly.
 
-## S5.6 — Break-even analysis (LLM + QA vs. human coder)
+## S5.6: Break-even analysis (LLM + QA vs. human coder)
 
 > **Methods finalized; quantitative numbers from the n=125 headline
 > run are limited by cohort size for some sensitivity dimensions.
@@ -186,14 +186,14 @@ properly.
 For each model configuration, total \$ per accurately-coded
 encounter under four deployment scenarios:
 
-1. **Human coder alone** — cost = $H/hr × (chart_throughput^-1)
-2. **LLM, no QA** — cost = API cost per encounter; accuracy =
+1. **Human coder alone.** Cost = $H/hr × (chart_throughput^-1).
+2. **LLM, no QA.** Cost = API cost per encounter; accuracy =
    top-1 rate (no review of model outputs)
-3. **LLM, QA only on flagged predictions** — flag low-confidence
+3. **LLM, QA only on flagged predictions.** Flag low-confidence
    outputs, hallucinated codes (mechanically detectable via the
    ICD-10-CM validator), and abstentions (no\_prediction);
    QA cost added per flag
-4. **Trained classifier with QA** — comparable QA fraction;
+4. **Trained classifier with QA.** Comparable QA fraction;
    training cost is negligible per §S5.4
 
 Sensitivity sweep dimensions: human-coder hourly rate (\$30–\$80/hr),
@@ -209,18 +209,18 @@ varies by model), LLM-with-QA pipelines using any of the
 constrained-mode Anthropic, OpenAI, or Gemini Flash configurations
 beat human-only on cost across all sensitivity-sweep parameter
 ranges considered. Gemini 2.5 Pro under our wrapper settings is
-the exception — its high abstention rate inflates the QA fraction
+the exception, since its high abstention rate inflates the QA fraction
 to the point where its per-correct cost approaches human-coder
 parity at moderate QA rates.
 
-## S5.7 — Real-world deployment considerations (qualitative)
+## S5.7: Real-world deployment considerations (qualitative)
 
 ### S5.7.1 Anthropic prompt-caching threshold
 
 Anthropic's prompt caching only fires when the cacheable prefix
 exceeds a model-specific minimum (Opus 4.7 = 4,096 tokens; Haiku
 4.5 = 4,096; Sonnet 4.6 = 2,048). Below the threshold,
-`cache_control: ephemeral` is silently no-opped — no error, no
+`cache_control: ephemeral` is silently no-opped, with no error, no
 warning, no cache hit on subsequent calls. For the v1 ACCESS-scope
 candidate list (~85 codes, ~2.8k tokens of system prompt) prior to
 the 2026-05-04 expansion to all 24 LLM configurations,
@@ -228,7 +228,7 @@ constrained-mode prompts sat below the Haiku 4.5 minimum and
 Anthropic caching did not fire for any Anthropic configuration in
 that earlier run. With the headline run's prompts, caching is
 active for Opus 4.7 constrained (78% cache-read ratio) and Sonnet
-4.6 constrained (80%) — see the `cache_read_tokens` columns in
+4.6 constrained (80%); see the `cache_read_tokens` columns in
 the per-prediction CSV. Haiku 4.5 constrained still sits below the
 threshold and shows no cache activity, consistent with the model-
 specific minimum.
@@ -248,7 +248,7 @@ fires reliably.
 ### S5.7.2 Reliability is a cost factor too
 
 The headline-run observed transient failures on `gemini-2.5-pro`
-(~10% ServerError 503 + ClientError 429 across modes — see
+(~10% ServerError 503 + ClientError 429 across modes; see
 §Results error breakdown) and a high empty-prediction rate
 distinct from API failures. For a deployment relying on Gemini Pro
 for code prediction, this implies either a retry/backoff layer
@@ -269,7 +269,7 @@ same token counts; the per-prediction CSV publishes token counts
 alongside the dated cost-USD column so cost numbers are
 reconstructible under any reader's current pricing.
 
-## S5.8 — Framing limitations (full version)
+## S5.8: Framing limitations (full version)
 
 A measured framing is essential for this section because the data
 touches on workforce questions that go beyond what a benchmark can
@@ -296,7 +296,7 @@ answer:
   propagate into the cost-per-correct ratio); replication at n=500
   would tighten these.
 
-## S5.9 — Historical: pre-headline-run smoke-test cost data
+## S5.9: Historical: pre-headline-run smoke-test cost data
 
 Preliminary per-call cost data from the 2026-05-02 Phase-0 wiring-
 validation run on 6 fixture FHIR Conditions × 4 degradation modes
@@ -326,6 +326,6 @@ the headline run: the same English prompt produces materially
 different token counts across providers (~3× difference between
 Anthropic and Google for the same content). This compounds with
 per-token pricing to produce headline cost differences that are
-NOT explained by accuracy or capability — they're partly
+NOT explained by accuracy or capability; they are partly
 tokenizer-driven. Literature comparisons that don't normalize for
 tokenization can mislead readers about relative deployment cost.

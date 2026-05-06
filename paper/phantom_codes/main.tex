@@ -126,8 +126,7 @@
 \author{%
   Brian K. Fung \\[2pt]
   \small Independent Researcher \\[2pt]
-  \small\href{mailto:brian@briankfung.com}{\texttt{brian@briankfung.com}} \\[2pt]
-  \small ORCID: \href{https://orcid.org/0000-0002-5951-3770}{0000-0002-5951-3770}}
+  \small\href{mailto:brian@briankfung.com}{\texttt{brian@briankfung.com}}}
 \date{\today}
 
 \begin{document}
@@ -138,42 +137,50 @@
 % Required headings: Objective / Materials and Methods / Results /
 % Discussion / Conclusion. Word limit: 250 prose words.
 \begin{abstract}
-\noindent\textbf{Objective.} To characterize how large language
-models (LLMs) fail at clinical concept normalization and to separate fabrication of non-existent
-codes from abstention, two failure modes typically conflated in
-existing benchmarks.
+\noindent\textbf{Objective.}\\
+To characterize how large language models (LLMs) fail at clinical
+concept normalization, and to separate fabrication of non-existent
+codes from abstention. These two failure modes are typically
+conflated in existing benchmarks.
 
-\noindent\textbf{Materials and Methods.} We evaluate eight frontier
-LLMs under three prompting modes (zero-shot, constrained, retrieval-
-augmented) against string-matching and frozen sentence-transformer
-retrieval baselines, on Synthea-generated FHIR Conditions across
-four input degradation modes. Each top-1 prediction lands in one of
-six outcome buckets that separate fabrication (code does not exist
-in CMS-published ICD-10-CM) from abstention (no usable prediction).
+\noindent\textbf{Materials and Methods.}\\
+We evaluate eight frontier LLMs under three prompting modes
+(zero-shot, constrained, and retrieval-augmented) against
+string-matching baselines and a frozen sentence-transformer
+retrieval baseline. Inputs are Synthea-generated FHIR Conditions
+under four degradation modes. Each top-1 prediction is assigned
+to one of six outcome buckets that distinguish fabrication (code
+does not exist in CMS-published ICD-10-CM) from abstention (no
+usable prediction).
 
-\noindent\textbf{Results.} On 125 unique Synthea Conditions $\times$
-4 degradation modes, fabrication ranged 0–5.6\% across flagship
-configurations and 0–12.8\% across sub-flagship; constrained
-prompting eliminated it for every Anthropic and OpenAI model.
-Abstention emerged as more consequential for some models —
-notably Gemini 2.5 Pro at 88\% empty-prediction under zero-shot
-D4. Cost-per-correct ranged 270$\times$; GPT-4o-mini constrained at
-\$0.0003 per exact-match was the cost-frontier.
+\noindent\textbf{Results.}\\
+On 125 unique Synthea Conditions across 4 degradation modes,
+fabrication ranged from 0 to 5.6\% across flagship configurations
+and from 0 to 12.8\% across sub-flagship configurations.
+Constrained prompting eliminated fabrication for every Anthropic
+and OpenAI model. Abstention proved more consequential for some
+models. Gemini 2.5 Pro returned an empty prediction on 88\% of
+zero-shot D4 inputs. Cost-per-correct varied by a factor of 270
+across the matrix; GPT-4o-mini in constrained mode achieved the
+lowest cost at \$0.0003 per exact match.
 
-\noindent\textbf{Discussion.} Hallucination appears more
-controllable than prior literature suggested at this scale, but
-the cohort and abbreviation stress are imperfect proxies for
-real-world triggers; larger cohorts with more realistic clinical
-text are needed to establish the true effect size.
+\noindent\textbf{Discussion.}\\
+Hallucination appears more controllable than prior literature
+suggested at this scale. However, the cohort size and the
+abbreviation-stress mode are imperfect proxies for real-world
+triggers. Larger cohorts with more realistic clinical text are
+needed to establish the true effect size.
 
-\noindent\textbf{Conclusion.} Zero-shot LLM prompting is unsafe
-for clinical concept normalization; constrained or retrieval-
-augmented grounding is required to eliminate fabrication. Among
-grounded configurations, cost-per-correct drives deployment
-selection: GPT-4o-mini constrained leads at 94.2\% top-1 /
-\$0.0003 per correct; Claude Haiku 4.5 constrained is the
-higher-accuracy alternative (96.8\% / \$0.0044). Both dominate the
-largest frontier model (Opus 4.7, \$0.0133).
+\noindent\textbf{Conclusion.}\\
+Zero-shot LLM prompting is unsafe for clinical concept
+normalization. Constrained or retrieval-augmented grounding is
+required to eliminate fabrication. Among grounded configurations,
+cost-per-correct drives deployment selection. GPT-4o-mini in
+constrained mode leads at 94.2\% top-1 accuracy and \$0.0003 per
+correct prediction. Claude Haiku 4.5 in constrained mode is a
+higher-accuracy alternative at 96.8\% and \$0.0044 per correct.
+Both dominate the largest frontier model tested (Opus 4.7 at
+\$0.0133 per correct).
 \end{abstract}
 
 \tableofcontents
@@ -208,24 +215,20 @@ corresponding author; per-call costs are itemized in §Cost economics.
 
 \section*{Data availability}
 \addcontentsline{toc}{section}{Data availability}
-\textbf{Synthea-generated FHIR Bundles} used for the headline
-evaluation are freely redistributable and will be released as
-\texttt{benchmarks/synthetic\_v1/} alongside the paper.
-\textbf{Source code} (data-preparation pipeline, degradation logic,
-ICD-10-CM validator, eval runner, prompts, baselines) is publicly
-available at the project repository under the MIT License. The full
-evaluation pipeline reproduces the LLM-evaluation arm against
-Synthea-generated inputs end-to-end without requiring any
-credentialed data.
+The Synthea-generated FHIR Bundles used for the headline evaluation
+are freely redistributable and will be released as
+\texttt{benchmarks/synthetic\_v1/} alongside the paper. All source
+code, including the data-preparation pipeline, degradation logic,
+ICD-10-CM validator, eval runner, prompts, and baselines, is
+publicly available at the project repository under the MIT License.
 
 \section*{Code availability}
 \addcontentsline{toc}{section}{Code availability}
-All source code, configuration files, synthetic test fixtures, and the
-manuscript source are publicly available at the project's GitHub
+All source code, configuration files, synthetic test fixtures, and
+the manuscript source are publicly available at the project's GitHub
 repository under the MIT License. The repository includes the full
-evaluation pipeline, allowing any researcher (with or without
-PhysioNet credentialing) to reproduce the LLM-evaluation arm against
-Synthea-generated inputs.
+evaluation pipeline and the Synthea generation configuration needed
+to reproduce the headline matrix end-to-end.
 
 \section*{Author contributions}
 \addcontentsline{toc}{section}{Author contributions}
@@ -235,14 +238,6 @@ the experiments, and wrote the manuscript.
 \section*{Competing interests}
 \addcontentsline{toc}{section}{Competing interests}
 The author declares no competing interests.
-
-\section*{Acknowledgments}
-\addcontentsline{toc}{section}{Acknowledgments}
-The author thanks the maintainers of the open-source tools that made
-this benchmark possible: Synthea \autocite{Walonoski2018} for the
-freely-redistributable synthetic patient cohort, and the FHIR
-working group whose specifications underpin the evaluation
-pipeline.
 
 \bigskip
 \hrule

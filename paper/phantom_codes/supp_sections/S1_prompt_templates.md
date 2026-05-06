@@ -1,7 +1,7 @@
-# S1 — Prompt templates and provider-specific structured-output configurations
+# S1: Prompt templates and provider-specific structured-output configurations
 
-This supplement reproduces the verbatim system + user prompts and
-provider-specific structured-output configurations used in the
+This supplement reproduces the verbatim system and user prompts and
+the provider-specific structured-output configurations used in the
 headline matrix. Three prompting modes (`zeroshot`, `constrained`,
 `rag`) are evaluated; each is reproduced below per provider
 (Anthropic, OpenAI, Google) for full reviewer auditability. All
@@ -9,8 +9,11 @@ content is extracted verbatim from
 [`src/phantom_codes/models/llm.py`](https://github.com/ufbfung/phantom-codes/blob/main/src/phantom_codes/models/llm.py)
 and
 [`src/phantom_codes/models/rag_llm.py`](https://github.com/ufbfung/phantom-codes/blob/main/src/phantom_codes/models/rag_llm.py).
+Note that the verbatim prompt strings reproduced in code blocks
+preserve the punctuation present in the source, including any
+em-dashes that appear in the actual model-facing prompts.
 
-## S1.1 — Zero-shot system prompt
+## S1.1: Zero-shot system prompt
 
 The zero-shot prompt is the static "base" string returned by
 `build_system_prompt(mode=PromptMode.ZEROSHOT)`. The model receives
@@ -33,7 +36,7 @@ If you are uncertain, still return your best guess(es) — the eval framework
 will distinguish hallucinations (non-existent codes) from real-but-wrong codes.
 ```
 
-## S1.2 — Constrained system prompt
+## S1.2: Constrained system prompt
 
 The constrained prompt appends the full CMS ACCESS-scope candidate
 list to the zero-shot base. The candidate block is rendered one
@@ -72,12 +75,12 @@ Candidate codes (<N> total):
 - ...
 ```
 
-## S1.3 — RAG system prompt template
+## S1.3: RAG system prompt template
 
 The RAG prompt reuses the constrained-mode template, but the
-candidate list is populated per-record by a frozen sentence-
-transformer retriever (default `all-MiniLM-L6-v2`) returning the
-top-`retrieve_k = 20` ACCESS-scope candidates most similar to the
+candidate list is populated per-record by a frozen
+sentence-transformer retriever (default `all-MiniLM-L6-v2`) returning
+the top-`retrieve_k = 20` ACCESS-scope candidates most similar to the
 input. The structural form is therefore identical to S1.2; only the
 size and identity of the candidate block change. From
 `RAGLLMModel.predict` in
@@ -100,11 +103,11 @@ system_prompt = build_system_prompt(
 )
 ```
 
-## S1.4 — User-message template
+## S1.4: User-message template
 
 The user message varies by input mode. For D1\_full and D2\_no\_code
-inputs the FHIR Condition resource is serialized to indented JSON;
-for D3\_text\_only and D4\_abbreviated inputs the text is sent
+inputs, the FHIR Condition resource is serialized to indented JSON.
+For D3\_text\_only and D4\_abbreviated inputs, the text is sent
 directly. Returned by `build_user_message(input_fhir=…, input_text=…)`:
 
 ```
@@ -129,7 +132,7 @@ ICD-10-CM code:
 <input_text>
 ```
 
-## S1.5 — Provider-specific structured-output configuration
+## S1.5: Provider-specific structured-output configuration
 
 All three providers are constrained to emit the same
 `PREDICTION_TOOL_SCHEMA` shape. The schema is defined once in
@@ -171,7 +174,7 @@ All three providers are constrained to emit the same
 }
 ```
 
-### S1.5.1 Anthropic — forced tool use
+### S1.5.1 Anthropic: forced tool use
 
 The schema is wrapped in a single tool with `tool_choice` forced to
 that tool, so the model must invoke it. The system block is marked
@@ -203,7 +206,7 @@ client.messages.create(
 )
 ```
 
-### S1.5.2 OpenAI — structured outputs (`response_format`)
+### S1.5.2 OpenAI: structured outputs (`response_format`)
 
 OpenAI's strict `json_schema` mode requires a slightly trimmed schema
 (strict-mode rejects `minItems`, `maxItems`, `minimum`, `maximum`,
@@ -231,10 +234,10 @@ client.chat.completions.create(
 )
 ```
 
-### S1.5.3 Google — `response_schema`
+### S1.5.3 Google: `response_schema`
 
-Gemini's `response_schema` is an OpenAPI 3.0 subset that rejects JSON
-Schema fields the other providers accept — most notably
+Gemini's `response_schema` is an OpenAPI 3.0 subset that rejects
+JSON Schema fields the other providers accept, most notably
 `additionalProperties` and `$schema`. A deep-copy helper
 `_strip_for_gemini` removes those fields. The system instruction is
 passed as a separate `system_instruction` config field; output is

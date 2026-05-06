@@ -7,74 +7,67 @@ controlled vocabulary such as ICD-10-CM, LOINC, or RxNorm
 \autocite{Miftahutdinov2021,Xu2022}. It sits at the foundation of
 healthcare data interoperability. Errors propagate downstream: a
 misassigned diagnosis code can shift a hospital's case-mix index,
-mis-stratify a research cohort, or quietly corrupt the training data
-of the next generation of models. For most of the last decade, the
-state of the art for automated coding came from supervised neural
+mis-stratify a research cohort, or corrupt the training data of the
+next generation of models. For most of the last decade, the state
+of the art for automated coding came from supervised neural
 classifiers trained on labeled clinical text
 \autocite{Mullenbach2018,Huang2022}. The arrival of general-purpose
-large language models has changed the deployment economics:
-foundation models can in principle perform code prediction with no
-task-specific fine-tuning. The questions that motivated this work
-are not whether LLMs can predict medical codes --- they can --- but
-whether the safety findings from earlier model generations still
-hold on the frontier models shipping today, and at what cost the
-resulting deployment economics actually pencil out.
+large language models has changed the deployment picture: foundation
+models can in principle perform code prediction with no task-specific
+fine-tuning. Two open questions motivated this work. Do the
+fabrication findings reported on earlier model generations still
+hold for the frontier models shipping today? And what does the cost
+side of the deployment tradeoff look like for the configurations
+that do work?
 
-Two gaps in the literature shape what this paper is for. First,
-\textbf{frontier-model evaluations age fast}. Soroush et al.\ (2024)
-reported that GPT-4 achieved only 46\% exact match on ICD-9 and 34\%
-on ICD-10, with a substantial fraction of errors being non-existent
-codes rather than real-but-wrong assignments \autocite{Soroush2024}.
-Lee and Lindsey documented that LLMs systematically struggle to
-distinguish real codes from plausibly-formatted fakes
-\autocite{Lee2024}. These findings frame the safety risk that
-fabricated codes pose, an instance of the broader medical-
-hallucination phenomenon \autocite{Kim2025,Ji2023}, but both are
-$\sim$18 months old. In that window Anthropic shipped Opus 4.7,
-OpenAI shipped GPT-5.5, and Google shipped Gemini 3 Flash Preview.
-Whether the safety story holds for the current generation is an
-empirical question no published evaluation has yet answered.
+The literature has documented the fabrication problem but on
+generations that are now dated. Soroush et al.\ (2024) reported
+that GPT-4 achieved only 46\% exact match on ICD-9 and 34\% on
+ICD-10, with a substantial fraction of errors being non-existent
+codes rather than real-but-wrong assignments
+\autocite{Soroush2024}. Lee and Lindsey documented that LLMs
+systematically struggle to distinguish real codes from
+plausibly-formatted fakes \autocite{Lee2024}. Both findings are an
+instance of the broader medical-hallucination phenomenon
+\autocite{Kim2025,Ji2023}, and both predate Anthropic's Opus 4.7,
+OpenAI's GPT-5.5, and Google's Gemini 3 Flash Preview. Whether the
+fabrication rates reported on GPT-4 generalize to the current
+generation has not been re-measured.
 
-Second, \textbf{deployment cost is mostly absent from the
-literature}. The field's response to hallucination has largely been
-architectural: retrieval-grounded pipelines
-\autocite{DasBaksi2024,Sarvari2025}, agentic walkers
+Cost is largely absent from the published evaluations. The field's
+response to hallucination has been architectural: retrieval-grounded
+pipelines \autocite{DasBaksi2024,Sarvari2025}, agentic walkers
 \autocite{Motzfeldt2025}, neuro-symbolic verifiers
 \autocite{HybridCode2025}, and broader benchmark expansions
 \autocite{Almeida2025,Singh2025,Li2025,Gershon2025}. Across this
-body of work, hallucination is rarely treated as a first-class
-outcome and per-prediction cost is rarely reported at all. As LLM-
-augmented coding moves toward production deployment, the
-deployment-decisive question shifts from ``which model is most
-accurate'' to ``which (model, prompting mode) combination is Pareto-
-optimal in accuracy and cost.'' The literature does not currently
-support that question.
+body of work, hallucination is rarely treated as an explicit
+outcome, and per-prediction cost is rarely reported at all. As
+LLM-augmented coding moves toward production deployment, the
+operationally relevant question is which (model, prompting mode)
+combination achieves a useful accuracy at a tolerable cost. The
+literature does not yet answer that question.
 
-We present \textbf{Phantom Codes}, a reproducible benchmark that
-contributes on three fronts. \emph{First}, we evaluate the most
-recent generation of frontier LLMs: 24 (model, prompting-mode)
-configurations spanning Claude Opus 4.7, Sonnet 4.6, and Haiku 4.5;
-GPT-5.5 and GPT-4o-mini; and Gemini 2.5 Pro, 2.5 Flash, and 3 Flash
-Preview --- many shipped within weeks of evaluation. Where prior
-work reports findings on 2023--2024 vintage models, this matrix
-tests whether those findings still hold. \emph{Second}, we treat
-per-call cost as a first-class outcome alongside accuracy. Every
-prediction in the matrix records token usage and dollar cost at
-runtime, computed against the published per-token rates of each
-provider; we report cost-per-correct (USD per exact-match outcome)
-as the deployment-relevant normalization and identify the small
-Pareto frontier in the accuracy-cost plane an operator should
-actually deploy. \emph{Third}, we provide methodological instruments
-that make the above two contributions land cleanly: a six-way
-outcome taxonomy in which fabrication of non-existent codes
-(hallucination) and abstention (\texttt{no\_prediction}) are
-explicit, mutually exclusive buckets; a within-model ablation across
-zero-shot, constrained, and retrieval-augmented prompting modes
-that holds the model and input fixed and varies only whether a
-candidate list is provided; and an abbreviation-stress mode (D4)
-that replaces canonical display strings with clinical jargon (T2DM,
-HTN, CKD-3) to expose the condition under which string-matching
-baselines collapse. The headline matrix runs entirely against
-Synthea-generated FHIR Bundles \autocite{Walonoski2018}, a freely-
-redistributable synthetic patient dataset that gives full
-reproducibility from a pinned Synthea version and seed.
+We present \textbf{Phantom Codes}, a reproducible benchmark with
+three contributions. The first is empirical coverage of the most
+recent frontier LLMs: 24 (model, prompting-mode) configurations
+spanning Claude Opus 4.7, Sonnet 4.6, and Haiku 4.5; GPT-5.5 and
+GPT-4o-mini; and Gemini 2.5 Pro, 2.5 Flash, and 3 Flash Preview.
+Several of these models were released within weeks of the evaluation
+date. The second is per-prediction cost as an outcome alongside
+accuracy: every prediction in the matrix records token usage and
+dollar cost at runtime, computed against the published per-token
+rates of each provider, and we report cost-per-correct (USD per
+exact-match outcome) at both the per-call and per-correct level.
+The third is a set of methodological choices that make the first
+two contributions interpretable: a six-way outcome taxonomy in
+which fabrication of non-existent codes (hallucination) and
+abstention (\texttt{no\_prediction}) are explicit, mutually
+exclusive buckets; a within-model ablation across zero-shot,
+constrained, and retrieval-augmented prompting modes that holds
+the model and input fixed; and an abbreviation-stress mode (D4)
+that replaces canonical display strings with clinical jargon
+(T2DM, HTN, CKD-3) to expose where string-matching baselines
+collapse. The headline matrix runs against Synthea-generated FHIR
+Bundles \autocite{Walonoski2018}, a freely-redistributable synthetic
+patient dataset that gives full reproducibility from a pinned
+Synthea version and seed.

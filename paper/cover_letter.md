@@ -13,9 +13,9 @@ FHIR Conditions, every fabrication of a non-existent ICD-10-CM
 code we observed occurred under zero-shot prompting; constrained
 prompting eliminated it entirely for every Anthropic and OpenAI
 model evaluated. This adds independent evidence that zero-shot
-LLM coding is unsafe for production use, and that the safety
-property is recoverable through prompting structure rather than
-model choice. Second, when configurations are scored on
+LLM coding is inferior to grounded prompting for production use,
+and that the fabrication-free property is recoverable through
+prompting structure rather than model choice. Second, when configurations are scored on
 cost-per-correct-prediction rather than accuracy alone, the
 deployment frontier collapses to two grounded sub-flagship models
 (GPT-4o-mini constrained at \$0.0003 per correct, Claude Haiku 4.5

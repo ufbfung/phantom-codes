@@ -115,9 +115,9 @@ to worst by deployment relevance:
 
 The \texttt{no\_prediction} and \texttt{hallucination} buckets capture
 qualitatively different failure modes and are reported separately.
-From a deployment-safety perspective, abstention is preferable to
-fabrication, since an abstaining model emits no spurious code that
-downstream systems silently mishandle. Earlier work \autocite{Soroush2024}
+From a downstream-error perspective, abstention is generally
+preferable to fabrication, since an abstaining model emits no
+spurious code that downstream systems silently mishandle. Earlier work \autocite{Soroush2024}
 collapses these into a single error bucket; the six-way split
 surfaces the distinction that conflation hides.
 
@@ -129,10 +129,10 @@ against the versioned pricing snapshot in \texttt{configs/pricing.yaml}
 \autocite{OpenAIPricing2026,GeminiPricing2026}. These infrastructure
 metrics are recorded even when the prediction is wrong and serve
 as the basis for the cost-per-correct normalization reported in
-Results. Cost-per-correct (USD per exact-match outcome) collapses
-per-call price and per-call accuracy into a single
-deployment-relevant number; we report it alongside per-call cost
-because the two diverge meaningfully when accuracy drops.
+Results. Cost-per-correct (USD per exact-match outcome) combines per-call
+price and per-call accuracy into a single number; we report it
+alongside per-call cost because the two diverge when accuracy
+drops.
 
 \subsection{Statistical analysis}\label{statistical-analysis}
 

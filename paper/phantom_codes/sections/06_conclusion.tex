@@ -20,12 +20,13 @@ documentation, code-specificity ambiguity, and long-tail rare
 diagnoses are not exercised here. A v2 cohort with broader
 vocabulary and more realistic clinical text (e.g., discharge
 summaries, ED notes) is needed to establish the true effect size
-of fabrication risk on production-relevant inputs.
+of fabrication risk on real clinical inputs.
 
-Two deployment prescriptions emerge. \textbf{Zero-shot LLM prompting is
-unsafe for medical concept normalization}, since every
-fabrication observed occurred under zero-shot, and constrained or
-retrieval-augmented grounding is required to eliminate it. Among
+Two recommendations follow from the matrix. \textbf{Zero-shot LLM prompting
+is inferior to constrained and retrieval-augmented grounding for
+medical concept normalization}, since every observed fabrication
+occurred under zero-shot, and only the grounded configurations
+eliminated it. Among
 grounded configurations, \textbf{cost-per-correct rather than accuracy
 alone should drive selection}, because clinical coding errors are
 downstream-costly and the cheaper model can win on the combined

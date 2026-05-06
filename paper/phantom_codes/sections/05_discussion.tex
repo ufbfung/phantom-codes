@@ -17,7 +17,7 @@ OpenAI model that shows any nonzero zero-shot hallucination, and
 within-model paired McNemar tests confirm significance at n=125.
 The string-matching baselines and the frozen sentence-transformer
 baseline (45 to 69\% top-1) sit well below every constrained-mode
-LLM on the safety-versus-accuracy frontier, confirming that
+LLM on the fabrication-versus-accuracy frontier, confirming that
 constrained frontier LLMs offer real gains over lexical and
 embedding-only approaches at this cohort scale. Cost-per-correct
 collapses the deployment choice to a small frontier: GPT-4o-mini
@@ -28,30 +28,29 @@ constrained at \$0.0003 and Claude Haiku 4.5 constrained at
 
 The closest direct precedent is Soroush et al.~(2024)
 \autocite{Soroush2024}, who benchmarked four 2023--2024 vintage
-LLMs on direct ICD code querying. Our matrix departs from theirs
-in three ways relevant to deployment. \emph{First, model
-generation.} Their headline numbers are GPT-4 (46\% exact match on
-ICD-9, 34\% on ICD-10); our matrix evaluates Opus 4.7, GPT-5.5,
-and Gemini 3 Flash Preview on the same task type. Every Anthropic
-and OpenAI configuration in our matrix exceeds 80\% top-1 even
-under the D4 abbreviation stress, attributable to cohort-scope
+LLMs on direct ICD code querying. Our matrix differs from theirs in
+three ways relevant to deployment. The first is model generation.
+Their headline numbers are GPT-4 (46\% exact match on ICD-9, 34\%
+on ICD-10); our matrix includes Opus 4.7, GPT-5.5, and Gemini 3
+Flash Preview on the same task type. Every Anthropic and OpenAI
+configuration we evaluated exceeds 80\% top-1 even under the D4
+abbreviation stress, which we attribute to cohort-scope
 restriction, generational LLM improvements, and structured-output
-prompting. \emph{Second, deployment cost.} Soroush et al.\ and
+prompting. The second is per-prediction cost. Soroush et al.\ and
 the broader hallucination-mitigation literature
 \autocite{DasBaksi2024,Sarvari2025,Motzfeldt2025,HybridCode2025} do
-not report per-prediction cost. We do, and the cost-per-correct
-collapse to a tight Pareto frontier (GPT-4o-mini constrained at
-\$0.0003; Claude Haiku 4.5 constrained at \$0.0044) is the most
-deployment-actionable finding in the matrix. \emph{Third,
-methodological refinement.} Hallucination is an explicit
-mutually-exclusive bucket; abstention is split out via the 6-way
-taxonomy; and the within-model zero-shot vs.\ constrained vs.\ RAG
-contrast is run as a controlled ablation that isolates
-``wandering off the menu'' from genuine ignorance. Neuro-symbolic
-alternatives \autocite{Motzfeldt2025,HybridCode2025} report
-hallucination control through architectural constraints; our 0\%
-Anthropic constrained-mode rate sits below their reported neural-
-baseline band, suggesting that modern frontier LLMs under
+not report per-prediction cost; we do, and cost-per-correct
+collapses the choice to a small Pareto frontier (GPT-4o-mini
+constrained at \$0.0003 and Claude Haiku 4.5 constrained at
+\$0.0044). The third is the outcome taxonomy: hallucination is an
+explicit, mutually-exclusive bucket, abstention is split out via
+the 6-way taxonomy, and the within-model zero-shot vs.\ constrained
+vs.\ RAG contrast is reported as a controlled ablation that
+separates ``wandering off the menu'' from genuine ignorance.
+Neuro-symbolic alternatives \autocite{Motzfeldt2025,HybridCode2025}
+report hallucination control through architectural constraints;
+our 0\% Anthropic constrained-mode rate sits below their reported
+neural-baseline band, suggesting that modern frontier LLMs under
 structured-output constraints have closed much of the fabrication
 gap those systems were designed to fix. Full comparison is in
 Supplementary §S2.
@@ -113,4 +112,4 @@ faithfulness and plausibility evaluation alongside the
 outcome-bucket framework. A v2 cohort with broader vocabulary and
 more realistic clinical text (e.g., discharge summaries, ED notes)
 is also needed to establish the true effect size of fabrication
-risk on production-relevant inputs.
+risk on real clinical inputs.

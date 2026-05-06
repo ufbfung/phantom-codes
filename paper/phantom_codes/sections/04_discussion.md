@@ -1,4 +1,4 @@
-# Discussion
+# DISCUSSION
 
 ## Principal findings
 

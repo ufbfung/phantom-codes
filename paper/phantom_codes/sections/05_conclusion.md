@@ -1,4 +1,4 @@
-# Conclusion
+# CONCLUSION
 
 Across a 24-LLM-configuration evaluation matrix on n=125
 Synthea-generated FHIR Conditions, fabrication of non-existent

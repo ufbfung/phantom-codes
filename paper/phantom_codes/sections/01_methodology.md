@@ -1,4 +1,4 @@
-# Materials and Methods
+# MATERIALS AND METHODS
 
 ## Data
 

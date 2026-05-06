@@ -1,10 +1,10 @@
 # Phantom Codes
 
-> *Hallucination in LLM-Based Clinical Concept Normalization.*
+> *Hallucination, Accuracy, and Cost in Frontier-LLM Medical Concept Normalization.*
 
-A reproducible benchmark for evaluating how well LLMs and trained models map degraded clinical data to standardized terminology codes — and how often they fabricate codes that don't exist.
+A reproducible benchmark for evaluating how well frontier LLMs map degraded clinical data to standardized terminology codes — how often they fabricate codes that don't exist, and at what cost-per-correct they actually deliver.
 
-**Clinical concept normalization** is the task of mapping mentions of clinical entities (diagnoses, labs, medications) to identifiers in controlled vocabularies (ICD-10-CM, LOINC, RxNorm, etc.). It's a foundational task for healthcare data integration, billing, research cohort construction, and AI-assisted documentation.
+**Medical concept normalization** is the entity-linking task of mapping in-text mentions of biomedical concepts (diagnoses, labs, medications) to entries in a standardized ontology or controlled vocabulary (ICD-10-CM, LOINC, RxNorm, etc.). It's a foundational task for healthcare data integration, billing, research cohort construction, and AI-assisted documentation.
 
 **Status:** v1 complete for diagnoses. Degradation pipeline, 6-way outcome taxonomy, ICD-10-CM validator, LLM module (Claude + GPT + Gemini in zero-shot + constrained + RAG modes), bi-encoder retrieval baseline, constrained-only baselines (exact / fuzzy / TF-IDF), token + cost tracking, run-manifest sidecars, blinded `--infra-only` smoke-test mode, and end-to-end eval runner are implemented and tested. PubMedBERT classifier fine-tuned locally on MIMIC-IV-FHIR via PyTorch MPS. Headline n=125 Synthea evaluation completed 2026-05-04 (per-(model, mode) aggregates in [results/summary/n125_run_v2/](results/summary/n125_run_v2/)). Paper draft submission-ready for **JAMIA Research and Applications**.
 

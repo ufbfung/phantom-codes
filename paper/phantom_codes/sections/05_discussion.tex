@@ -27,24 +27,34 @@ constrained at \$0.0003 and Claude Haiku 4.5 constrained at
 \subsection{Comparison with prior work}\label{comparison-with-prior-work}
 
 The closest direct precedent is Soroush et al.~(2024)
-\autocite{Soroush2024}, who benchmarked four LLMs on direct ICD
-code querying. Our framework departs from theirs in three ways.
-Hallucination is an explicit mutually-exclusive bucket and
-abstention is split out via the 6-way taxonomy. The within-model
-contrast between zero-shot and constrained prompting is isolated
-as a controlled comparison. The D4\_abbreviated stress strips
-lexical signal, so semantic-mapping behavior is testable
-separately from lexical lookup. Our matrix sits substantially
-above Soroush et al.'s GPT-4 numbers (every Anthropic and OpenAI
-configuration exceeds 80\% top-1 even on D4), attributable to
-cohort-scope restriction, generational LLM improvements, and
-structured-output prompting. Neuro-symbolic alternatives
-\autocite{Motzfeldt2025,HybridCode2025} report hallucination control
-through architectural constraints. Our 0\% Anthropic
-constrained-mode rate sits below their reported neural-baseline
-band, suggesting that modern frontier LLMs under structured-output
-constraints have closed much of the fabrication gap those systems
-were designed to fix. Full comparison is in Supplementary §S2.
+\autocite{Soroush2024}, who benchmarked four 2023--2024 vintage
+LLMs on direct ICD code querying. Our matrix departs from theirs
+in three ways relevant to deployment. \emph{First, model
+generation.} Their headline numbers are GPT-4 (46\% exact match on
+ICD-9, 34\% on ICD-10); our matrix evaluates Opus 4.7, GPT-5.5,
+and Gemini 3 Flash Preview on the same task type. Every Anthropic
+and OpenAI configuration in our matrix exceeds 80\% top-1 even
+under the D4 abbreviation stress, attributable to cohort-scope
+restriction, generational LLM improvements, and structured-output
+prompting. \emph{Second, deployment cost.} Soroush et al.\ and
+the broader hallucination-mitigation literature
+\autocite{DasBaksi2024,Sarvari2025,Motzfeldt2025,HybridCode2025} do
+not report per-prediction cost. We do, and the cost-per-correct
+collapse to a tight Pareto frontier (GPT-4o-mini constrained at
+\$0.0003; Claude Haiku 4.5 constrained at \$0.0044) is the most
+deployment-actionable finding in the matrix. \emph{Third,
+methodological refinement.} Hallucination is an explicit
+mutually-exclusive bucket; abstention is split out via the 6-way
+taxonomy; and the within-model zero-shot vs.\ constrained vs.\ RAG
+contrast is run as a controlled ablation that isolates
+``wandering off the menu'' from genuine ignorance. Neuro-symbolic
+alternatives \autocite{Motzfeldt2025,HybridCode2025} report
+hallucination control through architectural constraints; our 0\%
+Anthropic constrained-mode rate sits below their reported neural-
+baseline band, suggesting that modern frontier LLMs under
+structured-output constraints have closed much of the fabrication
+gap those systems were designed to fix. Full comparison is in
+Supplementary §S2.
 
 \subsection{Implications for clinical deployment}\label{implications-for-clinical-deployment}
 

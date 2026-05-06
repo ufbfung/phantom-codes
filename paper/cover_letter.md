@@ -1,8 +1,9 @@
 Dear Dr. Bakken and Editorial Team,
 
 I am pleased to submit the enclosed manuscript, "Phantom Codes:
-Hallucination in LLM-Based Clinical Concept Normalization," for
-consideration as a Research and Applications article in JAMIA.
+Hallucination, Accuracy, and Cost in Frontier-LLM Medical Concept
+Normalization," for consideration as a Research and Applications
+article in JAMIA.
 
 The paper contributes two findings that we believe are
 deployment-relevant for clinical informatics groups currently

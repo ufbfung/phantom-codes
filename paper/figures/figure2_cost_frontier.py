@@ -21,8 +21,17 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
+
+# Embed fonts as TrueType (type 42) so XeLaTeX preserves glyph metrics
+# when the PDF is scaled into the manuscript at width=95%. Default
+# (Type 3, glyph-as-postscript-program) renders as visibly stretched
+# when XeLaTeX rasterizes for inclusion.
+mpl.rcParams["pdf.fonttype"] = 42
+mpl.rcParams["ps.fonttype"] = 42
+mpl.rcParams["font.family"] = "DejaVu Sans"
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CSV_PATH = REPO_ROOT / "results" / "summary" / "n125_run_v2" / "cost_per_correct.csv"

@@ -24,13 +24,13 @@ checkable instance of the broader phenomenon of medical hallucination
 et al. reported that the best-performing model (GPT-4) achieved only 46%
 exact match on ICD-9 and 34% on ICD-10, with a substantial fraction of
 errors being non-existent codes rather than real-but-wrong assignments
-[@Soroush2024]. Goel et al. found that LLMs systematically struggle to
-distinguish real codes from plausibly-formatted fakes [@Goel2024]. The
+[@Soroush2024]. Lee and Lindsey found that LLMs systematically struggle
+to distinguish real codes from plausibly-formatted fakes [@Lee2024]. The
 field's response has largely been to constrain the LLM rather than to
 characterize its unconstrained behavior — through retrieval-grounded
-pipelines [@Sahaj2024; @Mahmoud2025], agentic walkers [@Motzfeldt2025],
+pipelines [@DasBaksi2024; @Sarvari2025], agentic walkers [@Motzfeldt2025],
 neuro-symbolic verifiers [@HybridCode2025], and broader benchmark
-expansions [@Almeida2025; @Bhatti2025; @Li2025; @Gershon2025]. Across
+expansions [@Almeida2025; @Singh2025; @Li2025; @Gershon2025]. Across
 this body of work, hallucination is rarely a first-class outcome,
 zero-shot vs. constrained is rarely a controlled within-model
 comparison, and degraded-input robustness is not systematically tested.
@@ -49,13 +49,9 @@ isolating "wandering off the menu" from "genuine ignorance." Third, an
 strings with clinical jargon (T2DM, HTN, CKD-3) while preserving the
 underlying diagnosis — the condition under which string-matching
 baselines collapse and any remaining accuracy must come from genuine
-semantic mapping. We adopt a deliberate train/evaluate separation:
-trained models are fine-tuned locally on credentialed MIMIC-IV-FHIR
-v2.1 [@Bennett2024; @Bennett2023; @Johnson2023]; the headline
-evaluation matrix runs entirely against Synthea-generated FHIR Bundles
-[@Walonoski2018]. This is *compliance by construction* with PhysioNet's
-responsible-LLM-use policy [@PhysioNet2025] — credentialed data never
-reaches a third-party API — and gives full reproducibility without
-PhysioNet credentialing. The framework, taxonomy, and evaluation
-runner extend without architectural change to LOINC and RxNorm in
-subsequent work.
+semantic mapping. The headline evaluation matrix runs entirely against
+Synthea-generated FHIR Bundles [@Walonoski2018], a freely-
+redistributable synthetic patient dataset that gives full
+reproducibility without any credentialed-data dependency. The
+framework, taxonomy, and evaluation runner extend without
+architectural change to LOINC and RxNorm in subsequent work.

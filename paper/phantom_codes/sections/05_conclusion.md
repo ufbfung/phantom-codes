@@ -1,6 +1,6 @@
 # Conclusion
 
-Across a 27-LLM-configuration evaluation matrix on n=125 Synthea-
+Across a 24-LLM-configuration evaluation matrix on n=125 Synthea-
 generated FHIR Conditions, fabrication of non-existent ICD-10-CM
 codes ranged 0–5.6% for flagship models (Opus 4.7, GPT-5.5, Gemini
 2.5 Pro) and 0–12.8% for sub-flagship models, and was eliminated

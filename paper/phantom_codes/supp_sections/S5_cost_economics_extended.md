@@ -18,9 +18,10 @@ The full per-(model, prompting-mode) cost breakdown is in
 configurations are reproduced in main §2; the full set adds the 12
 constrained and RAG configurations for the 9 LLMs other than Haiku
 (Sonnet, Opus, GPT-5.5, GPT-4o-mini, Gemini 2.5 Pro/Flash, Gemini
-3 Flash Preview), plus the 3 baselines + retrieval + classifier
-(zero LLM cost by construction). Total run cost across the 29
-configurations on the n=125 cohort = \$49.65, dominated by Claude
+3 Flash Preview), plus the 3 string-matching baselines and the
+frozen sentence-transformer retrieval baseline (all zero LLM cost
+by construction). Total run cost across the 28 configurations on
+the n=125 cohort = \$49.65, dominated by Claude
 Opus (\$18.18 across its 3 modes) and the GPT-5.5 / Sonnet 4.6
 groupings.
 
@@ -91,7 +92,7 @@ would tighten the comparison.
 
 A production deployment looks very different from the headline
 benchmark because organizations choose ONE configuration (not the
-full 29-config matrix) and run it on incoming records continuously.
+full 28-config matrix) and run it on incoming records continuously.
 We project costs for representative single-configuration
 deployments at three production scales, using the per-call costs
 observed in main §2 M1 with a conservative 1.4× scale-up for
@@ -123,16 +124,15 @@ same scale crosses into "real money" territory but is still small
 compared to the salary cost of equivalent human coding capacity
 (see §S5.5).
 
-### Trained-model training cost (negligible at v1 scale)
+### Non-LLM baseline cost (negligible)
 
-The trained PubMedBERT classifier and frozen sentence-transformer
-retrieval baseline contribute essentially zero training cost at v1
-scale: training runs on consumer Apple Silicon (M1 MacBook Pro via
-PyTorch's MPS backend). Hardware is sunk cost; energy use over a
-~5-hour training run is dominated by the device's idle floor and
-rounds to pennies. Equivalent training on a cloud GPU (Vertex AI
-A100 40GB ~\$3-5/hr; comparable on AWS p4d / Azure NCv3) would be
-~1-2 hours wall clock at \$5-10 per training run.
+The string-matching and frozen sentence-transformer retrieval
+baselines contribute essentially zero per-call cost: they run
+locally with no API calls. The frozen sentence-transformer
+(`all-MiniLM-L6-v2`) loads once into memory at startup; subsequent
+candidate retrieval is sub-millisecond. These baselines are
+included for accuracy comparison only and are excluded from the
+LLM cost extrapolations above.
 
 ### Caveats to the production extrapolation
 

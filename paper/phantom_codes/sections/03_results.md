@@ -8,7 +8,7 @@ modes for 500 EvalRecord items. Twelve unique ICD-10-CM codes
 appear: obesity (E66.9; 24%), prediabetes (R73.03; 20%), type 2
 diabetes variants (E11.x; 31% combined), essential hypertension
 (I10; 14%), and lipid disorders (E78.x; 10%). The matrix evaluates
-29 model configurations, generating 44,657 prediction rows.
+28 model configurations.
 
 ## Outcome distribution
 
@@ -67,7 +67,7 @@ interaction with the reasoning-token budget is unresolved (see
 §Discussion limitations). Gemini Flash zero-shot rows show roughly
 equal hallucination and no\_prediction rates because most rows are
 *both* — empty arrays counted as no\_prediction, and when a code
-is returned it is frequently fabricated. Full 27-LLM tables in
+is returned it is frequently fabricated. Full 24-LLM tables in
 Supplementary §S2.2–S2.3.
 
 ## Top-1 vs top-5 exact-match lift
@@ -84,7 +84,6 @@ even when their top-1 pick is wrong; lift quantifies the gap:
 | claude-opus-4-7 (constrained) | 94.8% | 99.8% | +5.0pp |
 | gpt-4o-mini (constrained) | 94.2% | 100.0% | +5.8pp |
 | gpt-5.5 (constrained) | 93.6% | 100.0% | +6.4pp |
-| pubmedbert:classifier | 47.8% | 73.2% | +25.4pp |
 | sentence-transformer:retrieval | 69.0% | 90.6% | +21.6pp |
 | baseline:tfidf | 45.2% | 83.2% | +38.0pp |
 | claude-sonnet-4-6 (zeroshot) | 75.4% | 95.8% | +20.4pp |
@@ -94,8 +93,8 @@ even when their top-1 pick is wrong; lift quantifies the gap:
 Two deployment-relevant signals: (i) LLMs in *constrained* mode
 saturate at top-1 (lift ≤6pp) — there is little additional value in
 human-in-the-loop top-5 review for those configurations; (ii)
-trained-classifier baselines and sub-frontier LLMs in zero-shot mode
-show large lifts (20–38pp), suggesting workflows that surface top-5
+non-LLM baselines and sub-frontier LLMs in zero-shot mode show
+large lifts (20–38pp), suggesting workflows that surface top-5
 candidates to a human reviewer would substantially improve net
 accuracy. Gemini 2.5 Pro's zero lift is consistent with the
 abstention-dominated failure mode (no candidate to be lifted into
@@ -122,8 +121,11 @@ row. Sorted by \$/correct ascending; n=500 per row.
 | Claude Haiku 4.5               | constr.  | 96.8% |   0.0% | $2.14 |   $0.0044 |
 | Claude Sonnet 4.6              | constr.  | 94.6% |   0.0% | $3.26 |   $0.0069 |
 | GPT-5.5                        | constr.  | 93.6% |   0.0% | $3.63 |   $0.0078 |
-| Gemini 2.5 Pro                 | constr.  | 46.2% |   0.0% | $1.57 |   $0.0068 |
+| Gemini 2.5 Pro\*               | constr.  | 46.2% |   0.0% | $1.57 |   $0.0068 |
 | Claude Opus 4.7                | constr.  | 94.8% |   0.0% | $6.31 |   $0.0133 |
+
+\*Reflects abstention pattern, not error rate; see §4.3 (Failure-mode
+breakdown).
 
 Read top-down: cheaper rows are all 4–19pp lower on top-1 or carry
 nonzero hallucination. **GPT-4o-mini constrained leads on

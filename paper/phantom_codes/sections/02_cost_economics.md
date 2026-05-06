@@ -1,7 +1,7 @@
 # Cost and deployment economics
 
 Most LLM medical-coding benchmarks report accuracy in isolation
-[@Soroush2024; @Almeida2025; @Bhatti2025], but the deployment
+[@Soroush2024; @Almeida2025; @Singh2025], but the deployment
 decision hinges on the joint distribution of API cost per call,
 per-call accuracy, and the rate of failure modes that drive
 downstream QA cost (hallucination, abstention). For every model
@@ -12,7 +12,7 @@ pricing snapshot in `configs/pricing.yaml` [@OpenAIPricing2026;
 even when the prediction is wrong — and serve as the basis for the
 cost-per-correct-prediction normalization reported in §Results.
 Selected configurations from the headline matrix are shown below;
-the full 29-configuration breakdown, per-bucket cost decomposition,
+the full 28-configuration breakdown, per-bucket cost decomposition,
 break-even analysis (LLM + QA vs.\ human coder), and annual cost
 projections at deployment scale are reported in Supplementary §S5.
 
@@ -21,10 +21,16 @@ projections at deployment scale are reported in Supplementary §S5.
 | claude-opus-4-7:zeroshot | 500 | 6.77 | 0.01354 |
 | claude-sonnet-4-6:zeroshot | 500 | 3.41 | 0.00682 |
 | claude-haiku-4-5:constrained | 500 | 2.14 | 0.00428 |
-| gpt-5.5:zeroshot | 499 | 3.59 | 0.00720 |
+| gpt-5.5:zeroshot † | 499 | 3.59 | 0.00720 |
 | gpt-4o-mini:constrained | 500 | 0.14 | 0.00028 |
 | gemini-2.5-pro:zeroshot | 424 | 0.41 | 0.00096 |
 | gemini-2.5-flash:zeroshot | 500 | 0.03 | 0.00005 |
+
+† One of 500 attempted gpt-5.5 zero-shot calls exhausted the SDK
+retry budget on a transient API error and is excluded from the cost
+total. We report n=499 as-is rather than re-running, since transient
+API failures are an inherent property of production LLM deployment
+and re-running would obscure that signal.
 
 A 270× spread separates the cheapest configuration (Gemini 2.5 Flash
 zeroshot at \$0.00005/call) from the most expensive (Claude Opus 4.7

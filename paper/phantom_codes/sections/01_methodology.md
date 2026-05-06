@@ -1,21 +1,13 @@
 # Materials and Methods
 
-## Data and policy compliance
+## Data
 
 The headline evaluation matrix runs entirely against
 Synthea-generated FHIR Bundles [@Walonoski2018], a freely-
-redistributable synthetic patient dataset, ensuring full compliance
-with PhysioNet's responsible-LLM-use policy [@PhysioNet2025] (which
-prohibits sending credentialed data through third-party APIs) and
-full reproducibility without PhysioNet credentialing. The PubMedBERT
-classifier baseline (see *Models evaluated* below) was fine-tuned
-locally on credentialed MIMIC-IV-FHIR v2.1 [@Bennett2024;
-@Bennett2023; @Johnson2023] on the corresponding author's own
-hardware (Apple M1 MacBook Pro); MIMIC content does not traverse
-any network beyond the initial PhysioNet download and is not used
-as input to any cloud service. Training methodology, hyperparameters,
-and convergence behavior for the PubMedBERT arm are reported in a
-companion technical report [@FungPubMedBERT2026].
+redistributable synthetic patient dataset. No credentialed data is
+used in any part of the evaluation, ensuring full reproducibility
+without PhysioNet credentialing or institutional data-use
+agreements.
 
 ## Cohort and label space
 
@@ -37,13 +29,12 @@ cohort (obesity ~24%; prediabetes ~20%; type 2 diabetes variants
 
 ## Models evaluated
 
-The headline matrix comprises 29 model configurations: three
+The headline matrix comprises 28 model configurations: three
 string-matching baselines (exact, fuzzy, TF-IDF), one frozen
-sentence-transformer retrieval baseline, a fine-tuned PubMedBERT
-classifier baseline (training methodology in
-[@FungPubMedBERT2026]), and 24 frontier LLM configurations across
-three providers and three prompting modes. Each LLM appears in
-`zeroshot`, `constrained`, and `rag` configurations:
+sentence-transformer retrieval baseline, and 24 frontier LLM
+configurations across three providers and three prompting modes.
+Each LLM appears in `zeroshot`, `constrained`, and `rag`
+configurations:
 
 - **Anthropic** (3 × 3): Claude Haiku 4.5, Sonnet 4.6, Opus 4.7
 - **OpenAI** (2 × 3): GPT-5.5 (`gpt-5.5-2026-04-23`) and GPT-4o-mini
@@ -110,7 +101,7 @@ surfaces the distinction that conflation hides.
 ## Statistical analysis
 
 Per-(model, mode) outcome rates are reported as point estimates with
-95% Wilson confidence intervals [@Wilson1927], preferred over
+95% Wilson confidence intervals, preferred over
 normal-approximation intervals for small N or rates near zero or one
 — both common in our matrix (per-cell N = 125; constrained-mode
 hallucination rates approach 0%). Within-model paired comparisons

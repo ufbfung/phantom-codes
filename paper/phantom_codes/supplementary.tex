@@ -20,6 +20,14 @@
 
 \documentclass[11pt]{article}
 
+% Fonts & Unicode (XeLaTeX) — see main.tex for rationale.
+\usepackage{fontspec}
+\setmainfont{STIX Two Text}
+\catcode`≥=\active \protected\def≥{\ensuremath{\geq}}
+\catcode`≤=\active \protected\def≤{\ensuremath{\leq}}
+\catcode`→=\active \protected\def→{\ensuremath{\rightarrow}}
+\catcode`≈=\active \protected\def≈{\ensuremath{\approx}}
+
 \usepackage[margin=1in]{geometry}
 \usepackage{microtype}
 \usepackage{parskip}

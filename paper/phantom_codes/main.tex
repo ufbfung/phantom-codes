@@ -22,6 +22,29 @@
 
 \documentclass[11pt]{article}
 
+% ─── Fonts & Unicode (XeLaTeX) ─────────────────────────────────────────
+% Build engine is xelatex (see paper/Makefile). Without fontspec, the
+% default font lacks coverage for U+2265 (≥), U+2264 (≤), U+00D7 (×),
+% and similar Unicode glyphs that appear throughout the markdown
+% sources — they render as the "ff" ligature in the output PDF. Loading
+% fontspec switches to OpenType font handling; TeX Gyre Termes (a
+% Times-like OpenType font bundled with TeX Live) covers the needed
+% Unicode codepoints and is guaranteed to be available even on
+% texlive-basic installs that omit the Latin Modern OTF package.
+\usepackage{fontspec}
+\setmainfont{STIX Two Text}
+
+% STIX Two Text covers most Unicode but not the Mathematical Operators
+% block (U+2264, U+2265). Make ≥ and ≤ active and redirect to math
+% mode so they render correctly in body text where the markdown sources
+% use them as ASCII shorthand for "≥80%", "≤6pp", etc. We use
+% XeLaTeX's native \catcode mechanism (Unicode-aware) rather than
+% newunicodechar.sty, which is not in the texlive-basic install.
+\catcode`≥=\active \protected\def≥{\ensuremath{\geq}}
+\catcode`≤=\active \protected\def≤{\ensuremath{\leq}}
+\catcode`→=\active \protected\def→{\ensuremath{\rightarrow}}
+\catcode`≈=\active \protected\def≈{\ensuremath{\approx}}
+
 % ─── Layout & typography ───────────────────────────────────────────────
 \usepackage[margin=1in]{geometry}
 \usepackage{microtype}                  % subtle kerning improvements
@@ -103,7 +126,8 @@
 \author{%
   Brian K. Fung \\[2pt]
   \small Independent Researcher \\[2pt]
-  \small\href{mailto:brian@briankfung.com}{\texttt{brian@briankfung.com}}}
+  \small\href{mailto:brian@briankfung.com}{\texttt{brian@briankfung.com}} \\[2pt]
+  \small ORCID: \href{https://orcid.org/0000-0002-5951-3770}{0000-0002-5951-3770}}
 \date{\today}
 
 \begin{document}
@@ -121,8 +145,8 @@ existing benchmarks.
 
 \noindent\textbf{Materials and Methods.} We evaluate eight frontier
 LLMs under three prompting modes (zero-shot, constrained, retrieval-
-augmented) against a fine-tuned PubMedBERT classifier and string-
-matching baselines, on Synthea-generated FHIR Conditions across
+augmented) against string-matching and frozen sentence-transformer
+retrieval baselines, on Synthea-generated FHIR Conditions across
 four input degradation modes. Each top-1 prediction lands in one of
 six outcome buckets that separate fabrication (code does not exist
 in CMS-published ICD-10-CM) from abstention (no usable prediction).
@@ -178,28 +202,21 @@ largest frontier model (Opus 4.7, \$0.0133).
 
 \section*{Funding}
 \addcontentsline{toc}{section}{Funding}
-This work received no external funding. Compute resources for trained-
-model fine-tuning were supplied by the corresponding author's personal
-hardware (Apple M1 MacBook Pro). LLM API access (Anthropic, OpenAI,
-Google) for the evaluation matrix was funded out of pocket; per-call
-costs are itemized in §Cost economics.
+This work received no external funding. LLM API access (Anthropic,
+OpenAI, Google) for the evaluation matrix was self-funded by the
+corresponding author; per-call costs are itemized in §Cost economics.
 
 \section*{Data availability}
 \addcontentsline{toc}{section}{Data availability}
-\textbf{MIMIC-IV-FHIR v2.1} is a credentialed dataset distributed by
-PhysioNet under their Credentialed Health Data License; access requires
-PhysioNet credentialing and CITI training. We do not redistribute MIMIC
-data, MIMIC-derivative parquet splits, or model weights fine-tuned on
-MIMIC. \textbf{Synthea-generated FHIR Bundles} used for the headline
+\textbf{Synthea-generated FHIR Bundles} used for the headline
 evaluation are freely redistributable and will be released as
-\texttt{benchmarks/synthetic\_v1/} alongside the paper. \textbf{Source
-code} (data-preparation pipeline, degradation logic, ICD-10-CM
-validator, eval runner, prompts, baselines, trained-model architecture
-and training script) is publicly available at the project repository
-under the MIT License. Aggregate per-epoch training metrics
-(\texttt{models/metrics/*.json}) are available on request; per-record
-predictions are not, in keeping with PhysioNet's responsible-LLM-use
-policy.
+\texttt{benchmarks/synthetic\_v1/} alongside the paper.
+\textbf{Source code} (data-preparation pipeline, degradation logic,
+ICD-10-CM validator, eval runner, prompts, baselines) is publicly
+available at the project repository under the MIT License. The full
+evaluation pipeline reproduces the LLM-evaluation arm against
+Synthea-generated inputs end-to-end without requiring any
+credentialed data.
 
 \section*{Code availability}
 \addcontentsline{toc}{section}{Code availability}
@@ -221,15 +238,11 @@ The author declares no competing interests.
 
 \section*{Acknowledgments}
 \addcontentsline{toc}{section}{Acknowledgments}
-The author gratefully acknowledges the PhysioNet team and the
-developers of MIMIC-IV-on-FHIR v2.1 for making this dataset available
-to the research community
-\autocite{Bennett2024,Bennett2023,Johnson2023,Goldberger2000}.
-% Optional personal acknowledgment (uncomment / edit before submission):
-% This work was developed during and after a year of full-time
-% caregiving for the author's grandmother, whose experience navigating
-% clinical care directly informed the methodological emphasis on
-% degraded-input robustness throughout this benchmark.
+The author thanks the maintainers of the open-source tools that made
+this benchmark possible: Synthea \autocite{Walonoski2018} for the
+freely-redistributable synthetic patient cohort, and the FHIR
+working group whose specifications underpin the evaluation
+pipeline.
 
 \bigskip
 \hrule

@@ -93,7 +93,7 @@
 % for the broader context that LLMs are being deployed in clinical
 % workflows, motivating careful evaluation of their failure modes.
 @article{Singhal2023,
-  author    = {Singhal, Karan and others},
+  author    = {Singhal, Karan and Azizi, Shekoofeh and Tu, Tao and others},
   title     = {Large language models encode clinical knowledge},
   journal   = {Nature},
   volume    = {620},
@@ -142,9 +142,8 @@
 % understand medical code ontologies and can distinguish real from
 % fabricated codes. Direct empirical support for the hallucination
 % concern we operationalize.
-@misc{Goel2024,
-  author        = {Goel, Akul and Schwartz, Steven and Larochelle, Felix
-                   and Eppes, Robert and Klein, Dan},
+@misc{Lee2024,
+  author        = {Lee, Simon A. and Lindsey, Timothy},
   title         = {Can Large Language Models Abstract Medical Coded Language?},
   year          = {2024},
   eprint        = {2403.10822},
@@ -155,8 +154,11 @@
 % Why we cite: Extract-retrieve-rerank pipeline for ICD-10 coding —
 % represents the modular response to LLM hallucination. Cited as a
 % contrasting architecture in the "what's been done" review.
-@misc{Sahaj2024,
-  author        = {Sahaj, Suresh and others},
+@misc{DasBaksi2024,
+  author        = {Das Baksi, Krishanu and Soba, Elijah and Higgins, John J.
+                   and Saini, Ravi and Wood, Jaden and Cook, Jane
+                   and Scott, Jack and Pudota, Nirmala and Weninger, Tim
+                   and Bowen, Edward and Bhattacharya, Sanmitra},
   title         = {{MedCodER}: A Generative {AI} Assistant for Medical Coding},
   year          = {2024},
   eprint        = {2409.15368},
@@ -168,8 +170,9 @@
 % 958 MIMIC-IV admissions — closest methodological cousin to our
 % constrained-mode setup. Inverts standard RAG: generate clinical
 % entities first, then match against the coding ontology vector index.
-@article{Mahmoud2025,
-  author  = {Mahmoud, Ahmed and others},
+@article{Sarvari2025,
+  author  = {Sarvari, Peter and Al-fagih, Zaid and Abou-Chedid, Alexander
+             and Jewell, Paul and Taylor, Rosie and Imtiaz, Arouba},
   title   = {Challenges and Solutions in Applying Large Language Models to
              Guideline-Based Management Planning and Automated Medical Coding
              in Health Care: Algorithm Development and Validation},
@@ -214,8 +217,9 @@
 % informed weighted scoring by code relevance ranking and diagnostic
 % specificity. Inspires the optional weighted-score variant in our
 % backlog.
-@misc{Bhatti2025,
-  author       = {Bhatti, Usman and others},
+@misc{Singh2025,
+  author       = {Singh, Ujjwal and Deshwal, Sarthak and Dube, Nitish
+                  and Sharma, Arjun},
   title        = {{MAX-EVAL-11}: A Comprehensive Benchmark for Evaluating
                   Large Language Models on Full-Spectrum {ICD-11} Medical Coding},
   year         = {2025},
@@ -246,7 +250,7 @@
 % constrained generation. Direct comparator if our zero-shot LLMs
 % hallucinate at rates within their reported neural-baseline band.
 @misc{HybridCode2025,
-  author        = {{Hybrid-Code v2 Authors}},
+  author        = {Yu, Yunguo and others},
   title         = {{Hybrid-Code v2}: Zero-Hallucination Clinical {ICD-10}
                    Coding via Neuro-Symbolic Verification and Automated
                    Knowledge Base Expansion},
@@ -281,7 +285,7 @@
 % across 7 hallucination tasks. Our `hallucination` bucket is a narrow,
 % mechanically-checkable instance of their broader definition.
 @misc{Kim2025,
-  author        = {Kim, Yubin and others},
+  author        = {Kim, Yubin and Jeong, Hyewon and Chen, Shan and others},
   title         = {Medical Hallucinations in Foundation Models and Their
                    Impact on Healthcare},
   year          = {2025},
@@ -328,7 +332,7 @@
 % degrade on rare diagnoses; external validation is scant; prospective
 % multicenter trials needed.
 @misc{Gershon2025,
-  author       = {Gershon, Andrea and Soffer, Shelly and Nadkarni, Girish N.
+  author       = {Gershon, Adi and Soffer, Shelly and Nadkarni, Girish N.
                   and Klang, Eyal},
   title        = {Automatic {ICD} coding using {LLMs}: a systematic review},
   year         = {2025},

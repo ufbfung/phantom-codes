@@ -14,14 +14,14 @@ property, not a fixed model property: the shift from zero-shot to
 constrained prompting eliminates fabrication entirely for every
 Anthropic and OpenAI model that shows any nonzero zero-shot
 hallucination (within-model paired McNemar tests confirm
-significance at n=125). A fine-tuned PubMedBERT classifier
-baseline (40–50% top-1, 0% hallucination by construction; methodology
-in [@FungPubMedBERT2026]) provides a non-LLM comparison floor;
-every Anthropic and OpenAI constrained configuration dominates it
-on the safety-vs-accuracy frontier. Cost-per-correct collapses the
-deployment choice to a small frontier: GPT-4o-mini constrained at
-\$0.0003 and Claude Haiku 4.5 constrained at \$0.0044 dominate
-every more expensive configuration tested.
+significance at n=125). The string-matching and frozen
+sentence-transformer baselines (45–69% top-1) sit well below every
+constrained-mode LLM on the safety-vs-accuracy frontier, confirming
+that constrained frontier LLMs offer real gains over lexical and
+embedding-only approaches at this cohort scale. Cost-per-correct
+collapses the deployment choice to a small frontier: GPT-4o-mini
+constrained at \$0.0003 and Claude Haiku 4.5 constrained at \$0.0044
+dominate every more expensive configuration tested.
 
 ## Comparison with prior work
 
@@ -36,7 +36,7 @@ matrix sits substantially above Soroush et al.'s GPT-4 numbers
 (every Anthropic / OpenAI configuration exceeds 80% top-1 even on
 D4), attributable to cohort-scope restriction, generational LLM
 improvements, and structured-output prompting. Neuro-symbolic
-alternatives \autocite{Motzfeldt2025; HybridCode2025} report
+alternatives [@Motzfeldt2025; @HybridCode2025] report
 hallucination control through architectural constraints; our 0%
 Anthropic constrained-mode rate is below their reported neural-
 baseline band, suggesting modern frontier LLMs under structured-
@@ -74,33 +74,27 @@ matters most.
 
 ## Limitations
 
-The headline matrix evaluates n=125 unique Synthea Conditions,
-smaller than the originally-targeted n=500 due to a `--max-records`
-CLI ambiguity; per-cell Wilson 95% CIs are correspondingly wider
-(~±5pp on a 10% rate), and replication via `--max-records 2000`
-would tighten intervals by ~2×. Limitations specific to the
-fine-tuned PubMedBERT baseline (top-50 vocabulary cap; single-seed
-training) are documented in the companion technical report
-[@FungPubMedBERT2026] and do not affect the LLM-evaluation
-findings. Gemini 2.5 Pro showed an 88% no\_prediction rate on
-zero-shot D4 with most empty rows showing zero output tokens —
-consistent with reasoning-token budget exhaustion under our
-wrapper's `max_output_tokens=1024` setting; whether this is a
-fixable wrapper interaction or a genuine model limitation is the
-subject of a follow-up investigation blocked by Tier-1 daily quota
-at v1 submission. Gemini 3.1 Pro Preview was excluded for the same
-quota reason. The benchmark covers English ICD-10-CM only;
-extension to LOINC and RxNorm via the same taxonomy is planned for
-v2.
+The v1 headline matrix evaluates n=125 unique Synthea Conditions;
+per-cell Wilson 95% CIs on a 10% rate are correspondingly ±5pp, and
+v2 replication at n=2000 will tighten intervals by approximately
+2×. Gemini 2.5 Pro showed an 88% no\_prediction rate on zero-shot
+D4 with most empty rows showing zero output tokens — consistent
+with reasoning-token budget exhaustion under our wrapper's
+`max_output_tokens=1024` setting; whether this is a fixable
+wrapper interaction or a genuine model limitation is the subject
+of a follow-up investigation blocked by Tier-1 daily quota at v1
+submission. Gemini 3.1 Pro Preview was excluded for the same quota
+reason. The benchmark covers English ICD-10-CM only; extension to
+LOINC and RxNorm via the same taxonomy is planned for v2.
 
 ## Future directions
 
-Three extensions follow directly: v2 vocabulary expansion to LOINC
+Two extensions follow directly: v2 vocabulary expansion to LOINC
 and RxNorm (the 6-way taxonomy and eval runner already support
-arbitrary FHIR resource types); parameter-efficient fine-tuning of
-larger biomedical encoders via LoRA \autocite{Hu2022} or QLoRA
-\autocite{Dettmers2023} to close the gap between the PubMedBERT
-baseline and larger biomedical models; and rationale evaluation
-following Li et al.\ \autocite{Li2025}, asking each LLM for a per-
-prediction rationale to support faithfulness/plausibility evaluation
-alongside the outcome-bucket framework.
+arbitrary FHIR resource types); and rationale evaluation following
+Li et al.\ \autocite{Li2025}, asking each LLM for a per-prediction
+rationale to support faithfulness/plausibility evaluation alongside
+the outcome-bucket framework. A v2 cohort with broader vocabulary
+and more realistic clinical text (e.g., discharge summaries, ED
+notes) is also needed to establish the true effect size of
+fabrication risk on production-relevant inputs.

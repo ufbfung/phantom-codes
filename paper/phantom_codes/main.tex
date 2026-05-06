@@ -57,6 +57,10 @@
 \usepackage{longtable}                  % multi-page tables (pandoc default)
 \usepackage{array}
 \usepackage{caption}
+% Smaller, italic caption text with a bold "Figure N:" label, so
+% captions visually separate from body prose. Standard scientific
+% convention.
+\captionsetup{font={small,it}, labelfont={small,bf,up}, labelsep=colon}
 \usepackage{calc}                       % needed for pandoc's column-width
                                         % expressions: p{(\columnwidth - X)
                                         % * \real{0.5}}

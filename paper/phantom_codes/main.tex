@@ -99,118 +99,35 @@
 
 \begin{document}
 
-% ─── Title page (JAMIA spec) ───────────────────────────────────────────
-% JAMIA General Instructions title-page elements:
-%  - Title of the article
-%  - Full name, postal address, email, telephone of corresponding author
-%  - Full name, department, institution, city, country, degree of all
-%    co-authors
-%  - Up to five keywords (MeSH preferred)
-%  - Word count, excluding title page, abstract, references, figures,
-%    and tables
+% ─── Title page ────────────────────────────────────────────────────────
+% Content lives in sections/title_page.tex; this file provides the
+% titlepage environment + single-spacing wrapper so the section file
+% can stay focused on JAMIA-required content.
 \begin{titlepage}
 \thispagestyle{empty}
 \begin{singlespace}
-\begin{center}
-
-\vspace*{0.5in}
-
-{\LARGE\bfseries Phantom Codes:\\[0.4em]
-\Large Hallucination in LLM-Based Clinical Concept Normalization\par}
-
-\vspace{2.5em}
-
-{\large Brian K. Fung\par}
-
-\vspace{2.5em}
-
-\textbf{Corresponding author:}\\
-Brian K. Fung\\
-Independent Researcher (unaffiliated)\\
-Email: \href{mailto:brian@briankfung.com}{brian@briankfung.com}\\
-Postal address and telephone available upon request.
-
-\vfill
-
-\begin{flushleft}
-\textbf{Keywords:} natural language processing; international
-classification of diseases; artificial intelligence; medical
-informatics; reproducibility of results.
-
-\medskip
-
-\textbf{Word count} (excluding title page, abstract, references,
-figures, and tables): approximately 3{,}900 words.
-\end{flushleft}
-
-\end{center}
+\input{sections/00_title_page}
 \end{singlespace}
 \end{titlepage}
 
-% Structured abstract — JAMIA convention.
-% Required headings: Objective / Materials and Methods / Results /
-% Discussion / Conclusion. Word limit: 250 prose words.
-\begin{center}
-{\Large\bfseries ABSTRACT\par}
-\end{center}
-
-\noindent\textbf{OBJECTIVE.}\\
-To characterize how large language models (LLMs) fail at clinical
-concept normalization, and to separate fabrication of non-existent
-codes from abstention as distinct failure modes.
-
-\medskip
-\noindent\textbf{MATERIALS AND METHODS.}\\
-We evaluate eight frontier LLMs under three prompting modes
-(zero-shot, constrained, retrieval-augmented) against
-string-matching and frozen sentence-transformer baselines.
-Inputs are Synthea-generated FHIR Conditions under four
-degradation modes. A six-way outcome taxonomy separates
-fabrication from abstention.
-
-\medskip
-\noindent\textbf{RESULTS.}\\
-On 125 unique Synthea Conditions across 4 degradation modes,
-fabrication ranged from 0 to 5.6\% across flagship configurations
-and from 0 to 12.8\% across sub-flagship configurations.
-Constrained prompting eliminated fabrication for every Anthropic
-and OpenAI model. Abstention proved more consequential for some
-models: Gemini 2.5 Pro returned an empty prediction on 88\% of
-zero-shot D4 inputs. Cost-per-correct varied by a factor of 270
-across the matrix; GPT-4o-mini in constrained mode achieved the
-lowest cost at \$0.0003 per exact match.
-
-\medskip
-\noindent\textbf{DISCUSSION.}\\
-Hallucination appears more controllable than prior literature
-suggested at this scale. Larger cohorts with more realistic
-clinical text are needed to establish the true effect size.
-
-\medskip
-\noindent\textbf{CONCLUSION.}\\
-Zero-shot LLM prompting is unsafe for clinical concept
-normalization; constrained or retrieval-augmented grounding is
-required to eliminate fabrication. Among grounded configurations,
-cost-per-correct drives deployment selection: GPT-4o-mini
-constrained leads at 94.2\% top-1 and \$0.0003 per correct, with
-Claude Haiku 4.5 constrained as the higher-accuracy alternative
-(96.8\%, \$0.0044). Both dominate the largest frontier model
-tested (Opus 4.7, \$0.0133 per correct).
-
-% (Keywords moved to title page per JAMIA General Instructions.)
+% ─── Abstract ──────────────────────────────────────────────────────────
+% Structured abstract on its own page. Content lives in
+% sections/abstract.tex; see that file for the JAMIA-required
+% subsection structure and word-count cap.
+\input{sections/01_abstract}
 
 \newpage
 
 % ─── Body ──────────────────────────────────────────────────────────────
-% Each section is generated from sections/*.md via pandoc; see Makefile.
-% Add new sections by: (1) creating sections/NN_name.md and
-% (2) appending an \input{build/sections/NN_name} line below.
+% Each section is a hand-edited .tex file under sections/. Add new
+% sections by: (1) creating sections/NN_name.tex and (2) appending an
+% \input{sections/NN_name} line below.
 
-\input{sections/00_introduction}
-\input{sections/01_methodology}
-\input{sections/03_results}
-\input{sections/04_discussion}
-\input{sections/05_conclusion}
+\input{sections/02_background_and_significance}
+\input{sections/03_materials_and_methods}
+\input{sections/04_results}
+\input{sections/05_discussion}
+\input{sections/06_conclusion}
 
 \bigskip
 \hrule

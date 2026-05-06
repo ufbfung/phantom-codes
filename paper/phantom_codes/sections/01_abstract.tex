@@ -1,0 +1,55 @@
+% Structured abstract — JAMIA convention.
+%
+% Required subsections (per JAMIA General Instructions for Authors):
+%   Objective / Materials and Methods / Results / Discussion / Conclusion
+% Word limit: 250 prose words (subsection labels do not count).
+%
+% Subsection labels are rendered as BOLD CAPS per JAMIA's heading
+% hierarchy spec ("BOLD CAPS, bold lower case, Plain text, Italics").
+
+\begin{center}
+{\Large\bfseries ABSTRACT\par}
+\end{center}
+
+\noindent\textbf{OBJECTIVE.}\\
+To characterize how large language models (LLMs) fail at medical
+concept normalization, and to separate fabrication of non-existent
+codes from abstention as distinct failure modes.
+
+\medskip
+\noindent\textbf{MATERIALS AND METHODS.}\\
+We evaluate eight frontier LLMs under three prompting modes
+(zero-shot, constrained, retrieval-augmented) against
+string-matching and frozen sentence-transformer baselines.
+Inputs are Synthea-generated FHIR Conditions under four
+degradation modes. A six-way outcome taxonomy separates
+fabrication from abstention.
+
+\medskip
+\noindent\textbf{RESULTS.}\\
+On 125 unique Synthea Conditions across 4 degradation modes,
+fabrication ranged from 0 to 5.6\% across flagship configurations
+and from 0 to 12.8\% across sub-flagship configurations.
+Constrained prompting eliminated fabrication for every Anthropic
+and OpenAI model. Abstention proved more consequential for some
+models: Gemini 2.5 Pro returned an empty prediction on 88\% of
+zero-shot D4 inputs. Cost-per-correct varied by a factor of 270
+across the matrix; GPT-4o-mini in constrained mode achieved the
+lowest cost at \$0.0003 per exact match.
+
+\medskip
+\noindent\textbf{DISCUSSION.}\\
+Hallucination appears more controllable than prior literature
+suggested at this scale. Larger cohorts with more realistic
+clinical text are needed to establish the true effect size.
+
+\medskip
+\noindent\textbf{CONCLUSION.}\\
+Zero-shot LLM prompting is unsafe for medical concept
+normalization; constrained or retrieval-augmented grounding is
+required to eliminate fabrication. Among grounded configurations,
+cost-per-correct drives deployment selection: GPT-4o-mini
+constrained leads at 94.2\% top-1 and \$0.0003 per correct, with
+Claude Haiku 4.5 constrained as the higher-accuracy alternative
+(96.8\%, \$0.0044). Both dominate the largest frontier model
+tested (Opus 4.7, \$0.0133 per correct).

@@ -1,10 +1,11 @@
 \section{BACKGROUND AND SIGNIFICANCE}\label{background-and-significance}
 
-Clinical concept normalization is the task of mapping unstructured
-mentions of diagnoses, medications, labs, and procedures to
-identifiers in controlled vocabularies such as ICD-10-CM, LOINC,
-and RxNorm. It sits at the foundation of healthcare data
-interoperability. Errors propagate downstream: a misassigned
+Medical concept normalization is the entity-linking task of mapping
+in-text mentions of biomedical concepts---diagnoses, medications,
+labs, and procedures---to entries in a standardized ontology or
+controlled vocabulary such as ICD-10-CM, LOINC, or RxNorm
+\autocite{Miftahutdinov2021,Xu2022}. It sits at the foundation of
+healthcare data interoperability. Errors propagate downstream: a misassigned
 diagnosis code can shift a hospital's case-mix index, mis-stratify
 a research cohort, or quietly corrupt the training data of the
 next generation of models. For most of the last decade, the state

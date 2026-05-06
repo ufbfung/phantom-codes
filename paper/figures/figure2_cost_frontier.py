@@ -97,7 +97,10 @@ def render() -> None:
     df = load()
     pareto = pareto_mask(df)
 
-    fig, ax = plt.subplots(figsize=(5.8, 3.8))
+    # Wider aspect ratio to leave room on the right for callouts and at
+    # the bottom for the legend, so neither overlaps the data area.
+    fig, ax = plt.subplots(figsize=(7.5, 3.8))
+    fig.subplots_adjust(left=0.10, right=0.66, bottom=0.27, top=0.94)
 
     # Plot all points; Pareto-optimal get a heavier border.
     for _, row in df.iterrows():
@@ -107,7 +110,7 @@ def render() -> None:
             row["cost_per_1k"],
             c=PROVIDER_COLORS[row["provider"]],
             marker=MODE_MARKERS[row["mode"]],
-            s=130,
+            s=110,
             edgecolors="black",
             linewidths=1.8 if is_pareto else 0.5,
             zorder=4 if is_pareto else 3,
@@ -115,31 +118,32 @@ def render() -> None:
 
     ax.set_yscale("log")
     ax.set_xlim(73, 100)
-    ax.set_ylim(0.05, 60)
-    ax.set_xlabel("Top-1 accuracy (%)", fontsize=11)
-    ax.set_ylabel("Cost per 1,000 correct predictions (USD)", fontsize=11)
+    ax.set_ylim(0.05, 30)
+    ax.set_xlabel("Top-1 accuracy (%)", fontsize=10)
+    ax.set_ylabel("Cost per 1,000 correct predictions (USD)", fontsize=10)
     ax.grid(True, which="major", linestyle="-", linewidth=0.4, color="#ccc", alpha=0.7)
     ax.grid(True, which="minor", linestyle=":", linewidth=0.3, color="#ddd", alpha=0.5)
     ax.set_axisbelow(True)
 
     yticks = [0.1, 1.0, 10.0]
     ax.set_yticks(yticks)
-    ax.set_yticklabels([f"${y:g}" for y in yticks], fontsize=10)
-    ax.tick_params(axis="x", labelsize=10)
+    ax.set_yticklabels([f"${y:g}" for y in yticks], fontsize=9)
+    ax.tick_params(axis="x", labelsize=9)
 
-    # Three deployment-frontier annotations with rounded boxes and curved arrows.
+    # Callouts placed in the right-side margin (axes-fraction coords past
+    # the right axis edge). Lines connect each label to its data point.
     annotations = {
-        ("gpt-4o-mini", "constrained"): {
-            "label": "GPT-4o-mini (constrained)\n$0.30 per 1,000 correct",
-            "xytext": (-160, 40),
+        ("claude-opus-4-7", "constrained"): {
+            "label": "Claude Opus 4.7\n(constrained)\n$13.30 / 1,000 correct\ndominated by Haiku 4.5",
+            "xytext": (1.05, 0.92),
         },
         ("claude-haiku-4-5", "constrained"): {
-            "label": "Claude Haiku 4.5 (constrained)\n$4.40 per 1,000 correct",
-            "xytext": (-200, 18),
+            "label": "Claude Haiku 4.5\n(constrained)\n$4.40 / 1,000 correct",
+            "xytext": (1.05, 0.55),
         },
-        ("claude-opus-4-7", "constrained"): {
-            "label": "Claude Opus 4.7 (constrained)\n$13.30 per 1,000 correct\ndominated by Haiku 4.5",
-            "xytext": (-220, 55),
+        ("gpt-4o-mini", "constrained"): {
+            "label": "GPT-4o-mini\n(constrained)\n$0.30 / 1,000 correct",
+            "xytext": (1.05, 0.18),
         },
     }
     for (model_id, mode), spec in annotations.items():
@@ -151,45 +155,46 @@ def render() -> None:
         ax.annotate(
             spec["label"],
             xy=(x, y),
+            xycoords="data",
             xytext=spec["xytext"],
-            textcoords="offset points",
-            fontsize=8.5,
+            textcoords="axes fraction",
+            fontsize=8,
             ha="left",
             va="center",
-            bbox=dict(boxstyle="round,pad=0.35", facecolor="white",
-                      edgecolor="#888", linewidth=0.6),
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="white",
+                      edgecolor="#888", linewidth=0.5),
             arrowprops=dict(
                 arrowstyle="-",
-                color="#444",
-                linewidth=0.8,
-                connectionstyle="arc3,rad=0.18",
+                color="#666",
+                linewidth=0.6,
+                connectionstyle="arc3,rad=0.0",
+                shrinkA=0, shrinkB=4,
             ),
+            annotation_clip=False,
         )
 
-    # Single combined legend in lower-left.
+    # Legend below plot, horizontal layout (3 columns).
     handles = []
     for provider, color in PROVIDER_COLORS.items():
         handles.append(plt.Line2D([0], [0], marker="o", color="w",
                                    markerfacecolor=color,
-                                   markeredgecolor="black", markersize=10,
+                                   markeredgecolor="black", markersize=8,
                                    label=provider.capitalize()))
-    handles.append(plt.Line2D([0], [0], marker="None", linestyle="None", label=" "))
     for mode, marker in MODE_MARKERS.items():
         handles.append(plt.Line2D([0], [0], marker=marker, color="w",
                                    markerfacecolor="#888",
-                                   markeredgecolor="black", markersize=10,
+                                   markeredgecolor="black", markersize=8,
                                    label=MODE_LABELS[mode]))
-    handles.append(plt.Line2D([0], [0], marker="None", linestyle="None", label=" "))
     handles.append(plt.Line2D([0], [0], marker="s", color="w",
                                markerfacecolor="white",
-                               markeredgecolor="black", markersize=10,
+                               markeredgecolor="black", markersize=8,
                                markeredgewidth=1.8,
                                label="Pareto-optimal"))
-    ax.legend(handles=handles, loc="lower left", fontsize=9,
-              frameon=True, framealpha=0.95, edgecolor="#888",
-              ncol=1, handletextpad=0.6, borderpad=0.6)
+    fig.legend(handles=handles, loc="lower center",
+               bbox_to_anchor=(0.38, 0.0), ncol=4,
+               fontsize=8, frameon=False,
+               handletextpad=0.5, columnspacing=1.4)
 
-    fig.tight_layout()
     fig.savefig(OUT_PATH, format="pdf", bbox_inches="tight")
     print(f"wrote {OUT_PATH}")
 

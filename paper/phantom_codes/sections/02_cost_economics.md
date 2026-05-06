@@ -27,6 +27,8 @@ scale are reported in Supplementary §S5.
 | gemini-2.5-pro:zeroshot ‡ | 424 | 0.41 | 0.00096 |
 | gemini-2.5-flash:zeroshot | 500 | 0.03 | 0.00005 |
 
+: Per-call API cost across selected (model, prompting-mode) configurations from the headline matrix. n = number of completed calls (out of 500 attempted). †, ‡ explained in the footnotes below.
+
 † One of 500 attempted gpt-5.5 zero-shot calls exhausted the SDK
 retry budget on a transient API error and is excluded from the cost
 total. We report n=499 as-is rather than re-running, since transient

@@ -32,12 +32,9 @@ no\_prediction at D4 zero-shot), not safe answering.
 The literature historically conflates two failure modes:
 fabrication of non-existent codes (hallucination) and abstention
 (no\_prediction). They surface different patterns (Figure 1).
-Table 1 reports both rates per cell as hallucination % /
+Table 2 reports both rates per cell as hallucination % /
 no\_prediction %. Per-cell N = 125; Wilson 95% CIs are ±3pp at 0%,
 ±5pp at 5%, and ±8 to ±9pp at 50% (full CIs in §S2.2 to §S2.3).
-
-**Table 1.** Failure-mode breakdown by model and degradation mode.
-Each cell reports hallucination % / no\_prediction %.
 
 | Model (mode) | D1\_full | D2\_no\_code | D3\_text\_only | D4\_abbreviated |
 |---|---|---|---|---|
@@ -55,6 +52,8 @@ Each cell reports hallucination % / no\_prediction %.
 | gemini-2.5-pro (constrained) | 0.0 / 54.4 | 0.0 / 32.0 | 0.0 / 67.2 | 0.0 / 60.8 |
 | gemini-2.5-flash (zeroshot) | 0.0 / 0.0 | 0.0 / 11.2 | 0.8 / 37.6 | 0.8 / 42.4 |
 | gemini-3-flash-preview (zeroshot) | 0.0 / 22.4 | 0.0 / 28.0 | 0.0 / 41.6 | 0.0 / 39.2 |
+
+: Failure-mode breakdown by model and degradation mode. Each cell reports hallucination % / no\_prediction %.
 
 \begin{figure}[tbp]
 \centering
@@ -86,8 +85,6 @@ Many configurations have the right answer in their top-5
 candidates even when their top-1 pick is wrong. Lift quantifies
 the gap.
 
-**Table 2.** Top-1 vs top-5 exact-match lift across selected configurations.
-
 | Model | Top-1 | Top-5 | Lift |
 |---|---|---|---|
 | claude-haiku-4-5 (constrained) | 96.8% | 100.0% | +3.2pp |
@@ -100,6 +97,8 @@ the gap.
 | claude-sonnet-4-6 (zeroshot) | 75.4% | 95.8% | +20.4pp |
 | gpt-5.5 (zeroshot) | 88.8% | 98.8% | +10.0pp |
 | gemini-2.5-pro (zeroshot) | 11.8% | 11.8% | +0.0pp |
+
+: Top-1 vs top-5 exact-match lift across selected configurations.
 
 Two deployment-relevant signals emerge. LLMs in *constrained* mode
 saturate at top-1 (lift ≤6pp), so there is little additional value
@@ -117,7 +116,7 @@ Cost-per-correct (\$ per exact-match outcome) collapses per-call
 price and accuracy into one deployment-ready number; the Top-1
 and Halluc columns surface all three deployment dimensions in one
 row. Plotted as a Pareto frontier in Figure 2 and tabulated in
-Table 3 below. Sorted by \$/correct ascending; n=500 per row.
+Table 4 below. Sorted by \$/correct ascending; n=500 per row.
 
 \begin{figure}[tbp]
 \centering
@@ -125,8 +124,6 @@ Table 3 below. Sorted by \$/correct ascending; n=500 per row.
 \caption{Cost per 1,000 correct predictions (USD, log scale) versus top-1 accuracy for every (LLM, prompting mode) configuration achieving \(\geq\)75\% top-1 accuracy. Color encodes provider; marker shape encodes prompting mode. Pareto-optimal configurations are drawn with a heavy black border. GPT-4o-mini constrained and Claude Haiku 4.5 constrained sit on the deployment frontier; Claude Opus 4.7 constrained is dominated despite competitive accuracy because its per-correct cost is 30 to 40 times higher.}
 \label{fig:cost}
 \end{figure}
-
-**Table 3.** Cost per correct prediction. *constr.* = constrained.
 
 | Model                          | Mode     | Top-1 | Halluc | Total | $/correct |
 |:-------------------------------|:---------|------:|-------:|------:|----------:|
@@ -143,8 +140,7 @@ Table 3 below. Sorted by \$/correct ascending; n=500 per row.
 | Gemini 2.5 Pro\*               | constr.  | 46.2% |   0.0% | $1.57 |   $0.0068 |
 | Claude Opus 4.7                | constr.  | 94.8% |   0.0% | $6.31 |   $0.0133 |
 
-\*Reflects abstention pattern, not error rate; see §4.3
-(Failure-mode breakdown).
+: Cost per correct prediction. *constr.* = constrained. \*Gemini 2.5 Pro constrained reflects abstention pattern, not error rate; see §4.3 (Failure-mode breakdown).
 
 Reading the table top-down, the cheaper rows are all 4 to 19pp
 lower on top-1 or carry nonzero hallucination. **GPT-4o-mini

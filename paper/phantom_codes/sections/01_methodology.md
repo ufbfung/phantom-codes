@@ -99,6 +99,19 @@ downstream systems silently mishandle. Earlier work [@Soroush2024]
 collapses these into a single error bucket; the six-way split
 surfaces the distinction that conflation hides.
 
+## Cost tracking
+
+For every model invocation in our matrix the per-prediction CSV
+records token usage, latency, and `cost_usd` computed at runtime
+against the versioned pricing snapshot in `configs/pricing.yaml`
+[@OpenAIPricing2026; @GeminiPricing2026]. These infrastructure
+metrics are recorded even when the prediction is wrong and serve
+as the basis for the cost-per-correct normalization reported in
+Results. Cost-per-correct (USD per exact-match outcome) collapses
+per-call price and per-call accuracy into a single
+deployment-relevant number; we report it alongside per-call cost
+because the two diverge meaningfully when accuracy drops.
+
 ## Statistical analysis
 
 Per-(model, mode) outcome rates are reported as point estimates

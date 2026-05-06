@@ -1,4 +1,4 @@
-# Introduction
+# Background and Significance
 
 Clinical concept normalization is the task of mapping unstructured
 mentions of diagnoses, medications, labs, and procedures to

@@ -32,7 +32,10 @@ data-use agreement.
 The manuscript has not been published elsewhere and is not under
 consideration by any other journal. The author is unaffiliated and
 declares no competing interests. The work received no external
-funding; LLM API costs were self-funded.
+funding; LLM API costs were self-funded. The author used Anthropic's
+Claude as a coding, drafting, and figure-design assistant; this is
+disclosed in the manuscript's Acknowledgments per the COPE position
+statement on Authorship and AI Tools.
 
 Sincerely,
 

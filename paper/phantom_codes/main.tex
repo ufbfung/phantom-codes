@@ -86,7 +86,8 @@
 % NEJM AI's manuscript guidance follows the AMA Manual of Style — this
 % setting matches that convention. Switch by changing `style=` only;
 % .bib + markdown prose are style-agnostic.
-\usepackage[backend=biber, style=vancouver, sortlocale=en_US]{biblatex}
+\usepackage[backend=biber, style=vancouver, sortlocale=en_US,
+            maxnames=3, minnames=3]{biblatex}
 \addbibresource{../references.bib}
 
 % ─── Links & references ────────────────────────────────────────────────
@@ -108,9 +109,9 @@
 % specific lines. Comment-out for read-throughs; uncomment for submission.
 % \usepackage{lineno}
 % \linenumbers
-% Double-spacing — also a near-universal submission convention.
-% \usepackage{setspace}
-% \doublespacing
+% Double-spacing — JAMIA submission convention.
+\usepackage{setspace}
+\doublespacing
 
 % ─── Pandoc compatibility shims ────────────────────────────────────────
 % Pandoc emits these commands in generated .tex; define them so the
@@ -144,18 +145,15 @@
 \noindent\textbf{Objective.}\\
 To characterize how large language models (LLMs) fail at clinical
 concept normalization, and to separate fabrication of non-existent
-codes from abstention. These two failure modes are typically
-conflated in existing benchmarks.
+codes from abstention as distinct failure modes.
 
 \noindent\textbf{Materials and Methods.}\\
 We evaluate eight frontier LLMs under three prompting modes
-(zero-shot, constrained, and retrieval-augmented) against
-string-matching baselines and a frozen sentence-transformer
-retrieval baseline. Inputs are Synthea-generated FHIR Conditions
-under four degradation modes. Each top-1 prediction is assigned
-to one of six outcome buckets that distinguish fabrication (code
-does not exist in CMS-published ICD-10-CM) from abstention (no
-usable prediction).
+(zero-shot, constrained, retrieval-augmented) against
+string-matching and frozen sentence-transformer baselines.
+Inputs are Synthea-generated FHIR Conditions under four
+degradation modes. A six-way outcome taxonomy separates
+fabrication from abstention.
 
 \noindent\textbf{Results.}\\
 On 125 unique Synthea Conditions across 4 degradation modes,
@@ -163,28 +161,30 @@ fabrication ranged from 0 to 5.6\% across flagship configurations
 and from 0 to 12.8\% across sub-flagship configurations.
 Constrained prompting eliminated fabrication for every Anthropic
 and OpenAI model. Abstention proved more consequential for some
-models. Gemini 2.5 Pro returned an empty prediction on 88\% of
+models: Gemini 2.5 Pro returned an empty prediction on 88\% of
 zero-shot D4 inputs. Cost-per-correct varied by a factor of 270
 across the matrix; GPT-4o-mini in constrained mode achieved the
 lowest cost at \$0.0003 per exact match.
 
 \noindent\textbf{Discussion.}\\
 Hallucination appears more controllable than prior literature
-suggested at this scale. However, the cohort size and the
-abbreviation-stress mode are imperfect proxies for real-world
-triggers. Larger cohorts with more realistic clinical text are
-needed to establish the true effect size.
+suggested at this scale. Larger cohorts with more realistic
+clinical text are needed to establish the true effect size.
 
 \noindent\textbf{Conclusion.}\\
 Zero-shot LLM prompting is unsafe for clinical concept
-normalization. Constrained or retrieval-augmented grounding is
+normalization; constrained or retrieval-augmented grounding is
 required to eliminate fabrication. Among grounded configurations,
-cost-per-correct drives deployment selection. GPT-4o-mini in
-constrained mode leads at 94.2\% top-1 accuracy and \$0.0003 per
-correct prediction. Claude Haiku 4.5 in constrained mode is a
-higher-accuracy alternative at 96.8\% and \$0.0044 per correct.
-Both dominate the largest frontier model tested (Opus 4.7 at
-\$0.0133 per correct).
+cost-per-correct drives deployment selection: GPT-4o-mini
+constrained leads at 94.2\% top-1 and \$0.0003 per correct, with
+Claude Haiku 4.5 constrained as the higher-accuracy alternative
+(96.8\%, \$0.0044). Both dominate the largest frontier model
+tested (Opus 4.7, \$0.0133 per correct).
+
+\bigskip
+\noindent\textbf{Keywords:} natural language processing;
+international classification of diseases; artificial intelligence;
+medical informatics; reproducibility of results.
 \end{abstract}
 
 \tableofcontents
@@ -197,7 +197,6 @@ Both dominate the largest frontier model tested (Opus 4.7 at
 
 \input{build/sections/00_introduction}
 \input{build/sections/01_methodology}
-\input{build/sections/02_cost_economics}
 \input{build/sections/03_results}
 \input{build/sections/04_discussion}
 \input{build/sections/05_conclusion}
@@ -215,7 +214,7 @@ Both dominate the largest frontier model tested (Opus 4.7 at
 \addcontentsline{toc}{section}{Funding}
 This work received no external funding. LLM API access (Anthropic,
 OpenAI, Google) for the evaluation matrix was self-funded by the
-corresponding author; per-call costs are itemized in §Cost economics.
+corresponding author; per-call costs are itemized in §Results.
 
 \section*{Data availability}
 \addcontentsline{toc}{section}{Data availability}
@@ -242,6 +241,19 @@ the experiments, and wrote the manuscript.
 \section*{Competing interests}
 \addcontentsline{toc}{section}{Competing interests}
 The author declares no competing interests.
+
+\section*{Acknowledgments}
+\addcontentsline{toc}{section}{Acknowledgments}
+\textbf{Use of AI tools.} This work used Anthropic's Claude (Claude
+Code CLI, model Claude Opus 4.7) as a coding, drafting, and
+figure-design assistant during the development of the benchmark
+codebase, the manuscript prose, and the figures. The author
+conceived and designed the study, defined the experimental framework
+and outcome taxonomy, conducted all analyses, and reviewed and
+verified the AI-generated content. The author retains full
+responsibility for the content, methodology, results, and any
+errors. AI tools are not credited as authors per the COPE position
+statement on Authorship and AI Tools.
 
 \bigskip
 \hrule

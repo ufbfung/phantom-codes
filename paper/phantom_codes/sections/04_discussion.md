@@ -66,7 +66,7 @@ and OpenAI configurations (0% hallucination, ~5% category-match,
 category-match adjudication, a clinically straightforward task an
 experienced coder can resolve in seconds, which beats human-only
 coding across all sensitivity-sweep parameter ranges considered
-(Supplementary §S5). The top-1 vs top-5 lift table (§3) also
+(Supplementary §S5). The top-1 vs top-5 lift table (§4.4) also
 shows that trained-classifier and sub-frontier zero-shot LLM
 workflows (top-1 in the 45 to 75% range) benefit substantially
 from surfacing top-5 candidates to a reviewer, lifting net

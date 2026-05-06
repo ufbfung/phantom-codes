@@ -31,6 +31,8 @@
 \usepackage[margin=1in]{geometry}
 \usepackage{microtype}
 \usepackage{parskip}
+\usepackage{setspace}
+\doublespacing
 
 \usepackage{graphicx}
 \usepackage{booktabs}
@@ -45,7 +47,8 @@
 
 % biblatex with biber backend — matches main.tex; same Vancouver style
 % so cross-references between main + supplement render consistently.
-\usepackage[backend=biber, style=vancouver, sortlocale=en_US]{biblatex}
+\usepackage[backend=biber, style=vancouver, sortlocale=en_US,
+            maxnames=3, minnames=3]{biblatex}
 \addbibresource{../references.bib}
 
 \usepackage[colorlinks=true,

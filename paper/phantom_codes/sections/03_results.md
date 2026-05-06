@@ -32,7 +32,7 @@ no\_prediction at D4 zero-shot), not safe answering.
 The literature historically conflates two failure modes:
 fabrication of non-existent codes (hallucination) and abstention
 (no\_prediction). They surface different patterns (Figure 1).
-Table 2 reports both rates per cell as hallucination % /
+Table 1 reports both rates per cell as hallucination % /
 no\_prediction %. Per-cell N = 125; Wilson 95% CIs are ±3pp at 0%,
 ±5pp at 5%, and ±8 to ±9pp at 50% (full CIs in §S2.2 to §S2.3).
 
@@ -59,6 +59,7 @@ no\_prediction %. Per-cell N = 125; Wilson 95% CIs are ±3pp at 0%,
 \centering
 \includegraphics[width=0.75\textwidth,keepaspectratio]{../figures/figure1_hallucination_heatmap.pdf}
 \caption{Hallucination rate (\%) by model, prompting mode, and degradation mode. Each row is one (LLM, prompting mode) configuration; columns are the four degradation modes. Cell color encodes the percentage of D-mode predictions that were fabricated codes (predictions that do not exist in the FY2026 CMS-published ICD-10-CM tabular list). Constrained and RAG rows are uniformly zero across all Anthropic and OpenAI models. Zero-shot fabrication concentrates in sub-flagship models, peaking at 12.8\% for GPT-4o-mini under D2.}
+\par\noindent\textit{Alt text: Heatmap with rows for 24 LLM and prompting-mode configurations grouped by provider (Anthropic, OpenAI, Google), and columns for four input degradation modes (D1 full, D2 no code, D3 text only, D4 abbreviated). Cell shading indicates hallucination percentage. All Anthropic and OpenAI constrained and RAG rows show 0\%. Zero-shot rows show measurable hallucination, peaking at 12.8\% for GPT-4o-mini at D2.}
 \label{fig:halluc}
 \end{figure}
 
@@ -112,6 +113,55 @@ candidate to be lifted into top-5 when the model returns nothing.
 
 ## Cost per correct prediction
 
+Most prior LLM medical-coding benchmarks report accuracy in
+isolation [@Soroush2024; @Almeida2025; @Singh2025]. The deployment
+decision, however, hinges on the joint distribution of API cost
+per call, per-call accuracy, and the rate of failure modes that
+drive downstream QA cost. Selected configurations from the
+headline matrix are shown below; the full 28-configuration
+breakdown, per-bucket cost decomposition, break-even analysis
+(LLM and QA versus a human coder), and annual cost projections at
+deployment scale are reported in Supplementary §S5.
+
+| Model × Mode | n | $ total | $ per call (mean) |
+|---|---:|---:|---:|
+| claude-opus-4-7:zeroshot | 500 | 6.77 | 0.01354 |
+| claude-sonnet-4-6:zeroshot | 500 | 3.41 | 0.00682 |
+| claude-haiku-4-5:constrained | 500 | 2.14 | 0.00428 |
+| gpt-5.5:zeroshot † | 499 | 3.59 | 0.00720 |
+| gpt-4o-mini:constrained | 500 | 0.14 | 0.00028 |
+| gemini-2.5-pro:zeroshot ‡ | 424 | 0.41 | 0.00096 |
+| gemini-2.5-flash:zeroshot | 500 | 0.03 | 0.00005 |
+
+: Per-call API cost across selected (model, prompting-mode) configurations from the headline matrix. n = number of completed calls (out of 500 attempted). †, ‡ explained in the footnotes below.
+
+† One of 500 attempted gpt-5.5 zero-shot calls exhausted the SDK
+retry budget on a transient API error and is excluded from the cost
+total. We report n=499 as-is rather than re-running, since transient
+API failures are an inherent property of production LLM deployment
+and re-running would obscure that signal.
+
+‡ Gemini 2.5 Pro zero-shot completed 424 of 500 attempted calls
+under our wrapper's `max_output_tokens=1024` setting. The remaining
+76 returned empty responses consistent with reasoning-token budget
+exhaustion (counted as `no_prediction` in §4.3, not as cost-bearing
+calls). The 424 figure reflects calls that produced billable
+output; cost normalization uses that denominator.
+
+A 270× spread separates the cheapest configuration (Gemini 2.5
+Flash zeroshot at \$0.00005/call) from the most expensive (Claude
+Opus 4.7 zeroshot at \$0.01354/call). Per-call price varies more
+dramatically across the matrix than per-call accuracy, so
+cost-per-correct prediction is dominated by per-call price for any
+configuration that achieves ≥80% top-1 accuracy. One caveat: the
+cost numbers reported here are *automated-coding cost*, not the
+broader role of clinical informaticists. Any break-even analysis
+is *deployment cost guidance*, not an *automation feasibility
+verdict*. Error tolerance is workflow-specific, and a hallucinated
+code that flows into claims billing has different downstream cost
+than the same hallucination in a research cohort definition. The
+full caveats are in Supplementary §S5.
+
 Cost-per-correct (\$ per exact-match outcome) collapses per-call
 price and accuracy into one deployment-ready number; the Top-1
 and Halluc columns surface all three deployment dimensions in one
@@ -122,6 +172,7 @@ Table 4 below. Sorted by \$/correct ascending; n=500 per row.
 \centering
 \includegraphics[width=0.7\textwidth,keepaspectratio]{../figures/figure2_cost_frontier.pdf}
 \caption{Cost per 1,000 correct predictions (USD, log scale) versus top-1 accuracy for every (LLM, prompting mode) configuration achieving \(\geq\)75\% top-1 accuracy. Color encodes provider; marker shape encodes prompting mode. Pareto-optimal configurations are drawn with a heavy black border. GPT-4o-mini constrained and Claude Haiku 4.5 constrained sit on the deployment frontier; Claude Opus 4.7 constrained is dominated despite competitive accuracy because its per-correct cost is 30 to 40 times higher.}
+\par\noindent\textit{Alt text: Scatter plot. The x-axis shows top-1 accuracy from 75 to 100 percent; the y-axis shows cost per 1,000 correct predictions in USD on a logarithmic scale from \$0.10 to \$10. Each point is one LLM and prompting-mode configuration; color indicates provider, marker shape indicates prompting mode. Pareto-optimal configurations have heavy black borders. Three labeled callouts identify GPT-4o-mini constrained at \$0.30 per 1,000 correct and 94.2\% accuracy, Claude Haiku 4.5 constrained at \$4.40 and 96.8\%, and Claude Opus 4.7 constrained at \$13.30 and 94.8\%, the last labeled as dominated by Haiku 4.5.}
 \label{fig:cost}
 \end{figure}
 
@@ -173,5 +224,6 @@ configuration under D4 stress.
 \centering
 \includegraphics[width=0.75\textwidth,keepaspectratio]{../figures/figure3_d4_outcome_stack.pdf}
 \caption{Outcome distribution per (model, prompting mode) configuration under D4 abbreviation stress. Each horizontal bar sums to 100\% across the six outcome buckets defined in \S2.5; bars are ordered by exact\_match share descending. Anthropic and OpenAI constrained configurations cluster at the top, dominated by exact\_match with a small category\_match remainder. Gemini 2.5 Pro at the bottom is dominated by no\_prediction (abstention), distinct from the hallucination-heavy string-matching baselines (\texttt{baseline:fuzzy}, \texttt{baseline:tfidf}) below it.}
+\par\noindent\textit{Alt text: Horizontal stacked bar chart showing the six-bucket outcome distribution per configuration under D4 abbreviation stress, ordered by exact-match share descending. Top rows (Anthropic and OpenAI constrained configurations) are dominated by green segments (exact-match and category-match). The bottom row (Gemini 2.5 Pro zero-shot) is dominated by blue-grey segments (no-prediction, abstention). Two string-matching baselines near the bottom show large red segments (hallucination).}
 \label{fig:d4stack}
 \end{figure}

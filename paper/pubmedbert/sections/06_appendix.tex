@@ -1,4 +1,4 @@
-# Appendix: Reproduction Recipe
+\section{Appendix: Reproduction Recipe}\label{appendix-reproduction-recipe}
 
 This appendix provides everything a credentialed reader needs to
 reproduce the trained checkpoint described above from a clean clone
@@ -6,9 +6,9 @@ of the project repository. Reproduction requires PhysioNet
 credentialing (the MIMIC-IV-FHIR dataset is not redistributed via
 this repository).
 
-## A.1 — Reproduction sequence
+\subsection{A.1 --- Reproduction sequence}\label{a.1-reproduction-sequence}
 
-```bash
+\begin{verbatim}
 # 1. Install dependencies
 uv sync --extra dev
 
@@ -31,43 +31,48 @@ uv run phantom-codes prepare \
 uv run phantom-codes train \
     --config configs/training.yaml \
     --output models/checkpoints/pubmedbert
-```
+\end{verbatim}
 
 The full reproduction recipe is documented in the project's
-`BENCHMARK.md` reference file.
+\texttt{BENCHMARK.md} reference file.
 
-## A.2 — Pinned dependencies and software versions
+\subsection{A.2 --- Pinned dependencies and software versions}\label{a.2-pinned-dependencies-and-software-versions}
 
-A complete `requirements.txt` produced by `uv export
---format requirements-txt` at the headline-checkpoint commit SHA
+A complete \texttt{requirements.txt} produced by \texttt{uv\ export\ -\/-format\ requirements-txt} at the headline-checkpoint commit SHA
 is committed alongside this paper for full reproducibility. Pin to
 specific package versions so future readers get byte-similar
 behavior from the wrapper code.
 
-## A.3 — Deterministic configurations
+\subsection{A.3 --- Deterministic configurations}\label{a.3-deterministic-configurations}
 
 The following configuration files fully specify the trained-model
 arm:
 
-- `configs/training.yaml` — training hyperparameters (peak LR,
+\begin{itemize}
+\tightlist
+\item
+  \texttt{configs/training.yaml} --- training hyperparameters (peak LR,
   warmup steps, batch size, max sequence length, epochs, patience,
   random seed)
-- `configs/data.yaml` — data paths, value-set scope filter
-- `src/phantom_codes/data/access_valuesets/` — bundled CMS ACCESS
+\item
+  \texttt{configs/data.yaml} --- data paths, value-set scope filter
+\item
+  \texttt{src/phantom\_codes/data/access\_valuesets/} --- bundled CMS ACCESS
   Model FHIR ValueSets (v0.9.6) used as the scope filter
+\end{itemize}
 
 All three are committed at the checkpoint commit SHA recorded in
 the checkpoint manifest sidecar.
 
-## A.4 — What's NOT redistributed
+\subsection{A.4 --- What's NOT redistributed}\label{a.4-whats-not-redistributed}
 
-Per PhysioNet's responsible-LLM-use policy [@PhysioNet2025],
+Per PhysioNet's responsible-LLM-use policy \autocite{PhysioNet2025},
 fine-tuned weights derived from MIMIC are themselves credentialed-
 derivative material and are not redistributed via this repository,
 HuggingFace Hub, or any cloud bucket. A credentialed reader can
 reproduce a byte-similar checkpoint from the recipe in §A.1; we
 do not provide a downloadable checkpoint.
 
-The companion paper [@FungPhantomCodes2026] documents the LLM
+The companion paper \autocite{FungPhantomCodes2026} documents the LLM
 evaluation arm, which runs entirely on Synthea-generated data and
 is fully reproducible without PhysioNet credentialing.

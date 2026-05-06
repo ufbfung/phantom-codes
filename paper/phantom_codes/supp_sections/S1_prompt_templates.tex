@@ -1,27 +1,27 @@
-# S1: Prompt templates and provider-specific structured-output configurations
+\section{S1: Prompt templates and provider-specific structured-output configurations}\label{s1-prompt-templates-and-provider-specific-structured-output-configurations}
 
 This supplement reproduces the verbatim system and user prompts and
 the provider-specific structured-output configurations used in the
-headline matrix. Three prompting modes (`zeroshot`, `constrained`,
-`rag`) are evaluated; each is reproduced below per provider
+headline matrix. Three prompting modes (\texttt{zeroshot}, \texttt{constrained},
+\texttt{rag}) are evaluated; each is reproduced below per provider
 (Anthropic, OpenAI, Google) for full reviewer auditability. All
 content is extracted verbatim from
-[`src/phantom_codes/models/llm.py`](https://github.com/ufbfung/phantom-codes/blob/main/src/phantom_codes/models/llm.py)
+\href{https://github.com/ufbfung/phantom-codes/blob/main/src/phantom_codes/models/llm.py}{\texttt{src/phantom\_codes/models/llm.py}}
 and
-[`src/phantom_codes/models/rag_llm.py`](https://github.com/ufbfung/phantom-codes/blob/main/src/phantom_codes/models/rag_llm.py).
+\href{https://github.com/ufbfung/phantom-codes/blob/main/src/phantom_codes/models/rag_llm.py}{\texttt{src/phantom\_codes/models/rag\_llm.py}}.
 Note that the verbatim prompt strings reproduced in code blocks
 preserve the punctuation present in the source, including any
 em-dashes that appear in the actual model-facing prompts.
 
-## S1.1: Zero-shot system prompt
+\subsection{S1.1: Zero-shot system prompt}\label{s1.1-zero-shot-system-prompt}
 
-The zero-shot prompt is the static "base" string returned by
-`build_system_prompt(mode=PromptMode.ZEROSHOT)`. The model receives
+The zero-shot prompt is the static ``base'' string returned by
+\texttt{build\_system\_prompt(mode=PromptMode.ZEROSHOT)}. The model receives
 this once per record (it is the cacheable prefix on Anthropic; OpenAI
-and Google also automatically cache long prefixes). `top_k` defaults
+and Google also automatically cache long prefixes). \texttt{top\_k} defaults
 to 5 in the headline run.
 
-```
+\begin{verbatim}
 You are a clinical informatics assistant. Your task is to recover the
 standardized ICD-10-CM diagnosis code for a clinical condition described
 by the user.
@@ -34,19 +34,19 @@ candidate.
 
 If you are uncertain, still return your best guess(es) — the eval framework
 will distinguish hallucinations (non-existent codes) from real-but-wrong codes.
-```
+\end{verbatim}
 
-## S1.2: Constrained system prompt
+\subsection{S1.2: Constrained system prompt}\label{s1.2-constrained-system-prompt}
 
 The constrained prompt appends the full CMS ACCESS-scope candidate
 list to the zero-shot base. The candidate block is rendered one
-candidate per line as `- <code>: <display> [<GROUP>]` (where
-`<GROUP>` is `CKM` or `ECKM`). The headline run uses ~85 candidate
+candidate per line as \texttt{-\ \textless{}code\textgreater{}:\ \textless{}display\textgreater{}\ {[}\textless{}GROUP\textgreater{}{]}} (where
+\texttt{\textless{}GROUP\textgreater{}} is \texttt{CKM} or \texttt{ECKM}). The headline run uses \textasciitilde85 candidate
 codes drawn from the CMS ACCESS Model FHIR Implementation Guide
 v0.9.6 ValueSets bundled at
-[`src/phantom_codes/data/access_valuesets/`](https://github.com/ufbfung/phantom-codes/tree/main/src/phantom_codes/data/access_valuesets/).
+\href{https://github.com/ufbfung/phantom-codes/tree/main/src/phantom_codes/data/access_valuesets/}{\texttt{src/phantom\_codes/data/access\_valuesets/}}.
 
-```
+\begin{verbatim}
 You are a clinical informatics assistant. Your task is to recover the
 standardized ICD-10-CM diagnosis code for a clinical condition described
 by the user.
@@ -73,20 +73,20 @@ Candidate codes (<N> total):
 - ...
 - N18.31: Chronic kidney disease, stage 3a [CKM]
 - ...
-```
+\end{verbatim}
 
-## S1.3: RAG system prompt template
+\subsection{S1.3: RAG system prompt template}\label{s1.3-rag-system-prompt-template}
 
 The RAG prompt reuses the constrained-mode template, but the
 candidate list is populated per-record by a frozen
-sentence-transformer retriever (default `all-MiniLM-L6-v2`) returning
-the top-`retrieve_k = 20` ACCESS-scope candidates most similar to the
+sentence-transformer retriever (default \texttt{all-MiniLM-L6-v2}) returning
+the top-\texttt{retrieve\_k\ =\ 20} ACCESS-scope candidates most similar to the
 input. The structural form is therefore identical to S1.2; only the
 size and identity of the candidate block change. From
-`RAGLLMModel.predict` in
-[`src/phantom_codes/models/rag_llm.py`](https://github.com/ufbfung/phantom-codes/blob/main/src/phantom_codes/models/rag_llm.py):
+\texttt{RAGLLMModel.predict} in
+\href{https://github.com/ufbfung/phantom-codes/blob/main/src/phantom_codes/models/rag_llm.py}{\texttt{src/phantom\_codes/models/rag\_llm.py}}:
 
-```python
+\begin{verbatim}
 # Stage 1 — retrieve top-K candidates for this specific input.
 retrieved = self._retriever.predict(
     input_fhir=input_fhir,
@@ -101,16 +101,16 @@ system_prompt = build_system_prompt(
     candidates=candidates,
     top_k=top_k,
 )
-```
+\end{verbatim}
 
-## S1.4: User-message template
+\subsection{S1.4: User-message template}\label{s1.4-user-message-template}
 
 The user message varies by input mode. For D1\_full and D2\_no\_code
 inputs, the FHIR Condition resource is serialized to indented JSON.
 For D3\_text\_only and D4\_abbreviated inputs, the text is sent
-directly. Returned by `build_user_message(input_fhir=…, input_text=…)`:
+directly. Returned by \texttt{build\_user\_message(input\_fhir=…,\ input\_text=…)}:
 
-```
+\begin{verbatim}
 The clinical condition is described by this (degraded) FHIR Condition
 resource. Recover the ICD-10-CM code:
 
@@ -120,17 +120,17 @@ resource. Recover the ICD-10-CM code:
   "code": { ... }
   ...
 }
-```
-```
+\end{verbatim}
+
+\begin{verbatim}
 
 For text-only modes:
+\end{verbatim}
 
-```
 The clinical condition is described by this text. Recover the
 ICD-10-CM code:
 
-<input_text>
-```
+\begin{verbatim}
 
 ## S1.5: Provider-specific structured-output configuration
 
@@ -172,15 +172,15 @@ All three providers are constrained to emit the same
   "required": ["predictions"],
   "additionalProperties": false
 }
-```
+\end{verbatim}
 
-### S1.5.1 Anthropic: forced tool use
+\subsubsection{S1.5.1 Anthropic: forced tool use}\label{s1.5.1-anthropic-forced-tool-use}
 
-The schema is wrapped in a single tool with `tool_choice` forced to
+The schema is wrapped in a single tool with \texttt{tool\_choice} forced to
 that tool, so the model must invoke it. The system block is marked
-`cache_control: ephemeral` for prompt caching.
+\texttt{cache\_control:\ ephemeral} for prompt caching.
 
-```python
+\begin{verbatim}
 client.messages.create(
     model=self.model_id,
     max_tokens=self.max_tokens,
@@ -204,17 +204,17 @@ client.messages.create(
     tool_choice={"type": "tool", "name": "record_predictions"},
     messages=[{"role": "user", "content": user_message}],
 )
-```
+\end{verbatim}
 
-### S1.5.2 OpenAI: structured outputs (`response_format`)
+\subsubsection{\texorpdfstring{S1.5.2 OpenAI: structured outputs (\texttt{response\_format})}{S1.5.2 OpenAI: structured outputs (response\_format)}}\label{s1.5.2-openai-structured-outputs-response_format}
 
-OpenAI's strict `json_schema` mode requires a slightly trimmed schema
-(strict-mode rejects `minItems`, `maxItems`, `minimum`, `maximum`,
-`pattern`, `format`); a deep-copy helper `_strip_for_openai_strict`
+OpenAI's strict \texttt{json\_schema} mode requires a slightly trimmed schema
+(strict-mode rejects \texttt{minItems}, \texttt{maxItems}, \texttt{minimum}, \texttt{maximum},
+\texttt{pattern}, \texttt{format}); a deep-copy helper \texttt{\_strip\_for\_openai\_strict}
 removes those fields. GPT-5+ and reasoning models (o1, o3, o4)
-require `max_completion_tokens` instead of the legacy `max_tokens`.
+require \texttt{max\_completion\_tokens} instead of the legacy \texttt{max\_tokens}.
 
-```python
+\begin{verbatim}
 strict_schema = _strip_for_openai_strict(PREDICTION_TOOL_SCHEMA)
 client.chat.completions.create(
     model=self.model_id,
@@ -232,18 +232,18 @@ client.chat.completions.create(
     ],
     **{token_kwarg: self.max_tokens},  # token_kwarg: "max_completion_tokens" for GPT-5+/o-series, else "max_tokens"
 )
-```
+\end{verbatim}
 
-### S1.5.3 Google: `response_schema`
+\subsubsection{\texorpdfstring{S1.5.3 Google: \texttt{response\_schema}}{S1.5.3 Google: response\_schema}}\label{s1.5.3-google-response_schema}
 
-Gemini's `response_schema` is an OpenAPI 3.0 subset that rejects
+Gemini's \texttt{response\_schema} is an OpenAPI 3.0 subset that rejects
 JSON Schema fields the other providers accept, most notably
-`additionalProperties` and `$schema`. A deep-copy helper
-`_strip_for_gemini` removes those fields. The system instruction is
-passed as a separate `system_instruction` config field; output is
-constrained to `application/json` with the trimmed schema.
+\texttt{additionalProperties} and \texttt{\$schema}. A deep-copy helper
+\texttt{\_strip\_for\_gemini} removes those fields. The system instruction is
+passed as a separate \texttt{system\_instruction} config field; output is
+constrained to \texttt{application/json} with the trimmed schema.
 
-```python
+\begin{verbatim}
 config = types.GenerateContentConfig(
     system_instruction=system_prompt,
     max_output_tokens=self.max_tokens,
@@ -255,9 +255,9 @@ client.models.generate_content(
     contents=user_message,
     config=config,
 )
-```
+\end{verbatim}
 
 The Google client wraps the call in a 429-only retry loop (one
-outer attempt) that respects the server's `retryDelay` hint; 5xx
+outer attempt) that respects the server's \texttt{retryDelay} hint; 5xx
 retries are handled by the SDK's internal backoff (5 attempts,
-exponential 1→16s with jitter).
+exponential 1$\rightarrow$16s with jitter).

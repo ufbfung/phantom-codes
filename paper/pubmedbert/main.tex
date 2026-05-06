@@ -14,7 +14,7 @@
 %         paper/pubmedbert_finetuning.pdf via `make snapshot-pubmedbert`).
 %
 % Editing model:
-%   - Prose edits happen in sections/*.md (markdown is canonical)
+%   - Prose edits happen in sections/*.tex.
 %   - This file only changes when sections are added/removed/reordered.
 
 \documentclass[11pt]{article}
@@ -55,10 +55,11 @@
 \usepackage{framed}
 \usepackage{csquotes}
 
-% ─── Pandoc compatibility shims ────────────────────────────────────────
+% ─── Pandoc legacy shim ────────────────────────────────────────────────
+% \tightlist still appears in section sources (suppresses inter-item
+% spacing in lists). Define it so the document compiles standalone.
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
-\providecommand{\pandocbounded}[1]{#1}
 
 % ─── Title block ───────────────────────────────────────────────────────
 \title{%
@@ -102,13 +103,13 @@ in place.
 \bigskip
 
 % ─── Body ──────────────────────────────────────────────────────────────
-\input{build/sections/00_introduction}
-\input{build/sections/01_data_and_compliance}
-\input{build/sections/02_architecture}
-\input{build/sections/03_hardware_and_optimization}
-\input{build/sections/04_results}
-\input{build/sections/05_discussion}
-\input{build/sections/06_appendix}
+\input{sections/00_introduction}
+\input{sections/01_data_and_compliance}
+\input{sections/02_architecture}
+\input{sections/03_hardware_and_optimization}
+\input{sections/04_results}
+\input{sections/05_discussion}
+\input{sections/06_appendix}
 
 \bigskip
 \hrule

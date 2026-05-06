@@ -1,8 +1,8 @@
 % Phantom Codes — main paper master file (JAMIA submission).
 %
-% This is a thin LaTeX skeleton; the actual prose lives in markdown
-% files under sections/ and is converted to .tex via pandoc at build
-% time (see Makefile). To rebuild the PDF after editing any section:
+% Pure-LaTeX source. Section prose lives in sections/*.tex; xelatex +
+% biber compiles directly with no pandoc step. To rebuild after
+% editing any section:
 %
 %     cd paper && make phantom_codes
 %
@@ -10,51 +10,30 @@
 %         paper/phantom_codes.pdf via `make snapshot-phantom_codes`).
 %
 % Editing model:
-%   - All prose edits happen in sections/*.md (the markdown is canonical)
+%   - All prose edits happen in sections/*.tex.
 %   - This main.tex only changes when you add/remove/reorder sections,
 %     change document class, add/remove packages, or restyle the title.
-%
-% When the paper is closer to submission and structure has stabilized,
-% the right move is to drop pandoc, convert each section to .tex
-% manually (or commit the generated .tex), and switch to a venue-
-% specific style file (acl_natbib.sty, neurips.sty, etc.). For now,
-% the article class is enough to preview drafts.
 
 \documentclass[11pt]{article}
 
 % ─── Fonts & Unicode (XeLaTeX) ─────────────────────────────────────────
-% Build engine is xelatex (see paper/Makefile). Without fontspec, the
-% default font lacks coverage for U+2265 (≥), U+2264 (≤), U+00D7 (×),
-% and similar Unicode glyphs that appear throughout the markdown
-% sources — they render as the "ff" ligature in the output PDF. Loading
-% fontspec switches to OpenType font handling; TeX Gyre Termes (a
-% Times-like OpenType font bundled with TeX Live) covers the needed
-% Unicode codepoints and is guaranteed to be available even on
-% texlive-basic installs that omit the Latin Modern OTF package.
+% Build engine is xelatex (see paper/Makefile). fontspec switches to
+% OpenType font handling; STIX Two Text is a Times-like OpenType font
+% with broad Unicode coverage that is available on texlive-basic
+% installs (some Latin Modern OTF variants are not). Mathematical
+% glyphs (≥, ≤, →, ≈) are written in source as $\geq$, $\leq$, etc.
 \usepackage{fontspec}
 \setmainfont{STIX Two Text}
-
-% STIX Two Text covers most Unicode but not the Mathematical Operators
-% block (U+2264, U+2265). Make ≥ and ≤ active and redirect to math
-% mode so they render correctly in body text where the markdown sources
-% use them as ASCII shorthand for "≥80%", "≤6pp", etc. We use
-% XeLaTeX's native \catcode mechanism (Unicode-aware) rather than
-% newunicodechar.sty, which is not in the texlive-basic install.
-\catcode`≥=\active \protected\def≥{\ensuremath{\geq}}
-\catcode`≤=\active \protected\def≤{\ensuremath{\leq}}
-\catcode`→=\active \protected\def→{\ensuremath{\rightarrow}}
-\catcode`≈=\active \protected\def≈{\ensuremath{\approx}}
 
 % ─── Layout & typography ───────────────────────────────────────────────
 \usepackage[margin=1in]{geometry}
 \usepackage{microtype}                  % subtle kerning improvements
 \usepackage{parskip}                    % paragraphs separated by blank lines
-                                        % (matches markdown source rhythm)
 
 % ─── Tables, figures, lists ────────────────────────────────────────────
 \usepackage{graphicx}
 \usepackage{booktabs}                   % \toprule/\midrule/\bottomrule
-\usepackage{longtable}                  % multi-page tables (pandoc default)
+\usepackage{longtable}                  % multi-page tables
 \usepackage{array}
 \usepackage{caption}
 % Smaller, italic caption text with a bold "Figure N:" label, so
@@ -64,25 +43,20 @@
 
 % JAMIA heading hierarchy: BOLD CAPS, bold lower case, Plain text,
 % Italics (per General Instructions for Authors). Top-level section
-% headings are written in uppercase directly in the markdown source
-% so they render as BOLD CAPS without depending on optional packages
-% (titlesec is not in texlive-basic). Subsections inherit the default
-% bold sentence-case; sub-subsections are plain; paragraphs are italic.
-\usepackage{calc}                       % needed for pandoc's column-width
-                                        % expressions: p{(\columnwidth - X)
-                                        % * \real{0.5}}
+% headings are written in uppercase directly in section sources so
+% they render as BOLD CAPS without depending on titlesec (not in
+% texlive-basic). Subsections inherit the default bold sentence-case;
+% sub-subsections are plain; paragraphs are italic.
+\usepackage{calc}                       % column-width expressions in tables
 
 % ─── Math ──────────────────────────────────────────────────────────────
-% amsmath provides \text{}, \frac{}{}, align/equation environments —
-% all of which appear in 02_cost_economics.md's metric definitions.
 \usepackage{amsmath}
 \usepackage{amssymb}                    % \mathbb, \leq, \geq, etc.
 
 % ─── Bibliography ──────────────────────────────────────────────────────
 % biblatex with biber backend — modern Unicode-friendly citation engine.
-% Pandoc converts [@Key] callouts in markdown sources into \autocite{Key}
-% in the generated .tex; biblatex resolves these at build time using
-% references.bib and the style configured below.
+% Sections use \autocite{Key}; biblatex resolves at build time against
+% references.bib using the style configured below.
 %
 % Citation style options (one-line swap between venues):
 %   - vancouver:    superscripted   — biomedical (NEJM AI, JAMIA, BMJ) ← active
@@ -90,9 +64,6 @@
 %   - authoryear:   (Devlin, 2019)  — skim-friendly drafting style
 %
 % Active style: vancouver (AMA-family, superscripted numeric refs).
-% NEJM AI's manuscript guidance follows the AMA Manual of Style — this
-% setting matches that convention. Switch by changing `style=` only;
-% .bib + markdown prose are style-agnostic.
 \usepackage[backend=biber, style=vancouver, sortlocale=en_US,
             maxnames=3, minnames=3]{biblatex}
 \addbibresource{../references.bib}
@@ -120,12 +91,11 @@
 \usepackage{setspace}
 \doublespacing
 
-% ─── Pandoc compatibility shims ────────────────────────────────────────
-% Pandoc emits these commands in generated .tex; define them so the
-% document compiles whether or not pandoc has injected its own preamble.
+% ─── Pandoc legacy shim ────────────────────────────────────────────────
+% \tightlist still appears in section sources (it suppresses inter-item
+% spacing in lists). Define it so the document compiles standalone.
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
-\providecommand{\pandocbounded}[1]{#1}
 
 \begin{document}
 
@@ -236,11 +206,11 @@ tested (Opus 4.7, \$0.0133 per correct).
 % Add new sections by: (1) creating sections/NN_name.md and
 % (2) appending an \input{build/sections/NN_name} line below.
 
-\input{build/sections/00_introduction}
-\input{build/sections/01_methodology}
-\input{build/sections/03_results}
-\input{build/sections/04_discussion}
-\input{build/sections/05_conclusion}
+\input{sections/00_introduction}
+\input{sections/01_methodology}
+\input{sections/03_results}
+\input{sections/04_discussion}
+\input{sections/05_conclusion}
 
 \bigskip
 \hrule

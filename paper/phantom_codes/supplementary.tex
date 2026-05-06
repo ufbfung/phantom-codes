@@ -3,8 +3,8 @@
 % Mirrors phantom_codes/main.tex's preamble (same biblatex setup, same
 % packages) so prose conventions and citation rendering are identical
 % between the main manuscript and the supplement. The main difference:
-% this file \input{}'s build/supp_sections/*.tex (one per S1-Sn section)
-% instead of build/sections/*.tex.
+% this file \input{}'s supp_sections/*.tex (one per S1-Sn section)
+% instead of sections/*.tex.
 %
 % Build:
 %     cd paper && make phantom_codes_supp
@@ -14,7 +14,7 @@
 %         `make snapshot-phantom_codes-supp`).
 %
 % Editing model:
-%   - Prose edits happen in supp_sections/*.md
+%   - Prose edits happen in supp_sections/*.tex.
 %   - This file only changes when you add/remove/reorder sections,
 %     change document class, or restyle the title.
 
@@ -23,10 +23,6 @@
 % Fonts & Unicode (XeLaTeX) — see main.tex for rationale.
 \usepackage{fontspec}
 \setmainfont{STIX Two Text}
-\catcode`≥=\active \protected\def≥{\ensuremath{\geq}}
-\catcode`≤=\active \protected\def≤{\ensuremath{\leq}}
-\catcode`→=\active \protected\def→{\ensuremath{\rightarrow}}
-\catcode`≈=\active \protected\def≈{\ensuremath{\approx}}
 
 \usepackage[margin=1in]{geometry}
 \usepackage{microtype}
@@ -62,10 +58,9 @@
 \usepackage{framed}
 \usepackage{csquotes}
 
-% Pandoc compatibility shims (same as main.tex)
+% Pandoc legacy shim (same as main.tex)
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
-\providecommand{\pandocbounded}[1]{#1}
 
 \title{%
   Supplementary Materials \\
@@ -93,9 +88,9 @@ the prefix S1--Sn for cross-reference from the main text.
 % Makefile. Add a new section by: (1) creating supp_sections/SN_name.md
 % and (2) appending an \input{build/supp_sections/SN_name} line below.
 
-\input{build/supp_sections/S1_prompt_templates}
-\input{build/supp_sections/S2_extended_results}
-\input{build/supp_sections/S5_cost_economics_extended}
+\input{supp_sections/S1_prompt_templates}
+\input{supp_sections/S2_extended_results}
+\input{supp_sections/S5_cost_economics_extended}
 % S3 (reproducibility appendix, trained-model arm details) lifted
 % into the companion arXiv technical report — see references.bib
 % entry FungPubMedBERT2026.

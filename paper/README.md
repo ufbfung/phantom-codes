@@ -49,13 +49,13 @@ paper/
   phantom_codes/
     main.tex                             (main paper LaTeX master)
     supplementary.tex                    (supplement LaTeX master)
-    sections/                            (00_introduction.md … 05_conclusion.md)
-    supp_sections/                       (S1, S2, S4, S5)
-    build/                               (gitignored)
+    sections/                            (00_introduction.tex … 05_conclusion.tex)
+    supp_sections/                       (S1, S2, S5)
+    build/                               (gitignored, xelatex/biber output)
 
   pubmedbert/
     main.tex                             (tech report LaTeX master)
-    sections/                            (00_introduction.md … 06_appendix.md)
+    sections/                            (00_introduction.tex … 06_appendix.tex)
     build/                               (gitignored)
 
   figures/                               (TBD)
@@ -64,43 +64,45 @@ paper/
 
 ## Editing model
 
-- **Prose edits** happen in markdown under
+Pure LaTeX. xelatex + biber compile section sources directly; there
+is no markdown / pandoc step.
+
+- **Prose edits** happen in `.tex` files under
   `phantom_codes/sections/`, `phantom_codes/supp_sections/`, or
-  `pubmedbert/sections/`. Markdown is canonical; LaTeX is generated.
-- **Citations** use Pandoc `[@Key]` syntax (e.g., `[@Soroush2024]`;
-  multiple: `[@Kim2025; @Hatem2025]`). Pandoc converts to
-  `\autocite{}`; biblatex resolves at build time against the
-  shared `references.bib` (each LaTeX master points at
-  `\addbibresource{../references.bib}`).
+  `pubmedbert/sections/`.
+- **Citations** use `\autocite{Key}` (e.g., `\autocite{Soroush2024}`;
+  multiple: `\autocite{Kim2025,Hatem2025}`). biblatex resolves at
+  build time against the shared `references.bib` (each LaTeX master
+  points at `\addbibresource{../references.bib}`).
 - **Bibliography**: append a BibTeX entry to `references.bib`
   with a `% Why we cite: …` comment block above it. Cite from
-  prose with `[@NewKey]`; uncited entries do not appear in the
-  rendered bibliography (biblatex default).
+  prose with `\autocite{NewKey}`; uncited entries do not appear in
+  the rendered bibliography (biblatex default).
 - **Document structure** (sections, packages, title, abstract)
   lives in each LaTeX master (`phantom_codes/main.tex`,
   `phantom_codes/supplementary.tex`, `pubmedbert/main.tex`).
-- **Adding a section**: create the `*.md` file under the
-  appropriate `sections/` directory and add a matching
-  `\input{build/sections/NN_name}` line in the LaTeX master.
+- **Adding a section**: create `sections/NN_name.tex` (or
+  `supp_sections/SN_name.tex`) and add a matching
+  `\input{sections/NN_name}` line in the relevant LaTeX master.
 
 ## Building the PDFs locally
 
 ### One-time setup
 
 ```bash
-make deps           # prints install hints for pandoc + LaTeX + biber
+make deps           # prints install hints for LaTeX + biber
 ```
 
 On macOS (typical):
 
 ```bash
-brew install pandoc
 brew install --cask basictex
 sudo tlmgr update --self
 sudo tlmgr install collection-fontsrecommended \
                    collection-latexrecommended \
                    framed parskip xurl csquotes microtype \
-                   biblatex biber logreq biblatex-vancouver
+                   biblatex biber logreq biblatex-vancouver \
+                   stix2-otf
 ```
 
 ### Build commands
@@ -120,6 +122,7 @@ make snapshot-all                # all three at once
 
 make clean                       # wipe both build/ subdirectories
 make watch                       # rebuild on any source change (requires `brew install entr`)
+make test                        # build all three + sanity-check page counts
 ```
 
 The committed `*.pdf` files in this directory are
@@ -155,5 +158,5 @@ along with the rest of the repository. The two-paper subdirectory
 layout is also a reusable pattern when a project produces a main
 manuscript plus one or more companion technical reports — drop in
 your own prose and citations, and you should be running with
-`make all` in a few minutes (assuming pandoc + a TeX distribution
-are installed).
+`make all` in a few minutes (assuming a TeX distribution with
+biblatex/biber and the STIX Two Text font is installed).

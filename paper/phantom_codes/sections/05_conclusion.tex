@@ -1,9 +1,9 @@
-# CONCLUSION
+\section{CONCLUSION}\label{conclusion}
 
 Across a 24-LLM-configuration evaluation matrix on n=125
 Synthea-generated FHIR Conditions, fabrication of non-existent
-ICD-10-CM codes ranged from 0% to 5.6% for flagship models (Opus
-4.7, GPT-5.5, Gemini 2.5 Pro) and from 0% to 12.8% for sub-flagship
+ICD-10-CM codes ranged from 0\% to 5.6\% for flagship models (Opus
+4.7, GPT-5.5, Gemini 2.5 Pro) and from 0\% to 12.8\% for sub-flagship
 models. Constrained prompting eliminated fabrication entirely for
 every Anthropic and OpenAI model. Hallucination behaves as a
 controllable property of the prompting setup at this scale rather
@@ -22,18 +22,18 @@ vocabulary and more realistic clinical text (e.g., discharge
 summaries, ED notes) is needed to establish the true effect size
 of fabrication risk on production-relevant inputs.
 
-Two deployment prescriptions emerge. **Zero-shot LLM prompting is
-unsafe for clinical concept normalization**, since every
+Two deployment prescriptions emerge. \textbf{Zero-shot LLM prompting is
+unsafe for clinical concept normalization}, since every
 fabrication observed occurred under zero-shot, and constrained or
 retrieval-augmented grounding is required to eliminate it. Among
-grounded configurations, **cost-per-correct rather than accuracy
-alone should drive selection**, because clinical coding errors are
+grounded configurations, \textbf{cost-per-correct rather than accuracy
+alone should drive selection}, because clinical coding errors are
 downstream-costly and the cheaper model can win on the combined
-metric. The deployment frontier consists of **GPT-4o-mini
-constrained** (94.2% top-1, \$0.0003 per correct, the cheapest
-configuration at ≥94% accuracy) and **Claude Haiku 4.5
-constrained** (96.8%, \$0.0044 per correct, an additional 2.6pp
+metric. The deployment frontier consists of \textbf{GPT-4o-mini
+constrained} (94.2\% top-1, \$0.0003 per correct, the cheapest
+configuration at $\geq$94\% accuracy) and \textbf{Claude Haiku 4.5
+constrained} (96.8\%, \$0.0044 per correct, an additional 2.6pp
 accuracy at roughly 14× the cost). Both dominate the largest
-frontier model (Opus 4.7 constrained, 94.8%, \$0.0133). The
+frontier model (Opus 4.7 constrained, 94.8\%, \$0.0133). The
 supported workflow is LLM-augmented coding with terminologist
 review.

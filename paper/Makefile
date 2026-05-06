@@ -1,4 +1,4 @@
-# Phantom Codes — paper build.
+# Phantom Codes — paper build (pure LaTeX, no pandoc).
 #
 # Repository hosts two papers from a single project:
 #
@@ -12,7 +12,11 @@
 #
 # Both papers share paper/references.bib via biblatex (their .tex masters
 # point at ../references.bib). Each paper has its own self-contained build/
-# subdirectory under its sources directory.
+# subdirectory under its sources directory for xelatex/biber intermediate
+# output (.aux, .bbl, .toc) and the final .pdf.
+#
+# Engine: xelatex (fontspec + STIX Two Text for full Unicode coverage).
+# Citation backend: biber + biblatex (Vancouver style, see main.tex preamble).
 #
 # Targets:
 #   make phantom_codes              — build phantom_codes/build/main.pdf
@@ -28,38 +32,29 @@
 #   make clean                      — wipe both build/ subdirectories
 #   make watch                      — rebuild on any source change (requires `entr`)
 #   make deps                       — print install hints
+#   make test                       — run regression tests (build + page-count check)
 
 # ─── Source/target inputs ──────────────────────────────────────────────
 PC_DIR := phantom_codes
-PC_MD_SECTIONS := $(sort $(wildcard $(PC_DIR)/sections/*.md))
-PC_TEX_SECTIONS := $(patsubst $(PC_DIR)/sections/%.md,$(PC_DIR)/build/sections/%.tex,$(PC_MD_SECTIONS))
+PC_TEX_SECTIONS := $(sort $(wildcard $(PC_DIR)/sections/*.tex))
 PC_PDF := $(PC_DIR)/build/main.pdf
 
-PC_MD_SUPP_SECTIONS := $(sort $(wildcard $(PC_DIR)/supp_sections/*.md))
-PC_TEX_SUPP_SECTIONS := $(patsubst $(PC_DIR)/supp_sections/%.md,$(PC_DIR)/build/supp_sections/%.tex,$(PC_MD_SUPP_SECTIONS))
+PC_TEX_SUPP_SECTIONS := $(sort $(wildcard $(PC_DIR)/supp_sections/*.tex))
 PC_SUPP_PDF := $(PC_DIR)/build/supplementary.pdf
 
 PB_DIR := pubmedbert
-PB_MD_SECTIONS := $(sort $(wildcard $(PB_DIR)/sections/*.md))
-PB_TEX_SECTIONS := $(patsubst $(PB_DIR)/sections/%.md,$(PB_DIR)/build/sections/%.tex,$(PB_MD_SECTIONS))
+PB_TEX_SECTIONS := $(sort $(wildcard $(PB_DIR)/sections/*.tex))
 PB_PDF := $(PB_DIR)/build/main.pdf
 
 # ─── Tools ─────────────────────────────────────────────────────────────
-PANDOC := pandoc
 PDFLATEX := xelatex
 BIBER := biber
-PANDOC_OPTS := \
-	--from markdown+pipe_tables+backtick_code_blocks+yaml_metadata_block \
-	--to latex \
-	--top-level-division=section \
-	--wrap=preserve \
-	--no-highlight \
-	--biblatex
+PDFLATEX_OPTS := -interaction=nonstopmode -halt-on-error -output-directory=build
 
 # ─── Targets ───────────────────────────────────────────────────────────
 .PHONY: all phantom_codes phantom_codes_supp pubmedbert \
 	snapshot-phantom_codes snapshot-phantom_codes-supp snapshot-pubmedbert snapshot-all \
-	clean watch deps
+	clean watch deps test
 
 all: phantom_codes phantom_codes_supp pubmedbert
 phantom_codes: $(PC_PDF)
@@ -69,66 +64,45 @@ pubmedbert: $(PB_PDF)
 # ─── Phantom Codes main paper ──────────────────────────────────────────
 $(PC_PDF): $(PC_DIR)/main.tex references.bib $(PC_TEX_SECTIONS) | $(PC_DIR)/build
 	@echo "[phantom_codes] compiling main.tex (pass 1)"
-	cd $(PC_DIR) && $(PDFLATEX) -interaction=nonstopmode -halt-on-error -output-directory=build main.tex >/dev/null
+	cd $(PC_DIR) && $(PDFLATEX) $(PDFLATEX_OPTS) main.tex >/dev/null
 	@echo "[phantom_codes] biber"
 	cd $(PC_DIR) && $(BIBER) --input-directory=build --output-directory=build main >/dev/null
 	@echo "[phantom_codes] compiling main.tex (pass 2)"
-	cd $(PC_DIR) && $(PDFLATEX) -interaction=nonstopmode -halt-on-error -output-directory=build main.tex >/dev/null
+	cd $(PC_DIR) && $(PDFLATEX) $(PDFLATEX_OPTS) main.tex >/dev/null
 	@echo "[phantom_codes] compiling main.tex (pass 3)"
-	cd $(PC_DIR) && $(PDFLATEX) -interaction=nonstopmode -halt-on-error -output-directory=build main.tex >/dev/null
+	cd $(PC_DIR) && $(PDFLATEX) $(PDFLATEX_OPTS) main.tex >/dev/null
 	@echo "[phantom_codes] ✓ $(PC_PDF)"
-
-$(PC_DIR)/build/sections/%.tex: $(PC_DIR)/sections/%.md | $(PC_DIR)/build/sections
-	@echo "[phantom_codes] pandoc: $< → $@"
-	$(PANDOC) $(PANDOC_OPTS) $< -o $@
 
 # ─── Phantom Codes supplement ──────────────────────────────────────────
 $(PC_SUPP_PDF): $(PC_DIR)/supplementary.tex references.bib $(PC_TEX_SUPP_SECTIONS) | $(PC_DIR)/build
 	@echo "[phantom_codes_supp] compiling supplementary.tex (pass 1)"
-	cd $(PC_DIR) && $(PDFLATEX) -interaction=nonstopmode -halt-on-error -output-directory=build supplementary.tex >/dev/null
+	cd $(PC_DIR) && $(PDFLATEX) $(PDFLATEX_OPTS) supplementary.tex >/dev/null
 	@echo "[phantom_codes_supp] biber"
 	cd $(PC_DIR) && $(BIBER) --input-directory=build --output-directory=build supplementary >/dev/null
 	@echo "[phantom_codes_supp] compiling supplementary.tex (pass 2)"
-	cd $(PC_DIR) && $(PDFLATEX) -interaction=nonstopmode -halt-on-error -output-directory=build supplementary.tex >/dev/null
+	cd $(PC_DIR) && $(PDFLATEX) $(PDFLATEX_OPTS) supplementary.tex >/dev/null
 	@echo "[phantom_codes_supp] compiling supplementary.tex (pass 3)"
-	cd $(PC_DIR) && $(PDFLATEX) -interaction=nonstopmode -halt-on-error -output-directory=build supplementary.tex >/dev/null
+	cd $(PC_DIR) && $(PDFLATEX) $(PDFLATEX_OPTS) supplementary.tex >/dev/null
 	@echo "[phantom_codes_supp] ✓ $(PC_SUPP_PDF)"
-
-$(PC_DIR)/build/supp_sections/%.tex: $(PC_DIR)/supp_sections/%.md | $(PC_DIR)/build/supp_sections
-	@echo "[phantom_codes_supp] pandoc: $< → $@"
-	$(PANDOC) $(PANDOC_OPTS) $< -o $@
 
 # ─── PubMedBERT tech report ────────────────────────────────────────────
 $(PB_PDF): $(PB_DIR)/main.tex references.bib $(PB_TEX_SECTIONS) | $(PB_DIR)/build
 	@echo "[pubmedbert] compiling main.tex (pass 1)"
-	cd $(PB_DIR) && $(PDFLATEX) -interaction=nonstopmode -halt-on-error -output-directory=build main.tex >/dev/null
+	cd $(PB_DIR) && $(PDFLATEX) $(PDFLATEX_OPTS) main.tex >/dev/null
 	@echo "[pubmedbert] biber"
 	cd $(PB_DIR) && $(BIBER) --input-directory=build --output-directory=build main >/dev/null
 	@echo "[pubmedbert] compiling main.tex (pass 2)"
-	cd $(PB_DIR) && $(PDFLATEX) -interaction=nonstopmode -halt-on-error -output-directory=build main.tex >/dev/null
+	cd $(PB_DIR) && $(PDFLATEX) $(PDFLATEX_OPTS) main.tex >/dev/null
 	@echo "[pubmedbert] compiling main.tex (pass 3)"
-	cd $(PB_DIR) && $(PDFLATEX) -interaction=nonstopmode -halt-on-error -output-directory=build main.tex >/dev/null
+	cd $(PB_DIR) && $(PDFLATEX) $(PDFLATEX_OPTS) main.tex >/dev/null
 	@echo "[pubmedbert] ✓ $(PB_PDF)"
-
-$(PB_DIR)/build/sections/%.tex: $(PB_DIR)/sections/%.md | $(PB_DIR)/build/sections
-	@echo "[pubmedbert] pandoc: $< → $@"
-	$(PANDOC) $(PANDOC_OPTS) $< -o $@
 
 # ─── Build directories (order-only prerequisites) ──────────────────────
 $(PC_DIR)/build:
 	@mkdir -p $(PC_DIR)/build
 
-$(PC_DIR)/build/sections:
-	@mkdir -p $(PC_DIR)/build/sections
-
-$(PC_DIR)/build/supp_sections:
-	@mkdir -p $(PC_DIR)/build/supp_sections
-
 $(PB_DIR)/build:
 	@mkdir -p $(PB_DIR)/build
-
-$(PB_DIR)/build/sections:
-	@mkdir -p $(PB_DIR)/build/sections
 
 # ─── Snapshot promote (build PDF → committed snapshot at paper/) ───────
 # Each snapshot is manual rather than auto so the committed PDFs only
@@ -161,11 +135,27 @@ watch:
 	@echo "[paper] watching for changes — Ctrl+C to stop"
 	@find phantom_codes pubmedbert references.bib Makefile | entr -c make all
 
+# ─── Regression test ───────────────────────────────────────────────────
+# Builds all three documents and verifies expected page counts. Used by
+# CI / pre-commit to catch source-level errors that would otherwise only
+# surface at submission time.
+test: all
+	@echo "[test] checking page counts"
+	@pages=$$(pdfinfo $(PC_PDF) | awk '/^Pages:/ {print $$2}'); \
+		[ "$$pages" -ge 15 ] || { echo "FAIL: $(PC_PDF) has $$pages pages (expected >=15)"; exit 1; }; \
+		echo "[test] ✓ phantom_codes: $$pages pages"
+	@pages=$$(pdfinfo $(PC_SUPP_PDF) | awk '/^Pages:/ {print $$2}'); \
+		[ "$$pages" -ge 30 ] || { echo "FAIL: $(PC_SUPP_PDF) has $$pages pages (expected >=30)"; exit 1; }; \
+		echo "[test] ✓ phantom_codes_supp: $$pages pages"
+	@pages=$$(pdfinfo $(PB_PDF) | awk '/^Pages:/ {print $$2}'); \
+		[ "$$pages" -ge 8 ] || { echo "FAIL: $(PB_PDF) has $$pages pages (expected >=8)"; exit 1; }; \
+		echo "[test] ✓ pubmedbert: $$pages pages"
+	@echo "[test] all builds clean, page counts plausible"
+
 deps:
-	@echo "Build requires pandoc + a LaTeX distribution + biblatex/biber."
+	@echo "Build requires a LaTeX distribution + biblatex/biber."
 	@echo
 	@echo "macOS:"
-	@echo "  brew install pandoc"
 	@echo "  brew install --cask basictex      # ~100MB minimal TeX"
 	@echo "  # OR: brew install --cask mactex  # ~5GB full TeX"
 	@echo
@@ -174,9 +164,8 @@ deps:
 	@echo "  sudo tlmgr install collection-fontsrecommended \\"
 	@echo "                     collection-latexrecommended \\"
 	@echo "                     framed parskip xurl csquotes microtype \\"
-	@echo "                     biblatex biber logreq"
+	@echo "                     biblatex biber logreq stix2-otf"
 	@echo
 	@echo "Verify install:"
-	@echo "  pandoc --version"
 	@echo "  xelatex --version"
 	@echo "  biber --version"

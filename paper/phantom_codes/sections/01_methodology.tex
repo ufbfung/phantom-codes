@@ -1,0 +1,151 @@
+\section{MATERIALS AND METHODS}\label{materials-and-methods}
+
+\subsection{Data}\label{data}
+
+The headline evaluation matrix runs entirely against
+Synthea-generated FHIR Bundles \autocite{Walonoski2018}, a freely-
+redistributable synthetic patient dataset. Cohort generation is
+fully reproducible from a pinned Synthea version and seed (see
+\emph{Cohort and label space} below).
+
+\subsection{Cohort and label space}\label{cohort-and-label-space}
+
+We restrict the cohort to ICD-10-CM codes in the CMS ACCESS Model
+FHIR Implementation Guide v0.9.6 \autocite{CMS2026}. The Implementation
+Guide defines two disease groups: \textbf{CKM} (cardiometabolic, covering
+diabetes, atherosclerotic cardiovascular disease, and CKD stage 3)
+and \textbf{eCKM} (extended cardiometabolic, covering hypertension,
+dyslipidemia, prediabetes, and obesity). The headline matrix is
+evaluated on a single Synthea-generated cohort of \textbf{125 unique FHIR
+Conditions}, each materialized into four degradation modes for a
+total of 500 EvalRecord items. Cohort generation is fully
+deterministic: Synthea v4.0.0 \autocite{Walonoski2018} is run at a pinned
+commit SHA with \texttt{seed=42}, producing patient bundles whose
+Conditions are extracted, deduplicated per (patient, ICD code), and
+filtered to ACCESS-scope codes via bundled value-set definitions.
+Twelve unique ICD-10-CM codes appear in the cohort: obesity (\textasciitilde24\%),
+prediabetes (\textasciitilde20\%), type 2 diabetes variants (\textasciitilde31\%), essential
+hypertension (\textasciitilde14\%), and lipid disorders (\textasciitilde10\%).
+
+\subsection{Models evaluated}\label{models-evaluated}
+
+The headline matrix comprises 28 model configurations. These are:
+three string-matching baselines (exact, fuzzy, TF-IDF), one frozen
+sentence-transformer retrieval baseline, and 24 frontier LLM
+configurations across three providers and three prompting modes.
+Each LLM appears in \texttt{zeroshot}, \texttt{constrained}, and \texttt{rag}
+configurations.
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Anthropic} (3 × 3): Claude Haiku 4.5, Sonnet 4.6, Opus 4.7
+\item
+  \textbf{OpenAI} (2 × 3): GPT-5.5 (\texttt{gpt-5.5-2026-04-23}) and GPT-4o-mini
+  \autocite{OpenAIModels2026}
+\item
+  \textbf{Google} (3 × 3): Gemini 2.5 Pro, Gemini 2.5 Flash, and Gemini 3
+  Flash Preview (preview-status, disclosed as such) \autocite{GeminiModels2026}
+\end{itemize}
+
+Gemini 3.1 Pro Preview was excluded due to insufficient daily quota
+at our API tier; a partial-coverage analysis appears in
+Supplementary §S2. Per-token pricing for cost calculations was
+sourced from each provider's documentation as of the evaluation date
+\autocite{OpenAIPricing2026,GeminiPricing2026}.
+
+\subsection{Prompting modes}\label{prompting-modes}
+
+All LLMs are evaluated under three prompting modes that vary in how
+much external structure is provided.
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{\texttt{zeroshot}}: a generic system prompt instructs the model to
+  return the most likely ICD-10-CM code for the input, with no
+  candidate list.
+\item
+  \textbf{\texttt{constrained}}: the system prompt additionally includes the
+  full list of CMS ACCESS-scope candidate codes (with display
+  strings) and instructs the model to choose only from that list.
+  Mechanical schema enforcement (Anthropic forced tool use, OpenAI
+  structured outputs, Google \texttt{response\_schema}) is applied across
+  all modes; in \texttt{constrained} mode the menu itself is also passed
+  in-prompt.
+\item
+  \textbf{\texttt{rag}}: a frozen sentence-transformer (\texttt{all-MiniLM-L6-v2})
+  retrieves the top-k = 10 ACCESS-scope candidate codes most similar
+  to the per-record input and injects only those into a
+  constrained-style prompt.
+\end{itemize}
+
+The verbatim system and user prompts and per-provider tool-use and
+schema configurations are reproduced in Supplementary §S1.
+
+\subsection{Outcome taxonomy}\label{outcome-taxonomy}
+
+Each per-record top-1 prediction is classified into one of six
+mutually exclusive, exhaustive outcome buckets, ordered from best
+to worst by deployment relevance:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{\texttt{exact\_match}}: predicted code equals ground truth.
+\item
+  \textbf{\texttt{category\_match}}: predicted code is in the same ICD-10-CM
+  3-character category as ground truth (e.g., E11.0 vs.~E11.9, both
+  Type 2 diabetes).
+\item
+  \textbf{\texttt{chapter\_match}}: same ICD-10-CM chapter, different category.
+\item
+  \textbf{\texttt{out\_of\_domain}}: real ICD-10-CM code with no hierarchical
+  relation to ground truth.
+\item
+  \textbf{\texttt{no\_prediction}}: model returned no usable prediction (empty
+  array, refusal, or transient API failure that exhausted the SDK
+  retry budget). The model fabricated nothing; it abstained.
+\item
+  \textbf{\texttt{hallucination}}: predicted code does not exist in the FY2026
+  CMS ICD-10-CM tabular list (mechanically validated against the
+  bundled validator).
+\end{enumerate}
+
+The \texttt{no\_prediction} and \texttt{hallucination} buckets capture
+qualitatively different failure modes and are reported separately.
+From a deployment-safety perspective, abstention is preferable to
+fabrication, since an abstaining model emits no spurious code that
+downstream systems silently mishandle. Earlier work \autocite{Soroush2024}
+collapses these into a single error bucket; the six-way split
+surfaces the distinction that conflation hides.
+
+\subsection{Cost tracking}\label{cost-tracking}
+
+For every model invocation in our matrix the per-prediction CSV
+records token usage, latency, and \texttt{cost\_usd} computed at runtime
+against the versioned pricing snapshot in \texttt{configs/pricing.yaml}
+\autocite{OpenAIPricing2026,GeminiPricing2026}. These infrastructure
+metrics are recorded even when the prediction is wrong and serve
+as the basis for the cost-per-correct normalization reported in
+Results. Cost-per-correct (USD per exact-match outcome) collapses
+per-call price and per-call accuracy into a single
+deployment-relevant number; we report it alongside per-call cost
+because the two diverge meaningfully when accuracy drops.
+
+\subsection{Statistical analysis}\label{statistical-analysis}
+
+Per-(model, mode) outcome rates are reported as point estimates
+with 95\% Wilson confidence intervals, which we prefer over
+normal-approximation intervals because both small N and rates near
+zero or one are common in our matrix (per-cell N = 125, and
+constrained-mode hallucination rates approach 0\%). Within-model
+paired comparisons across zero-shot, constrained, and RAG modes on
+identical inputs are reported as exact McNemar tests on discordant
+prediction pairs. Across-model and across-mode comparisons are
+reported descriptively with overlapping or non-overlapping CIs. We
+deliberately do not perform null-hypothesis significance tests
+across the full grid, because the intended interpretation is
+comparative deployment relevance rather than detection of any
+single effect.

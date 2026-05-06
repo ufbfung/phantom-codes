@@ -1,6 +1,7 @@
-# Build artifacts — markdown sources, .tex masters, and references.bib are
-# the canonical source of truth. Each paper subdirectory has its own
-# build/ directory that is fully derived and should never be committed.
+# Build artifacts — .tex sources and references.bib are the canonical
+# source of truth. Each paper subdirectory has its own build/ directory
+# that is fully derived (xelatex/biber output) and should never be
+# committed.
 #
 # Note: paper/phantom_codes.pdf, paper/phantom_codes_supplementary.pdf,
 # and paper/pubmedbert_finetuning.pdf are intentionally *not* gitignored

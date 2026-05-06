@@ -1,36 +1,42 @@
-# Introduction
+\section{Introduction}\label{introduction}
 
-Clinical concept normalization — mapping unstructured mentions of
+Clinical concept normalization --- mapping unstructured mentions of
 diagnoses, medications, and labs to identifiers in controlled
-vocabularies such as ICD-10-CM — sits at the foundation of
+vocabularies such as ICD-10-CM --- sits at the foundation of
 healthcare data interoperability. Supervised neural classifiers
 trained on labeled clinical text have been the state of the art for
 most of the last decade, with hierarchical attention over MIMIC
-discharge summaries [@Mullenbach2018] and transformer-based
+discharge summaries \autocite{Mullenbach2018} and transformer-based
 extensions adapting domain-pretrained encoders such as PubMedBERT
-[@Gu2021; @Huang2022] to the multi-label setting. Two practical
+\autocite{Gu2021,Huang2022} to the multi-label setting. Two practical
 constraints shape how such classifiers can be built and shared in
 the current regulatory landscape:
 
-1. **PhysioNet's responsible-LLM-use policy** [@PhysioNet2025],
-   effective 2025-09-24, prohibits sharing credentialed data with
-   third parties — including sending it through commercial LLM APIs.
-   This rules out cloud LLM-based classifier construction on
-   credentialed corpora and constrains where credentialed data can
-   physically reside during training.
-2. **Trained-model weights derived from credentialed corpora are
-   themselves credentialed-derivative** under PhysioNet's policy, so
-   weights cannot be redistributed via standard model-sharing
-   channels (HuggingFace Hub, etc.) without going through PhysioNet's
-   own MIMIC-IV Models distribution channel.
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{PhysioNet's responsible-LLM-use policy} \autocite{PhysioNet2025},
+  effective 2025-09-24, prohibits sharing credentialed data with
+  third parties --- including sending it through commercial LLM APIs.
+  This rules out cloud LLM-based classifier construction on
+  credentialed corpora and constrains where credentialed data can
+  physically reside during training.
+\item
+  \textbf{Trained-model weights derived from credentialed corpora are
+  themselves credentialed-derivative} under PhysioNet's policy, so
+  weights cannot be redistributed via standard model-sharing
+  channels (HuggingFace Hub, etc.) without going through PhysioNet's
+  own MIMIC-IV Models distribution channel.
+\end{enumerate}
 
 This technical report documents a fully-local fine-tuning pipeline
-for **PubMedBERT-base** [@Gu2021] on MIMIC-IV-FHIR v2.1
-[@Bennett2024; @Bennett2023; @Johnson2023] restricted to ICD-10-CM
-codes in the CMS ACCESS Model FHIR Implementation Guide [@CMS2026].
+for \textbf{PubMedBERT-base} \autocite{Gu2021} on MIMIC-IV-FHIR v2.1
+\autocite{Bennett2024,Bennett2023,Johnson2023} restricted to ICD-10-CM
+codes in the CMS ACCESS Model FHIR Implementation Guide \autocite{CMS2026}.
 The contribution is methodological rather than architectural: every
 step from data loading through training through checkpoint
-persistence runs on **consumer Apple Silicon hardware** (M1
+persistence runs on \textbf{consumer Apple Silicon hardware} (M1
 MacBook Pro, 16 GB unified memory) via PyTorch's MPS backend,
 without ever uploading credentialed content to any cloud service,
 training platform, or telemetry endpoint. The same code path
@@ -43,7 +49,7 @@ on personal hardware without institutional cloud-compute budgets.
 The classifier described here serves as the non-LLM baseline in a
 companion paper that benchmarks frontier LLMs against a 6-way
 hallucination-aware outcome taxonomy on Synthea-generated
-out-of-distribution inputs [@FungPhantomCodes2026]. That paper is
+out-of-distribution inputs \autocite{FungPhantomCodes2026}. That paper is
 the headline scientific contribution; this report documents the
 trained-model arm in full detail so it does not crowd the main
 paper's word budget and so future re-implementations have a

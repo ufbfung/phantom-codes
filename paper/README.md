@@ -5,7 +5,7 @@ Two papers from this project live here, each in its own subdirectory:
 | Snapshot PDF | Sources | What it is |
 |---|---|---|
 | [`phantom_codes.pdf`](phantom_codes.pdf) | [`phantom_codes/`](phantom_codes/) | Main manuscript (target venue: **JAMIA Research and Applications**) — *Phantom Codes: Hallucination, Accuracy, and Cost in Frontier-LLM Medical Concept Normalization* |
-| [`phantom_codes_supplementary.pdf`](phantom_codes_supplementary.pdf) | [`phantom_codes/supp_sections/`](phantom_codes/supp_sections/) | Supplement to the main manuscript (extended results, prompt templates, MI-CLAIM checklist, extended cost economics) |
+| [`phantom_codes_supplementary.pdf`](phantom_codes_supplementary.pdf) | [`phantom_codes/supp_sections/`](phantom_codes/supp_sections/) | Supplement to the main manuscript (S1 prompt templates, S2 extended results, S5 extended cost economics) |
 | [`pubmedbert_finetuning.pdf`](pubmedbert_finetuning.pdf) | [`pubmedbert/`](pubmedbert/) | Companion technical report (planned arXiv preprint) — *Local Fine-Tuning of PubMedBERT for ACCESS-Scope ICD-10-CM Classification under PhysioNet Compliance Constraints* |
 
 Both papers share [`references.bib`](references.bib) via biblatex.
@@ -17,18 +17,19 @@ the PDFs from source.
 
 ## Status
 
-Headline n=125 Synthea evaluation completed 2026-05-04; all six
-main-text sections of the JAMIA paper are drafted with realized
-numbers (no `[TBD]` markers). Main text fits within JAMIA's
-4,000-word limit (~3,200 words); abstract is ~225 prose words
-(≤250 cap). The PubMedBERT tech report has 7 sections (~3,200
-words) covering data + compliance, architecture, hardware,
-optimization, results, discussion, and a reproduction appendix.
+Headline n=125 Synthea evaluation completed 2026-05-04; the JAMIA
+manuscript is submission-ready. Main text fits JAMIA's 4,000-word
+limit (~3,200 words); structured abstract is ~225 prose words
+(≤250 cap). 4 tables and 3 figures (at JAMIA's 4-table / 6-figure
+caps). The PubMedBERT tech report is a separate arXiv-bound
+companion (~3,200 words) covering data + compliance, architecture,
+hardware, optimization, results, discussion, and a reproduction
+appendix.
 
-| Document | Sections | State |
+| Document | Structure | State |
 |---|---|---|
-| Phantom Codes (JAMIA) | §0 Introduction → §5 Conclusion | ✅ drafted |
-| Phantom Codes supplement | S1, S2, S4, S5 | ✅ scaffolded with realized numbers in S5 |
+| Phantom Codes (JAMIA) | Title page → Abstract → §1 Background and Significance → §5 Conclusion → back-matter | ✅ submission-ready |
+| Phantom Codes supplement | S1 prompts, S2 extended results, S5 extended cost economics | ✅ submission-ready |
 | PubMedBERT tech report | §0 Introduction → §6 Appendix | ✅ drafted |
 
 Submission-readiness tasks are tracked in the project
@@ -45,11 +46,19 @@ paper/
   phantom_codes_supplementary.pdf        (supplement snapshot)
   pubmedbert_finetuning.pdf              (tech report snapshot)
 
+  cover_letter.md                        (JAMIA submission cover letter)
+
   phantom_codes/
     main.tex                             (main paper LaTeX master)
     supplementary.tex                    (supplement LaTeX master)
-    sections/                            (00_introduction.tex … 05_conclusion.tex)
-    supp_sections/                       (S1, S2, S5)
+    sections/                            (00_title_page, 01_abstract,
+                                          02_background_and_significance,
+                                          03_materials_and_methods,
+                                          04_results, 05_discussion,
+                                          06_conclusion)
+    supp_sections/                       (S1_prompt_templates,
+                                          S2_extended_results,
+                                          S5_cost_economics_extended)
     build/                               (gitignored, xelatex/biber output)
 
   pubmedbert/
@@ -57,8 +66,9 @@ paper/
     sections/                            (00_introduction.tex … 06_appendix.tex)
     build/                               (gitignored)
 
-  figures/                               (TBD)
-  tables/                                (TBD)
+  figures/                               (figure1 heatmap, figure2 cost
+                                          frontier, figure3 D4 outcome
+                                          stack — .py source + .pdf each)
 ```
 
 ## Editing model
@@ -146,8 +156,8 @@ Single-line change in the relevant LaTeX master. Find the biblatex
 ```
 
 Then `make clean && make <target>`. No changes to the `.bib` or
-to the markdown citations — biblatex re-renders everything in the
-new style.
+to the `\autocite{...}` calls in section sources — biblatex
+re-renders everything in the new style.
 
 ## Reusing this scaffolding
 

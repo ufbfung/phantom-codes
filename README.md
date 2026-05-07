@@ -6,7 +6,7 @@ A reproducible benchmark for evaluating how well frontier LLMs map degraded clin
 
 **Medical concept normalization** is the entity-linking task of mapping in-text mentions of biomedical concepts (diagnoses, labs, medications) to entries in a standardized ontology or controlled vocabulary (ICD-10-CM, LOINC, RxNorm, etc.). It's a foundational task for healthcare data integration, billing, research cohort construction, and AI-assisted documentation.
 
-**Status:** v1 complete for diagnoses. Degradation pipeline, 6-way outcome taxonomy, ICD-10-CM validator, LLM module (Claude + GPT + Gemini in zero-shot + constrained + RAG modes), bi-encoder retrieval baseline, constrained-only baselines (exact / fuzzy / TF-IDF), token + cost tracking, run-manifest sidecars, blinded `--infra-only` smoke-test mode, and end-to-end eval runner are implemented and tested. PubMedBERT classifier fine-tuned locally on MIMIC-IV-FHIR via PyTorch MPS. Headline n=125 Synthea evaluation completed 2026-05-04 (per-(model, mode) aggregates in [results/summary/n125_run_v2/](results/summary/n125_run_v2/)). Paper draft submission-ready for **JAMIA Research and Applications**.
+**Status:** v1 complete for diagnoses. Degradation pipeline, 6-way outcome taxonomy, ICD-10-CM validator, LLM module (Claude + GPT + Gemini in zero-shot + constrained + RAG modes), bi-encoder retrieval baseline, constrained-only baselines (exact / fuzzy / TF-IDF), token + cost tracking, run-manifest sidecars, blinded `--infra-only` smoke-test mode, and end-to-end eval runner are implemented and tested. PubMedBERT classifier fine-tuned locally on MIMIC-IV-FHIR via PyTorch MPS. Headline n=125 Synthea evaluation completed 2026-05-04 (per-(model, mode) aggregates in [results/summary/n125_run_v2/](results/summary/n125_run_v2/)). Manuscript submission-ready for **JAMIA Research and Applications** (~3,200 words, ≤250-word structured abstract, 3 figures, 4 tables, accompanied by supplementary materials and a companion arXiv tech report on the PubMedBERT fine-tuning).
 
 **v1 scope:** diagnoses (ICD-10-CM). v2+ extends to labs (LOINC) and medications (RxNorm) using the same framework.
 
@@ -40,9 +40,9 @@ Every prediction lands in exactly one bucket. Aligned with the literature: hiera
 - `chapter_match` — same ICD-10 chapter (E vs E), different category
 - `out_of_domain` — real ICD-10-CM code, no hierarchical relation to truth
 - `no_prediction` — model returned no usable prediction (empty array, refusal, or transient API failure). Distinct from hallucination — nothing was fabricated; the model abstained.
-- `hallucination` — predicted code does NOT exist in ICD-10-CM (**the headline metric** — *narrow* definition: fabrications only)
+- `hallucination` — predicted code does NOT exist in ICD-10-CM (*narrow* definition: fabrications only)
 
-Hallucination and no-prediction are reported separately to surface a deployment-relevant distinction: an abstaining model is safer than a confidently-wrong one (no spurious code propagates downstream), even though both fail to produce a usable prediction. (Refined 2026-05-04 from a 5-bucket version that lumped abstention into hallucination — see CHANGELOG / metrics.py docstring for the rationale.)
+Hallucination and no-prediction are reported separately to surface a downstream-error distinction: an abstaining model emits no spurious code that downstream systems silently mishandle, while a hallucinated code propagates into billing, research, and quality reporting. Both fail to produce a usable prediction, but their downstream costs differ. (Refined 2026-05-04 from a 5-bucket version that lumped abstention into hallucination — see metrics.py docstring for the rationale.)
 
 The taxonomy generalizes naturally to LOINC and RxNorm in v2: same definitions with the appropriate hierarchy and validator file.
 
@@ -228,23 +228,26 @@ scripts/        # demo_minimal_training.py (synthetic-fixture end-to-end demo)
 tests/          # unit tests + synthetic fixtures (205 tests, ruff clean)
 benchmarks/     # released open benchmark (Synthea — TBD)
 paper/
-  sections/         # §0–§5 markdown drafts (introduction, methods,
-                    #   cost economics, results, discussion, conclusion)
-  supp_sections/    # S1–S5 supplementary markdown (prompts,
-                    #   extended results, reproducibility appendix,
-                    #   MI-CLAIM, extended cost economics)
-  main.tex          # main manuscript master file
-  supplementary.tex # supplementary master file
+  phantom_codes/    # JAMIA main manuscript + supplement (pure LaTeX)
+    main.tex            # main manuscript master
+    supplementary.tex   # supplement master
+    sections/           # 00_title_page → 06_conclusion (.tex)
+    supp_sections/      # S1, S2, S5 (.tex)
+  pubmedbert/       # arXiv companion tech report (PubMedBERT fine-tuning)
+    main.tex            # tech report master
+    sections/           # 00_introduction → 06_appendix (.tex)
   references.bib    # shared bibliography (biblatex Vancouver)
-  Makefile          # `make pdf` (main) / `make supp` / `make snapshot`
-  figures/          # generated figures (TBD)
-  tables/           # generated tables (TBD)
-  paper.pdf         # committed snapshot of the latest build
+  Makefile          # `make phantom_codes` / `make pubmedbert` / `make snapshot-all`
+  figures/          # 3 figures (heatmap, cost frontier, D4 outcome stack)
+  cover_letter.md   # submission cover letter
+  phantom_codes.pdf            # committed snapshot of the main manuscript
+  phantom_codes_supplementary.pdf  # committed supplement snapshot
+  pubmedbert_finetuning.pdf        # committed arXiv tech-report snapshot
 ```
 
 ## Roadmap
 
-- **v1**: diagnoses (ICD-10-CM) — paper draft complete; under JAMIA submission prep
+- **v1**: diagnoses (ICD-10-CM) — manuscript submission-ready for JAMIA Research and Applications
 - **v2**: + labs (LOINC), via Observation resources
 - **v3**: + medications (RxNorm), via MedicationRequest resources
 
@@ -262,9 +265,9 @@ Phantom Codes draws on five recent (2024-2026) lines of work in LLM-based clinic
 
 What we contribute on top of this prior work:
 
-- **D4_abbreviated as a stress test** — deliberately strips the canonical display tokens that string-matching baselines depend on, forcing semantic retrieval. This is the experiment where LLM-vs-baseline differences should surface most cleanly, and the headline mode of the benchmark.
-- **Hallucination as a first-class outcome** — "code does not exist in the controlled vocabulary" gets its own bucket, mechanically checked against a CMS-published validator. Replaces top-1 accuracy as the headline metric.
-- **Zero-shot vs. constrained as a controlled within-model ablation** — isolates "wandering off the menu" from "genuine ignorance" using the same model and the same input, varying only the candidate-list constraint.
+- **Frontier-model recency** — 24 (model, prompting-mode) configurations spanning Claude Opus 4.7 / Sonnet 4.6 / Haiku 4.5, GPT-5.5 / GPT-4o-mini, and Gemini 2.5 Pro / 2.5 Flash / 3 Flash Preview. Several were released within weeks of the evaluation date; prior work reports findings on 2023–2024 vintage models.
+- **Cost as a first-class outcome alongside accuracy** — every prediction records token usage and dollar cost at runtime; we report cost-per-correct (USD per exact-match outcome) as the deployment-decisive normalization and identify the small Pareto frontier in the accuracy-cost plane.
+- **Methodological instruments that make the above two contributions interpretable** — a 6-way outcome taxonomy (fabrication and abstention as explicit, mutually-exclusive buckets), a within-model ablation across zero-shot / constrained / RAG, and a D4 abbreviation-stress mode that strips lexical signal so semantic-mapping behavior is testable separately from lexical lookup.
 
 ## References
 

@@ -141,15 +141,14 @@
 
 \section*{ACKNOWLEDGMENTS}
 \textbf{Use of AI tools.} This work used Anthropic's Claude (Claude
-Code CLI, model Claude Opus 4.7) as a coding, drafting, and
+Code, model Claude Opus 4.7) as a coding, drafting, and
 figure-design assistant during the development of the benchmark
 codebase, the manuscript prose, and the figures. The author
 conceived and designed the study, defined the experimental framework
 and outcome taxonomy, conducted all analyses, and reviewed and
 verified the AI-generated content. The author retains full
 responsibility for the content, methodology, results, and any
-errors. AI tools are not credited as authors per the COPE position
-statement on Authorship and AI Tools.
+errors. 
 
 \section*{COMPETING INTERESTS}
 The author declares no competing interests.
@@ -162,17 +161,19 @@ corresponding author; per-call costs are itemized in §Results.
 \section*{DATA AVAILABILITY}
 The Synthea-generated FHIR Bundles used for the headline evaluation
 are freely redistributable and will be released as
-\texttt{benchmarks/synthetic\_v1/} alongside the paper. All source
-code, including the data-preparation pipeline, degradation logic,
+\texttt{benchmarks/synthetic\_v1/} alongside the paper at
+\url{https://github.com/ufbfung/phantom-codes}. All source code,
+including the data-preparation pipeline, degradation logic,
 ICD-10-CM validator, eval runner, prompts, and baselines, is
-publicly available at the project repository under the MIT License.
+publicly available at the same repository under the MIT License.
 
 \section*{CODE AVAILABILITY}
 All source code, configuration files, synthetic test fixtures, and
-the manuscript source are publicly available at the project's GitHub
-repository under the MIT License. The repository includes the full
-evaluation pipeline and the Synthea generation configuration needed
-to reproduce the headline matrix end-to-end.
+the manuscript source are publicly available at
+\url{https://github.com/ufbfung/phantom-codes} under the MIT
+License. The repository includes the full evaluation pipeline and
+the Synthea generation configuration needed to reproduce the
+headline matrix end-to-end.
 
 \section*{AUTHOR CONTRIBUTIONS}
 B.K.F.\ designed the benchmark, implemented the codebase, conducted

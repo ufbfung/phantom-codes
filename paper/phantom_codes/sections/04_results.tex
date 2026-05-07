@@ -116,8 +116,9 @@ under D4 abbreviation stress. Full 24-LLM tables in Supplementary
 \subsection{Top-1 vs top-5 exact-match lift}\label{top-1-vs-top-5-exact-match-lift}
 
 Many configurations have the right answer in their top-5
-candidates even when their top-1 pick is wrong. Lift quantifies
-the gap.
+candidates even when their top-1 pick is wrong. Table 2 reports
+top-1 accuracy, top-5 accuracy, and the resulting lift across
+selected configurations.
 
 \begin{longtable}[]{@{}llll@{}}
 \caption{Top-1 vs top-5 exact-match lift across selected configurations.}\tabularnewline
@@ -158,11 +159,12 @@ Most prior LLM medical-coding benchmarks report accuracy in
 isolation \autocite{Soroush2024,Almeida2025,Singh2025}. The deployment
 decision, however, hinges on the joint distribution of API cost
 per call, per-call accuracy, and the rate of failure modes that
-drive downstream QA cost. Selected configurations from the
-headline matrix are shown below; the full 28-configuration
-breakdown, per-bucket cost decomposition, break-even analysis
-(LLM and QA versus a human coder), and annual cost projections at
-deployment scale are reported in Supplementary §S5.
+drive downstream QA cost. Table 3 reports per-call API cost across
+selected (model, prompting-mode) configurations from the headline
+matrix; the full 28-configuration breakdown, per-bucket cost
+decomposition, break-even analysis (LLM and QA versus a human
+coder), and annual cost projections at deployment scale are
+reported in Supplementary §S5.
 
 \begin{longtable}[]{@{}lrrr@{}}
 \caption{Per-call API cost across selected (model, prompting-mode) configurations from the headline matrix. n = number of completed calls (out of 500 attempted). †, ‡ explained in the footnotes below.}\tabularnewline

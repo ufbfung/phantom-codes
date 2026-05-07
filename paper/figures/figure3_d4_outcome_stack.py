@@ -65,6 +65,18 @@ BUCKET_COLORS = {
     "hallucination": "#C0392B",    # red (deployment-critical failure)
 }
 
+# Hatching gives a second visual cue beyond color so readers with
+# color-vision deficits can still tell category_match and chapter_match
+# (the two lighter greens) apart from exact_match.
+BUCKET_HATCH = {
+    "exact_match": "",
+    "category_match": "//",
+    "chapter_match": "xx",
+    "out_of_domain": "",
+    "no_prediction": "",
+    "hallucination": "",
+}
+
 PRETTY = {
     "claude-haiku-4-5": "Claude Haiku 4.5",
     "claude-sonnet-4-6": "Claude Sonnet 4.6",
@@ -120,6 +132,7 @@ def render() -> None:
             color=BUCKET_COLORS[bucket],
             edgecolor="white",
             linewidth=0.4,
+            hatch=BUCKET_HATCH[bucket],
             label=BUCKET_LABELS[bucket],
         )
         cumulative += widths

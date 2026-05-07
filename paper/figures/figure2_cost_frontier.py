@@ -53,6 +53,10 @@ MODE_MARKERS = {
 
 MODE_LABELS = {"zeroshot": "Zero-shot", "constrained": "Constrained", "rag": "RAG"}
 
+# Provider display labels (Python's str.capitalize() lowercases the
+# remainder, which renders "OpenAI" as "Openai" — define explicitly).
+PROVIDER_LABELS = {"anthropic": "Anthropic", "openai": "OpenAI", "google": "Google"}
+
 
 def classify_provider(model_name: str) -> str:
     if model_name.startswith("claude"):
@@ -179,7 +183,7 @@ def render() -> None:
         handles.append(plt.Line2D([0], [0], marker="o", color="w",
                                    markerfacecolor=color,
                                    markeredgecolor="black", markersize=8,
-                                   label=provider.capitalize()))
+                                   label=PROVIDER_LABELS[provider]))
     for mode, marker in MODE_MARKERS.items():
         handles.append(plt.Line2D([0], [0], marker=marker, color="w",
                                    markerfacecolor="#888",

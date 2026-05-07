@@ -20,11 +20,10 @@ the PDFs from source.
 Headline n=125 Synthea evaluation completed 2026-05-04; all six
 main-text sections of the JAMIA paper are drafted with realized
 numbers (no `[TBD]` markers). Main text fits within JAMIA's
-4,000-word limit (~3,830 words); abstract is 251 prose words
-(≤250 cap, within rounding). The PubMedBERT tech report has 7
-sections (~3,220 words) covering data + compliance, architecture,
-hardware, optimization, results, discussion, and a reproduction
-appendix.
+4,000-word limit (~3,200 words); abstract is ~225 prose words
+(≤250 cap). The PubMedBERT tech report has 7 sections (~3,200
+words) covering data + compliance, architecture, hardware,
+optimization, results, discussion, and a reproduction appendix.
 
 | Document | Sections | State |
 |---|---|---|

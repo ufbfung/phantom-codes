@@ -37,6 +37,16 @@
 \usepackage{caption}
 \captionsetup{font={small,it}, labelfont={small,bf,up}, labelsep=colon}
 \usepackage{calc}
+\usepackage{etoolbox}
+
+% Tables in this supplement are wide auditability tables (28 configs ×
+% 4 modes × 6 buckets, full Wilson CIs, etc.). Under the default
+% \doublespacing applied above, those tables break visually: long
+% model identifiers like ``claude-haiku-4-5:zeroshot'' wrap across
+% multiple lines and adjacent cells collide. Fix: every longtable
+% body renders single-spaced and at \footnotesize; the \doublespacing
+% setting is restored automatically when the longtable closes.
+\AtBeginEnvironment{longtable}{\singlespacing\footnotesize}
 
 \usepackage{amsmath}
 \usepackage{amssymb}

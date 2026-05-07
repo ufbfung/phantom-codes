@@ -1,21 +1,21 @@
 \section{S5: Cost economics: extended analysis}\label{s5-cost-economics-extended-analysis}
 
-This supplement extends §2 of the main manuscript. The headline
-per-call costs and cost-per-correct numbers from the n=125 Synthea
-run are reported in main §2; this section covers (a) the full
-24-LLM × 4-mode cost table, (b) per-bucket cost decomposition, (c)
-the original metric framework (M3 hallucination tax + M4
+This supplement extends §3 (Results) of the main manuscript. The
+headline per-call costs and cost-per-correct numbers from the n=125
+Synthea run are reported in main §3; this section covers (a) the
+full 24-LLM × 4-mode cost table, (b) per-bucket cost decomposition,
+(c) the original metric framework (M3 hallucination tax + M4
 fixed-accuracy-floor cost), (d) projected production-deployment
 costs at multiple organization scales, (e) the deployment break-even
 analysis, (f) qualitative deployment considerations (caching
 threshold quirks, reliability cost), and (g) the full version of the
-framing caveats summarized briefly in main §2.
+framing caveats summarized briefly in main §3.
 
 \subsection{S5.1: Full cost table (24 LLM configurations × 4 modes)}\label{s5.1-full-cost-table-24-llm-configurations-4-modes}
 
 The full per-(model, prompting-mode) cost breakdown is in
 \texttt{results/summary/n125\_run\_v2/cost\_per\_correct.csv}. The headline
-configurations are reproduced in main §2; the full set adds the 12
+configurations are reproduced in main §3; the full set adds the 12
 constrained and RAG configurations for the 9 LLMs other than Haiku
 (Sonnet, Opus, GPT-5.5, GPT-4o-mini, Gemini 2.5 Pro/Flash, Gemini
 3 Flash Preview), plus the 3 string-matching baselines and the
@@ -70,9 +70,9 @@ annually for a single deployment.
 
 For each model, find the configuration (zero-shot vs.~constrained
 vs.~RAG) that achieves accuracy $\geq$ X\% and report cost. Allows
-comparison of LLM zero-shot vs.~RAG-LLM vs.~trained-classifier at
-iso-accuracy, which is the question a deployment team actually asks. From
-the n=125 headline data:
+comparison of zero-shot vs.~constrained vs.~RAG at iso-accuracy,
+which is the question a deployment team actually asks. From the
+n=125 headline data:
 
 \begin{itemize}
 \tightlist
@@ -101,7 +101,7 @@ benchmark because organizations choose ONE configuration (not the
 full 28-config matrix) and run it on incoming records continuously.
 We project costs for representative single-configuration
 deployments at three production scales, using the per-call costs
-observed in main §2 M1 with a conservative 1.4× scale-up for
+observed in main §3 Table 3 with a conservative 1.4× scale-up for
 real-clinical-text payloads (which carry more metadata than Synthea
 Conditions). Average 5 coded conditions per healthcare encounter
 (typical for inpatient discharges in cardiometabolic populations).
@@ -181,7 +181,7 @@ LLM cost extrapolations above.
 \item
   Per-call cost is dominated by zero-shot mode in this projection.
   Constrained or RAG modes add \textasciitilde1.5--2× per-call cost relative to
-  zero-shot for the same model (per main §2 M1); production
+  zero-shot for the same model (per main §3 Table 3); production
   deployments using those modes would scale annual costs
   proportionally.
 \item
@@ -240,7 +240,7 @@ Replication at n=500 would sharpen the break-even surfaces.}
 \end{quote}
 
 For each model configuration, total \$ per accurately-coded
-encounter under four deployment scenarios:
+encounter under three deployment scenarios:
 
 \begin{enumerate}
 \def\labelenumi{\arabic{enumi}.}
@@ -249,15 +249,12 @@ encounter under four deployment scenarios:
   \textbf{Human coder alone.} Cost = \$H/hr × (chart\_throughput\^{}-1).
 \item
   \textbf{LLM, no QA.} Cost = API cost per encounter; accuracy =
-  top-1 rate (no review of model outputs)
+  top-1 rate (no review of model outputs).
 \item
   \textbf{LLM, QA only on flagged predictions.} Flag low-confidence
   outputs, hallucinated codes (mechanically detectable via the
   ICD-10-CM validator), and abstentions (no\_prediction);
-  QA cost added per flag
-\item
-  \textbf{Trained classifier with QA.} Comparable QA fraction;
-  training cost is negligible per §S5.4
+  QA cost added per flag.
 \end{enumerate}
 
 Sensitivity sweep dimensions: human-coder hourly rate (\$30--\$80/hr),
@@ -322,7 +319,7 @@ these are free.
 
 \subsubsection{S5.7.3 Pricing snapshots are reproducibility artifacts}\label{s5.7.3-pricing-snapshots-are-reproducibility-artifacts}
 
-API pricing changes. The cost numbers reported in main §2 and this
+API pricing changes. The cost numbers reported in main §3 and this
 supplement are anchored to the pricing snapshot in
 \texttt{configs/pricing.yaml} at the time of the headline run (2026-05-03,
 date-stamped in the run manifest)
@@ -372,7 +369,7 @@ answer:
 Preliminary per-call cost data from the 2026-05-02 Phase-0 wiring-
 validation run on 6 fixture FHIR Conditions × 4 degradation modes
 (24 records) × 9 LLM configurations (216 calls). Reported here for
-historical reference; the headline-run numbers in main §2 supersede
+historical reference; the headline-run numbers in main §3 supersede
 them.
 
 \begin{longtable}[]{@{}

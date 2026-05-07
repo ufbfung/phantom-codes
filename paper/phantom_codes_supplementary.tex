@@ -1,0 +1,1554 @@
+% ====================================================================
+% GENERATED FILE — DO NOT EDIT.
+%
+% This file is auto-flattened by `make flatten` from the modular
+% sources at paper/phantom_codes/{main.tex,sections/} (or the
+% supplementary equivalent). Edit those instead; this file is
+% overwritten on every `make snapshot-phantom_codes`.
+%
+% Source master: phantom_codes/supplementary.tex
+% Generator:     paper/scripts/flatten_paper.py
+% ====================================================================
+
+% Phantom Codes — supplementary materials master file (JAMIA supplement).
+%
+% Mirrors phantom_codes/main.tex's preamble (same biblatex setup, same
+% packages) so prose conventions and citation rendering are identical
+% between the main manuscript and the supplement. The main difference:
+% this file \input{}'s supp_sections/*.tex (one per S1-Sn section)
+% instead of sections/*.tex.
+%
+% Build:
+%     cd paper && make phantom_codes_supp
+%
+% Output: paper/phantom_codes/build/supplementary.pdf (snapshotted to
+%         paper/phantom_codes_supplementary.pdf via
+%         `make snapshot-phantom_codes-supp`).
+%
+% Editing model:
+%   - Prose edits happen in supp_sections/*.tex.
+%   - This file only changes when you add/remove/reorder sections,
+%     change document class, or restyle the title.
+
+\documentclass[11pt]{article}
+
+% Fonts & Unicode (XeLaTeX) — see main.tex for rationale.
+\usepackage{fontspec}
+\setmainfont{STIX Two Text}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{microtype}
+\usepackage{parskip}
+\usepackage{setspace}
+\doublespacing
+
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{caption}
+\captionsetup{font={small,it}, labelfont={small,bf,up}, labelsep=colon}
+\usepackage{calc}
+\usepackage{etoolbox}
+
+% Tables in this supplement are wide auditability tables (28 configs ×
+% 4 modes × 6 buckets, full Wilson CIs, etc.). Under the default
+% \doublespacing applied above, those tables break visually: long
+% model identifiers like ``claude-haiku-4-5:zeroshot'' wrap across
+% multiple lines and adjacent cells collide. Fix: every longtable
+% body renders single-spaced and at \footnotesize; the \doublespacing
+% setting is restored automatically when the longtable closes.
+\AtBeginEnvironment{longtable}{\singlespacing\footnotesize}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% biblatex with biber backend — matches main.tex; same Vancouver style
+% so cross-references between main + supplement render consistently.
+\usepackage[backend=biber, style=vancouver, sortlocale=en_US,
+            maxnames=3, minnames=3]{biblatex}
+\addbibresource{references.bib}
+
+\usepackage[colorlinks=true,
+            linkcolor=blue!60!black,
+            citecolor=blue!60!black,
+            urlcolor=blue!60!black]{hyperref}
+\usepackage{xurl}
+
+\usepackage{xcolor}
+\usepackage{fancyvrb}
+\usepackage{framed}
+\usepackage{csquotes}
+
+% Pandoc legacy shim (same as main.tex)
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
+\title{%
+  Supplementary Materials \\
+  \large Phantom Codes: Hallucination, Accuracy, and Cost in Frontier-LLM Medical Concept Normalization}
+\author{%
+  Brian K. Fung \\[2pt]
+  \small Independent Researcher \\[2pt]
+  \small\href{mailto:brian@briankfung.com}{\texttt{brian@briankfung.com}}}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\noindent
+This supplement accompanies the main manuscript. References cite the
+shared bibliography (\texttt{paper/references.bib}); section labels use
+the prefix S1--Sn for cross-reference from the main text.
+
+\tableofcontents
+\bigskip
+
+% ─── Body ──────────────────────────────────────────────────────────────
+% Each S* section is generated from supp_sections/*.md via pandoc; see
+% Makefile. Add a new section by: (1) creating supp_sections/SN_name.md
+% and (2) appending an \input{build/supp_sections/SN_name} line below.
+
+\section{S1: Prompt templates and provider-specific structured-output configurations}\label{s1-prompt-templates-and-provider-specific-structured-output-configurations}
+
+This supplement reproduces the verbatim system and user prompts and
+the provider-specific structured-output configurations used in the
+headline matrix. Three prompting modes (\texttt{zeroshot}, \texttt{constrained},
+\texttt{rag}) are evaluated; each is reproduced below per provider
+(Anthropic, OpenAI, Google) for full reviewer auditability. All
+content is extracted verbatim from
+\href{https://github.com/ufbfung/phantom-codes/blob/main/src/phantom_codes/models/llm.py}{\texttt{src/phantom\_codes/models/llm.py}}
+and
+\href{https://github.com/ufbfung/phantom-codes/blob/main/src/phantom_codes/models/rag_llm.py}{\texttt{src/phantom\_codes/models/rag\_llm.py}}.
+Note that the verbatim prompt strings reproduced in code blocks
+preserve the punctuation present in the source, including any
+em-dashes that appear in the actual model-facing prompts.
+
+\subsection{S1.1: Zero-shot system prompt}\label{s1.1-zero-shot-system-prompt}
+
+The zero-shot prompt is the static ``base'' string returned by
+\texttt{build\_system\_prompt(mode=PromptMode.ZEROSHOT)}. The model receives
+this once per record (it is the cacheable prefix on Anthropic; OpenAI
+and Google also automatically cache long prefixes). \texttt{top\_k} defaults
+to 5 in the headline run.
+
+\begin{verbatim}
+You are a clinical informatics assistant. Your task is to recover the
+standardized ICD-10-CM diagnosis code for a clinical condition described
+by the user.
+
+Return up to 5 candidate codes, ranked by your confidence (highest
+first), via the `record_predictions` tool. Use ICD-10-CM dotted format
+(e.g., 'E11.9', 'I10', 'N18.31'). Provide the official display text for
+each code. Confidence values should reflect your true belief about each
+candidate.
+
+If you are uncertain, still return your best guess(es) — the eval framework
+will distinguish hallucinations (non-existent codes) from real-but-wrong codes.
+\end{verbatim}
+
+\subsection{S1.2: Constrained system prompt}\label{s1.2-constrained-system-prompt}
+
+The constrained prompt appends the full CMS ACCESS-scope candidate
+list to the zero-shot base. The candidate block is rendered one
+candidate per line as \texttt{-\ \textless{}code\textgreater{}:\ \textless{}display\textgreater{}\ {[}\textless{}GROUP\textgreater{}{]}} (where
+\texttt{\textless{}GROUP\textgreater{}} is \texttt{CKM} or \texttt{ECKM}). The headline run uses \textasciitilde85 candidate
+codes drawn from the CMS ACCESS Model FHIR Implementation Guide
+v0.9.6 ValueSets bundled at
+\href{https://github.com/ufbfung/phantom-codes/tree/main/src/phantom_codes/data/access_valuesets/}{\texttt{src/phantom\_codes/data/access\_valuesets/}}.
+
+\begin{verbatim}
+You are a clinical informatics assistant. Your task is to recover the
+standardized ICD-10-CM diagnosis code for a clinical condition described
+by the user.
+
+Return up to 5 candidate codes, ranked by your confidence (highest
+first), via the `record_predictions` tool. Use ICD-10-CM dotted format
+(e.g., 'E11.9', 'I10', 'N18.31'). Provide the official display text for
+each code. Confidence values should reflect your true belief about each
+candidate.
+
+If you are uncertain, still return your best guess(es) — the eval framework
+will distinguish hallucinations (non-existent codes) from real-but-wrong codes.
+
+You MUST select codes from the following candidate list. Predicting any
+code not in this list is incorrect.
+
+Candidate codes (<N> total):
+- E08.00: Diabetes mellitus due to underlying condition with hyperosmolarity without nonketotic hyperglycemic-hyperosmolar coma (NKHHC) [CKM]
+- E08.01: Diabetes mellitus due to underlying condition with hyperosmolarity with coma [CKM]
+- ...
+- E11.9: Type 2 diabetes mellitus without complications [CKM]
+- ...
+- I10: Essential (primary) hypertension [ECKM]
+- ...
+- N18.31: Chronic kidney disease, stage 3a [CKM]
+- ...
+\end{verbatim}
+
+\subsection{S1.3: RAG system prompt template}\label{s1.3-rag-system-prompt-template}
+
+The RAG prompt reuses the constrained-mode template, but the
+candidate list is populated per-record by a frozen
+sentence-transformer retriever (default \texttt{all-MiniLM-L6-v2}) returning
+the top-\texttt{retrieve\_k\ =\ 20} ACCESS-scope candidates most similar to the
+input. The structural form is therefore identical to S1.2; only the
+size and identity of the candidate block change. From
+\texttt{RAGLLMModel.predict} in
+\href{https://github.com/ufbfung/phantom-codes/blob/main/src/phantom_codes/models/rag_llm.py}{\texttt{src/phantom\_codes/models/rag\_llm.py}}:
+
+\begin{verbatim}
+# Stage 1 — retrieve top-K candidates for this specific input.
+retrieved = self._retriever.predict(
+    input_fhir=input_fhir,
+    input_text=input_text,
+    top_k=self._retrieve_k,  # default 20
+)
+
+# Stage 2 — build a constrained-mode prompt with these per-record candidates
+# and call the LLM.
+system_prompt = build_system_prompt(
+    PromptMode.CONSTRAINED,
+    candidates=candidates,
+    top_k=top_k,
+)
+\end{verbatim}
+
+\subsection{S1.4: User-message template}\label{s1.4-user-message-template}
+
+The user message varies by input mode. For D1\_full and D2\_no\_code
+inputs, the FHIR Condition resource is serialized to indented JSON.
+For D3\_text\_only and D4\_abbreviated inputs, the text is sent
+directly. Returned by \texttt{build\_user\_message(input\_fhir=…,\ input\_text=…)}:
+
+\begin{verbatim}
+The clinical condition is described by this (degraded) FHIR Condition
+resource. Recover the ICD-10-CM code:
+
+```json
+{
+  "resourceType": "Condition",
+  "code": { ... }
+  ...
+}
+\end{verbatim}
+
+\begin{verbatim}
+
+For text-only modes:
+\end{verbatim}
+
+The clinical condition is described by this text. Recover the
+ICD-10-CM code:
+
+\begin{verbatim}
+
+## S1.5: Provider-specific structured-output configuration
+
+All three providers are constrained to emit the same
+`PREDICTION_TOOL_SCHEMA` shape. The schema is defined once in
+`src/phantom_codes/models/llm.py` and adapted per-provider:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "predictions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "ICD-10-CM code in dotted format, e.g. 'E11.9' or 'I10'."
+          },
+          "display": {
+            "type": "string",
+            "description": "Human-readable description of the code."
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "description": "Model's confidence, higher = more confident."
+          }
+        },
+        "required": ["code", "display", "confidence"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["predictions"],
+  "additionalProperties": false
+}
+\end{verbatim}
+
+\subsubsection{S1.5.1 Anthropic: forced tool use}\label{s1.5.1-anthropic-forced-tool-use}
+
+The schema is wrapped in a single tool with \texttt{tool\_choice} forced to
+that tool, so the model must invoke it. The system block is marked
+\texttt{cache\_control:\ ephemeral} for prompt caching.
+
+\begin{verbatim}
+client.messages.create(
+    model=self.model_id,
+    max_tokens=self.max_tokens,
+    system=[
+        {
+            "type": "text",
+            "text": system_prompt,
+            "cache_control": {"type": "ephemeral"},
+        }
+    ],
+    tools=[
+        {
+            "name": "record_predictions",
+            "description": (
+                "Record the model's ranked ICD-10-CM code predictions "
+                "for the given clinical input."
+            ),
+            "input_schema": PREDICTION_TOOL_SCHEMA,
+        }
+    ],
+    tool_choice={"type": "tool", "name": "record_predictions"},
+    messages=[{"role": "user", "content": user_message}],
+)
+\end{verbatim}
+
+\subsubsection{\texorpdfstring{S1.5.2 OpenAI: structured outputs (\texttt{response\_format})}{S1.5.2 OpenAI: structured outputs (response\_format)}}\label{s1.5.2-openai-structured-outputs-response_format}
+
+OpenAI's strict \texttt{json\_schema} mode requires a slightly trimmed schema
+(strict-mode rejects \texttt{minItems}, \texttt{maxItems}, \texttt{minimum}, \texttt{maximum},
+\texttt{pattern}, \texttt{format}); a deep-copy helper \texttt{\_strip\_for\_openai\_strict}
+removes those fields. GPT-5+ and reasoning models (o1, o3, o4)
+require \texttt{max\_completion\_tokens} instead of the legacy \texttt{max\_tokens}.
+
+\begin{verbatim}
+strict_schema = _strip_for_openai_strict(PREDICTION_TOOL_SCHEMA)
+client.chat.completions.create(
+    model=self.model_id,
+    response_format={
+        "type": "json_schema",
+        "json_schema": {
+            "name": "icd10_predictions",
+            "strict": True,
+            "schema": strict_schema,
+        },
+    },
+    messages=[
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_message},
+    ],
+    **{token_kwarg: self.max_tokens},  # token_kwarg: "max_completion_tokens" for GPT-5+/o-series, else "max_tokens"
+)
+\end{verbatim}
+
+\subsubsection{\texorpdfstring{S1.5.3 Google: \texttt{response\_schema}}{S1.5.3 Google: response\_schema}}\label{s1.5.3-google-response_schema}
+
+Gemini's \texttt{response\_schema} is an OpenAPI 3.0 subset that rejects
+JSON Schema fields the other providers accept, most notably
+\texttt{additionalProperties} and \texttt{\$schema}. A deep-copy helper
+\texttt{\_strip\_for\_gemini} removes those fields. The system instruction is
+passed as a separate \texttt{system\_instruction} config field; output is
+constrained to \texttt{application/json} with the trimmed schema.
+
+\begin{verbatim}
+config = types.GenerateContentConfig(
+    system_instruction=system_prompt,
+    max_output_tokens=self.max_tokens,
+    response_mime_type="application/json",
+    response_schema=_strip_for_gemini(PREDICTION_TOOL_SCHEMA),
+)
+client.models.generate_content(
+    model=self.model_id,
+    contents=user_message,
+    config=config,
+)
+\end{verbatim}
+
+The Google client wraps the call in a 429-only retry loop (one
+outer attempt) that respects the server's \texttt{retryDelay} hint; 5xx
+retries are handled by the SDK's internal backoff (5 attempts,
+exponential 1$\rightarrow$16s with jitter).
+\section{S2: Extended results}\label{s2-extended-results}
+
+This supplement extends §3 of the main manuscript with the full
+per-(model, mode) outcome distribution across all 28 configurations,
+the complete Wilson 95\% CI tables for hallucination and
+no\_prediction, the full top-k lift table, the per-bucket cost
+decomposition, and an enumeration of every fabricated ICD-10-CM code
+emitted in the headline run. All tables are auto-generated by
+\texttt{phantom-codes\ report} from
+\href{https://github.com/ufbfung/phantom-codes/blob/main/BENCHMARK.md}{\texttt{results/raw/headline\_n125\_20260504T040931Z.csv}}
+into \href{https://github.com/ufbfung/phantom-codes/tree/main/results/summary/n125_run_v2/}{\texttt{results/summary/n125\_run\_v2/}};
+this supplement reproduces them verbatim for reviewer auditability.
+
+\subsection{S2.1: Full headline outcome distribution (28 configs × 4 modes)}\label{s2.1-full-headline-outcome-distribution-28-configs-4-modes}
+
+Each row sums to n=125 across the six outcome buckets (counts and
+percentages). The headline-relevant subset of these rows is in main
+§3 Table 1; the full set is reproduced below for auditability.
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 16\tabcolsep) * \real{0.22}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 16\tabcolsep) * \real{0.13}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 16\tabcolsep) * \real{0.05}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 16\tabcolsep) * \real{0.10}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 16\tabcolsep) * \real{0.10}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 16\tabcolsep) * \real{0.10}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 16\tabcolsep) * \real{0.10}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 16\tabcolsep) * \real{0.10}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 16\tabcolsep) * \real{0.10}}@{}}
+\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+Model
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Mode
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Exact
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Category
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Chapter
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+OOD
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+NoPred
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Halluc
+\end{minipage} \\
+\midrule()
+\endhead
+baseline:exact & D1\_full & 125 & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 125 (100.0\%) & 0 (0.0\%) \\
+baseline:exact & D2\_no\_code & 125 & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 125 (100.0\%) & 0 (0.0\%) \\
+baseline:exact & D3\_text\_only & 125 & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 125 (100.0\%) & 0 (0.0\%) \\
+baseline:exact & D4\_abbreviated & 125 & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 125 (100.0\%) & 0 (0.0\%) \\
+baseline:fuzzy & D1\_full & 125 & 67 (53.6\%) & 28 (22.4\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 30 (24.0\%) \\
+baseline:fuzzy & D2\_no\_code & 125 & 67 (53.6\%) & 28 (22.4\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 30 (24.0\%) \\
+baseline:fuzzy & D3\_text\_only & 125 & 67 (53.6\%) & 28 (22.4\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 30 (24.0\%) \\
+baseline:fuzzy & D4\_abbreviated & 125 & 25 (20.0\%) & 8 (6.4\%) & 30 (24.0\%) & 28 (22.4\%) & 0 (0.0\%) & 34 (27.2\%) \\
+baseline:tfidf & D1\_full & 125 & 67 (53.6\%) & 15 (12.0\%) & 0 (0.0\%) & 0 (0.0\%) & 7 (5.6\%) & 36 (28.8\%) \\
+baseline:tfidf & D2\_no\_code & 125 & 67 (53.6\%) & 15 (12.0\%) & 0 (0.0\%) & 0 (0.0\%) & 7 (5.6\%) & 36 (28.8\%) \\
+baseline:tfidf & D3\_text\_only & 125 & 67 (53.6\%) & 15 (12.0\%) & 0 (0.0\%) & 0 (0.0\%) & 7 (5.6\%) & 36 (28.8\%) \\
+baseline:tfidf & D4\_abbreviated & 125 & 25 (20.0\%) & 7 (5.6\%) & 16 (12.8\%) & 38 (30.4\%) & 0 (0.0\%) & 39 (31.2\%) \\
+claude-haiku-4-5:constrained & D1\_full & 125 & 125 (100.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-haiku-4-5:constrained & D2\_no\_code & 125 & 125 (100.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-haiku-4-5:constrained & D3\_text\_only & 125 & 117 (93.6\%) & 8 (6.4\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-haiku-4-5:constrained & D4\_abbreviated & 125 & 117 (93.6\%) & 8 (6.4\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-haiku-4-5:rag & D1\_full & 125 & 125 (100.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-haiku-4-5:rag & D2\_no\_code & 125 & 123 (98.4\%) & 2 (1.6\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-haiku-4-5:rag & D3\_text\_only & 125 & 110 (88.0\%) & 15 (12.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-haiku-4-5:rag & D4\_abbreviated & 125 & 95 (76.0\%) & 30 (24.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-haiku-4-5:zeroshot & D1\_full & 125 & 125 (100.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-haiku-4-5:zeroshot & D2\_no\_code & 125 & 113 (90.4\%) & 8 (6.4\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 4 (3.2\%) \\
+claude-haiku-4-5:zeroshot & D3\_text\_only & 125 & 105 (84.0\%) & 14 (11.2\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 6 (4.8\%) \\
+claude-haiku-4-5:zeroshot & D4\_abbreviated & 125 & 102 (81.6\%) & 18 (14.4\%) & 0 (0.0\%) & 1 (0.8\%) & 0 (0.0\%) & 4 (3.2\%) \\
+claude-opus-4-7:constrained & D1\_full & 125 & 125 (100.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-opus-4-7:constrained & D2\_no\_code & 125 & 125 (100.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-opus-4-7:constrained & D3\_text\_only & 125 & 116 (92.8\%) & 8 (6.4\%) & 0 (0.0\%) & 0 (0.0\%) & 1 (0.8\%) & 0 (0.0\%) \\
+claude-opus-4-7:constrained & D4\_abbreviated & 125 & 108 (86.4\%) & 17 (13.6\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-opus-4-7:rag & D1\_full & 125 & 125 (100.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-opus-4-7:rag & D2\_no\_code & 125 & 125 (100.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-opus-4-7:rag & D3\_text\_only & 125 & 109 (87.2\%) & 16 (12.8\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-opus-4-7:rag & D4\_abbreviated & 125 & 102 (81.6\%) & 23 (18.4\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-opus-4-7:zeroshot & D1\_full & 125 & 124 (99.2\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 1 (0.8\%) \\
+claude-opus-4-7:zeroshot & D2\_no\_code & 125 & 124 (99.2\%) & 1 (0.8\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-opus-4-7:zeroshot & D3\_text\_only & 125 & 96 (76.8\%) & 22 (17.6\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 7 (5.6\%) \\
+claude-opus-4-7:zeroshot & D4\_abbreviated & 125 & 101 (80.8\%) & 17 (13.6\%) & 0 (0.0\%) & 5 (4.0\%) & 2 (1.6\%) & 0 (0.0\%) \\
+claude-sonnet-4-6:constrained & D1\_full & 125 & 125 (100.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-sonnet-4-6:constrained & D2\_no\_code & 125 & 125 (100.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-sonnet-4-6:constrained & D3\_text\_only & 125 & 110 (88.0\%) & 15 (12.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-sonnet-4-6:constrained & D4\_abbreviated & 125 & 113 (90.4\%) & 12 (9.6\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-sonnet-4-6:rag & D1\_full & 125 & 125 (100.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-sonnet-4-6:rag & D2\_no\_code & 125 & 125 (100.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-sonnet-4-6:rag & D3\_text\_only & 125 & 108 (86.4\%) & 17 (13.6\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-sonnet-4-6:rag & D4\_abbreviated & 125 & 96 (76.8\%) & 29 (23.2\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-sonnet-4-6:zeroshot & D1\_full & 125 & 125 (100.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+claude-sonnet-4-6:zeroshot & D2\_no\_code & 125 & 94 (75.2\%) & 30 (24.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 1 (0.8\%) \\
+claude-sonnet-4-6:zeroshot & D3\_text\_only & 125 & 81 (64.8\%) & 36 (28.8\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 8 (6.4\%) \\
+claude-sonnet-4-6:zeroshot & D4\_abbreviated & 125 & 77 (61.6\%) & 40 (32.0\%) & 0 (0.0\%) & 4 (3.2\%) & 0 (0.0\%) & 4 (3.2\%) \\
+gemini-2.5-flash:constrained & D1\_full & 125 & 124 (99.2\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 1 (0.8\%) & 0 (0.0\%) \\
+gemini-2.5-flash:constrained & D2\_no\_code & 125 & 125 (100.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+gemini-2.5-flash:constrained & D3\_text\_only & 125 & 105 (84.0\%) & 5 (4.0\%) & 0 (0.0\%) & 0 (0.0\%) & 15 (12.0\%) & 0 (0.0\%) \\
+gemini-2.5-flash:constrained & D4\_abbreviated & 125 & 88 (70.4\%) & 14 (11.2\%) & 0 (0.0\%) & 0 (0.0\%) & 23 (18.4\%) & 0 (0.0\%) \\
+gemini-2.5-flash:rag & D1\_full & 125 & 123 (98.4\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 2 (1.6\%) & 0 (0.0\%) \\
+gemini-2.5-flash:rag & D2\_no\_code & 125 & 120 (96.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 5 (4.0\%) & 0 (0.0\%) \\
+gemini-2.5-flash:rag & D3\_text\_only & 125 & 96 (76.8\%) & 2 (1.6\%) & 0 (0.0\%) & 0 (0.0\%) & 27 (21.6\%) & 0 (0.0\%) \\
+gemini-2.5-flash:rag & D4\_abbreviated & 125 & 84 (67.2\%) & 15 (12.0\%) & 0 (0.0\%) & 0 (0.0\%) & 26 (20.8\%) & 0 (0.0\%) \\
+gemini-2.5-flash:zeroshot & D1\_full & 125 & 125 (100.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+gemini-2.5-flash:zeroshot & D2\_no\_code & 125 & 107 (85.6\%) & 4 (3.2\%) & 0 (0.0\%) & 0 (0.0\%) & 14 (11.2\%) & 0 (0.0\%) \\
+gemini-2.5-flash:zeroshot & D3\_text\_only & 125 & 76 (60.8\%) & 1 (0.8\%) & 0 (0.0\%) & 0 (0.0\%) & 47 (37.6\%) & 1 (0.8\%) \\
+gemini-2.5-flash:zeroshot & D4\_abbreviated & 125 & 69 (55.2\%) & 2 (1.6\%) & 0 (0.0\%) & 0 (0.0\%) & 53 (42.4\%) & 1 (0.8\%) \\
+gemini-2.5-pro:constrained & D1\_full & 125 & 57 (45.6\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 68 (54.4\%) & 0 (0.0\%) \\
+gemini-2.5-pro:constrained & D2\_no\_code & 125 & 85 (68.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 40 (32.0\%) & 0 (0.0\%) \\
+gemini-2.5-pro:constrained & D3\_text\_only & 125 & 40 (32.0\%) & 1 (0.8\%) & 0 (0.0\%) & 0 (0.0\%) & 84 (67.2\%) & 0 (0.0\%) \\
+gemini-2.5-pro:constrained & D4\_abbreviated & 125 & 49 (39.2\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 76 (60.8\%) & 0 (0.0\%) \\
+gemini-2.5-pro:rag & D1\_full & 125 & 49 (39.2\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 76 (60.8\%) & 0 (0.0\%) \\
+gemini-2.5-pro:rag & D2\_no\_code & 125 & 44 (35.2\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 81 (64.8\%) & 0 (0.0\%) \\
+gemini-2.5-pro:rag & D3\_text\_only & 125 & 31 (24.8\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 94 (75.2\%) & 0 (0.0\%) \\
+gemini-2.5-pro:rag & D4\_abbreviated & 125 & 35 (28.0\%) & 7 (5.6\%) & 0 (0.0\%) & 0 (0.0\%) & 83 (66.4\%) & 0 (0.0\%) \\
+gemini-2.5-pro:zeroshot & D1\_full & 125 & 28 (22.4\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 97 (77.6\%) & 0 (0.0\%) \\
+gemini-2.5-pro:zeroshot & D2\_no\_code & 125 & 18 (14.4\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 107 (85.6\%) & 0 (0.0\%) \\
+gemini-2.5-pro:zeroshot & D3\_text\_only & 125 & 7 (5.6\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 118 (94.4\%) & 0 (0.0\%) \\
+gemini-2.5-pro:zeroshot & D4\_abbreviated & 125 & 6 (4.8\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 119 (95.2\%) & 0 (0.0\%) \\
+gemini-3-flash-preview:constrained & D1\_full & 125 & 122 (97.6\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 3 (2.4\%) & 0 (0.0\%) \\
+gemini-3-flash-preview:constrained & D2\_no\_code & 125 & 121 (96.8\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 4 (3.2\%) & 0 (0.0\%) \\
+gemini-3-flash-preview:constrained & D3\_text\_only & 125 & 99 (79.2\%) & 4 (3.2\%) & 0 (0.0\%) & 0 (0.0\%) & 22 (17.6\%) & 0 (0.0\%) \\
+gemini-3-flash-preview:constrained & D4\_abbreviated & 125 & 106 (84.8\%) & 3 (2.4\%) & 0 (0.0\%) & 0 (0.0\%) & 16 (12.8\%) & 0 (0.0\%) \\
+gemini-3-flash-preview:rag & D1\_full & 125 & 119 (95.2\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 6 (4.8\%) & 0 (0.0\%) \\
+gemini-3-flash-preview:rag & D2\_no\_code & 125 & 107 (85.6\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 18 (14.4\%) & 0 (0.0\%) \\
+gemini-3-flash-preview:rag & D3\_text\_only & 125 & 102 (81.6\%) & 3 (2.4\%) & 0 (0.0\%) & 0 (0.0\%) & 20 (16.0\%) & 0 (0.0\%) \\
+gemini-3-flash-preview:rag & D4\_abbreviated & 125 & 84 (67.2\%) & 17 (13.6\%) & 0 (0.0\%) & 0 (0.0\%) & 24 (19.2\%) & 0 (0.0\%) \\
+gemini-3-flash-preview:zeroshot & D1\_full & 125 & 97 (77.6\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 28 (22.4\%) & 0 (0.0\%) \\
+gemini-3-flash-preview:zeroshot & D2\_no\_code & 125 & 90 (72.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 35 (28.0\%) & 0 (0.0\%) \\
+gemini-3-flash-preview:zeroshot & D3\_text\_only & 125 & 69 (55.2\%) & 4 (3.2\%) & 0 (0.0\%) & 0 (0.0\%) & 52 (41.6\%) & 0 (0.0\%) \\
+gemini-3-flash-preview:zeroshot & D4\_abbreviated & 125 & 75 (60.0\%) & 1 (0.8\%) & 0 (0.0\%) & 0 (0.0\%) & 49 (39.2\%) & 0 (0.0\%) \\
+gpt-4o-mini:constrained & D1\_full & 125 & 125 (100.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+gpt-4o-mini:constrained & D2\_no\_code & 125 & 125 (100.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+gpt-4o-mini:constrained & D3\_text\_only & 125 & 113 (90.4\%) & 12 (9.6\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+gpt-4o-mini:constrained & D4\_abbreviated & 125 & 108 (86.4\%) & 17 (13.6\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+gpt-4o-mini:rag & D1\_full & 125 & 125 (100.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+gpt-4o-mini:rag & D2\_no\_code & 125 & 125 (100.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+gpt-4o-mini:rag & D3\_text\_only & 125 & 101 (80.8\%) & 24 (19.2\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+gpt-4o-mini:rag & D4\_abbreviated & 125 & 101 (80.8\%) & 24 (19.2\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+gpt-4o-mini:zeroshot & D1\_full & 125 & 124 (99.2\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 1 (0.8\%) \\
+gpt-4o-mini:zeroshot & D2\_no\_code & 125 & 106 (84.8\%) & 2 (1.6\%) & 1 (0.8\%) & 0 (0.0\%) & 0 (0.0\%) & 16 (12.8\%) \\
+gpt-4o-mini:zeroshot & D3\_text\_only & 125 & 98 (78.4\%) & 13 (10.4\%) & 0 (0.0\%) & 2 (1.6\%) & 0 (0.0\%) & 12 (9.6\%) \\
+gpt-4o-mini:zeroshot & D4\_abbreviated & 125 & 98 (78.4\%) & 16 (12.8\%) & 0 (0.0\%) & 2 (1.6\%) & 0 (0.0\%) & 9 (7.2\%) \\
+gpt-5.5:constrained & D1\_full & 125 & 125 (100.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+gpt-5.5:constrained & D2\_no\_code & 125 & 125 (100.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+gpt-5.5:constrained & D3\_text\_only & 125 & 109 (87.2\%) & 16 (12.8\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+gpt-5.5:constrained & D4\_abbreviated & 125 & 109 (87.2\%) & 16 (12.8\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+gpt-5.5:rag & D1\_full & 125 & 124 (99.2\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 1 (0.8\%) & 0 (0.0\%) \\
+gpt-5.5:rag & D2\_no\_code & 125 & 123 (98.4\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 2 (1.6\%) & 0 (0.0\%) \\
+gpt-5.5:rag & D3\_text\_only & 125 & 109 (87.2\%) & 16 (12.8\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+gpt-5.5:rag & D4\_abbreviated & 125 & 90 (72.0\%) & 29 (23.2\%) & 0 (0.0\%) & 0 (0.0\%) & 6 (4.8\%) & 0 (0.0\%) \\
+gpt-5.5:zeroshot & D1\_full & 125 & 124 (99.2\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 1 (0.8\%) & 0 (0.0\%) \\
+gpt-5.5:zeroshot & D2\_no\_code & 125 & 125 (100.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+gpt-5.5:zeroshot & D3\_text\_only & 125 & 89 (71.2\%) & 16 (12.8\%) & 0 (0.0\%) & 19 (15.2\%) & 1 (0.8\%) & 0 (0.0\%) \\
+gpt-5.5:zeroshot & D4\_abbreviated & 125 & 106 (84.8\%) & 16 (12.8\%) & 0 (0.0\%) & 3 (2.4\%) & 0 (0.0\%) & 0 (0.0\%) \\
+sentence-transformer:retrieval & D1\_full & 125 & 101 (80.8\%) & 24 (19.2\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+sentence-transformer:retrieval & D2\_no\_code & 125 & 101 (80.8\%) & 24 (19.2\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+sentence-transformer:retrieval & D3\_text\_only & 125 & 101 (80.8\%) & 24 (19.2\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) & 0 (0.0\%) \\
+sentence-transformer:retrieval & D4\_abbreviated & 125 & 42 (33.6\%) & 4 (3.2\%) & 8 (6.4\%) & 65 (52.0\%) & 0 (0.0\%) & 6 (4.8\%) \\
+\bottomrule()
+\end{longtable}
+
+\subsection{S2.2: Full hallucination-rate table with Wilson 95\% CIs}\label{s2.2-full-hallucination-rate-table-with-wilson-95-cis}
+
+Hallucination here is the \emph{narrow} definition: a predicted code
+that does not exist in CMS-published FY2026 ICD-10-CM (a fabricated
+string).
+Empty predictions / abstentions are reported separately as
+no\_prediction in §S2.3.
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.26}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.14}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.08}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.17}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.35}}@{}}
+\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+Model
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Mode
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Hallucinations
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Rate (95\% CI)
+\end{minipage} \\
+\midrule()
+\endhead
+baseline:exact & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+baseline:exact & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+baseline:exact & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+baseline:exact & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+baseline:fuzzy & D1\_full & 125 & 30 & 24.0\% (17.4--32.2) \\
+baseline:fuzzy & D2\_no\_code & 125 & 30 & 24.0\% (17.4--32.2) \\
+baseline:fuzzy & D3\_text\_only & 125 & 30 & 24.0\% (17.4--32.2) \\
+baseline:fuzzy & D4\_abbreviated & 125 & 34 & 27.2\% (20.2--35.6) \\
+baseline:tfidf & D1\_full & 125 & 36 & 28.8\% (21.6--37.3) \\
+baseline:tfidf & D2\_no\_code & 125 & 36 & 28.8\% (21.6--37.3) \\
+baseline:tfidf & D3\_text\_only & 125 & 36 & 28.8\% (21.6--37.3) \\
+baseline:tfidf & D4\_abbreviated & 125 & 39 & 31.2\% (23.7--39.8) \\
+claude-haiku-4-5:constrained & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-haiku-4-5:constrained & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-haiku-4-5:constrained & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-haiku-4-5:constrained & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-haiku-4-5:rag & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-haiku-4-5:rag & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-haiku-4-5:rag & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-haiku-4-5:rag & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-haiku-4-5:zeroshot & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-haiku-4-5:zeroshot & D2\_no\_code & 125 & 4 & 3.2\% (1.3--7.9) \\
+claude-haiku-4-5:zeroshot & D3\_text\_only & 125 & 6 & 4.8\% (2.2--10.1) \\
+claude-haiku-4-5:zeroshot & D4\_abbreviated & 125 & 4 & 3.2\% (1.3--7.9) \\
+claude-opus-4-7:constrained & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-opus-4-7:constrained & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-opus-4-7:constrained & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-opus-4-7:constrained & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-opus-4-7:rag & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-opus-4-7:rag & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-opus-4-7:rag & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-opus-4-7:rag & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-opus-4-7:zeroshot & D1\_full & 125 & 1 & 0.8\% (0.1--4.4) \\
+claude-opus-4-7:zeroshot & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-opus-4-7:zeroshot & D3\_text\_only & 125 & 7 & 5.6\% (2.7--11.1) \\
+claude-opus-4-7:zeroshot & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-sonnet-4-6:constrained & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-sonnet-4-6:constrained & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-sonnet-4-6:constrained & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-sonnet-4-6:constrained & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-sonnet-4-6:rag & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-sonnet-4-6:rag & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-sonnet-4-6:rag & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-sonnet-4-6:rag & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-sonnet-4-6:zeroshot & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-sonnet-4-6:zeroshot & D2\_no\_code & 125 & 1 & 0.8\% (0.1--4.4) \\
+claude-sonnet-4-6:zeroshot & D3\_text\_only & 125 & 8 & 6.4\% (3.3--12.1) \\
+claude-sonnet-4-6:zeroshot & D4\_abbreviated & 125 & 4 & 3.2\% (1.3--7.9) \\
+gemini-2.5-flash:constrained & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-flash:constrained & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-flash:constrained & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-flash:constrained & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-flash:rag & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-flash:rag & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-flash:rag & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-flash:rag & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-flash:zeroshot & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-flash:zeroshot & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-flash:zeroshot & D3\_text\_only & 125 & 1 & 0.8\% (0.1--4.4) \\
+gemini-2.5-flash:zeroshot & D4\_abbreviated & 125 & 1 & 0.8\% (0.1--4.4) \\
+gemini-2.5-pro:constrained & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-pro:constrained & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-pro:constrained & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-pro:constrained & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-pro:rag & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-pro:rag & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-pro:rag & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-pro:rag & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-pro:zeroshot & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-pro:zeroshot & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-pro:zeroshot & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-pro:zeroshot & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-3-flash-preview:constrained & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-3-flash-preview:constrained & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-3-flash-preview:constrained & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-3-flash-preview:constrained & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-3-flash-preview:rag & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-3-flash-preview:rag & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-3-flash-preview:rag & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-3-flash-preview:rag & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-3-flash-preview:zeroshot & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-3-flash-preview:zeroshot & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-3-flash-preview:zeroshot & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-3-flash-preview:zeroshot & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-4o-mini:constrained & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-4o-mini:constrained & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-4o-mini:constrained & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-4o-mini:constrained & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-4o-mini:rag & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-4o-mini:rag & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-4o-mini:rag & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-4o-mini:rag & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-4o-mini:zeroshot & D1\_full & 125 & 1 & 0.8\% (0.1--4.4) \\
+gpt-4o-mini:zeroshot & D2\_no\_code & 125 & 16 & 12.8\% (8.0--19.8) \\
+gpt-4o-mini:zeroshot & D3\_text\_only & 125 & 12 & 9.6\% (5.6--16.0) \\
+gpt-4o-mini:zeroshot & D4\_abbreviated & 125 & 9 & 7.2\% (3.8--13.1) \\
+gpt-5.5:constrained & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-5.5:constrained & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-5.5:constrained & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-5.5:constrained & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-5.5:rag & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-5.5:rag & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-5.5:rag & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-5.5:rag & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-5.5:zeroshot & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-5.5:zeroshot & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-5.5:zeroshot & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-5.5:zeroshot & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+sentence-transformer:retrieval & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+sentence-transformer:retrieval & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+sentence-transformer:retrieval & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+sentence-transformer:retrieval & D4\_abbreviated & 125 & 6 & 4.8\% (2.2--10.1) \\
+\bottomrule()
+\end{longtable}
+
+\subsection{S2.3: Full no\_prediction-rate table with Wilson 95\% CIs}\label{s2.3-full-no_prediction-rate-table-with-wilson-95-cis}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.26}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.14}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.08}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.17}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.35}}@{}}
+\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+Model
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Mode
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+NoPredictions
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Rate (95\% CI)
+\end{minipage} \\
+\midrule()
+\endhead
+baseline:exact & D1\_full & 125 & 125 & 100.0\% (97.0--100.0) \\
+baseline:exact & D2\_no\_code & 125 & 125 & 100.0\% (97.0--100.0) \\
+baseline:exact & D3\_text\_only & 125 & 125 & 100.0\% (97.0--100.0) \\
+baseline:exact & D4\_abbreviated & 125 & 125 & 100.0\% (97.0--100.0) \\
+baseline:fuzzy & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+baseline:fuzzy & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+baseline:fuzzy & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+baseline:fuzzy & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+baseline:tfidf & D1\_full & 125 & 7 & 5.6\% (2.7--11.1) \\
+baseline:tfidf & D2\_no\_code & 125 & 7 & 5.6\% (2.7--11.1) \\
+baseline:tfidf & D3\_text\_only & 125 & 7 & 5.6\% (2.7--11.1) \\
+baseline:tfidf & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-haiku-4-5:constrained & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-haiku-4-5:constrained & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-haiku-4-5:constrained & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-haiku-4-5:constrained & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-haiku-4-5:rag & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-haiku-4-5:rag & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-haiku-4-5:rag & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-haiku-4-5:rag & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-haiku-4-5:zeroshot & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-haiku-4-5:zeroshot & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-haiku-4-5:zeroshot & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-haiku-4-5:zeroshot & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-opus-4-7:constrained & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-opus-4-7:constrained & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-opus-4-7:constrained & D3\_text\_only & 125 & 1 & 0.8\% (0.1--4.4) \\
+claude-opus-4-7:constrained & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-opus-4-7:rag & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-opus-4-7:rag & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-opus-4-7:rag & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-opus-4-7:rag & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-opus-4-7:zeroshot & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-opus-4-7:zeroshot & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-opus-4-7:zeroshot & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-opus-4-7:zeroshot & D4\_abbreviated & 125 & 2 & 1.6\% (0.4--5.6) \\
+claude-sonnet-4-6:constrained & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-sonnet-4-6:constrained & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-sonnet-4-6:constrained & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-sonnet-4-6:constrained & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-sonnet-4-6:rag & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-sonnet-4-6:rag & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-sonnet-4-6:rag & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-sonnet-4-6:rag & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-sonnet-4-6:zeroshot & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-sonnet-4-6:zeroshot & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-sonnet-4-6:zeroshot & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+claude-sonnet-4-6:zeroshot & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-flash:constrained & D1\_full & 125 & 1 & 0.8\% (0.1--4.4) \\
+gemini-2.5-flash:constrained & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-flash:constrained & D3\_text\_only & 125 & 15 & 12.0\% (7.4--18.9) \\
+gemini-2.5-flash:constrained & D4\_abbreviated & 125 & 23 & 18.4\% (12.6--26.1) \\
+gemini-2.5-flash:rag & D1\_full & 125 & 2 & 1.6\% (0.4--5.6) \\
+gemini-2.5-flash:rag & D2\_no\_code & 125 & 5 & 4.0\% (1.7--9.0) \\
+gemini-2.5-flash:rag & D3\_text\_only & 125 & 27 & 21.6\% (15.3--29.6) \\
+gemini-2.5-flash:rag & D4\_abbreviated & 125 & 26 & 20.8\% (14.6--28.7) \\
+gemini-2.5-flash:zeroshot & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+gemini-2.5-flash:zeroshot & D2\_no\_code & 125 & 14 & 11.2\% (6.8--17.9) \\
+gemini-2.5-flash:zeroshot & D3\_text\_only & 125 & 47 & 37.6\% (29.6--46.3) \\
+gemini-2.5-flash:zeroshot & D4\_abbreviated & 125 & 53 & 42.4\% (34.1--51.2) \\
+gemini-2.5-pro:constrained & D1\_full & 125 & 68 & 54.4\% (45.7--62.9) \\
+gemini-2.5-pro:constrained & D2\_no\_code & 125 & 40 & 32.0\% (24.5--40.6) \\
+gemini-2.5-pro:constrained & D3\_text\_only & 125 & 84 & 67.2\% (58.6--74.8) \\
+gemini-2.5-pro:constrained & D4\_abbreviated & 125 & 76 & 60.8\% (52.0--68.9) \\
+gemini-2.5-pro:rag & D1\_full & 125 & 76 & 60.8\% (52.0--68.9) \\
+gemini-2.5-pro:rag & D2\_no\_code & 125 & 81 & 64.8\% (56.1--72.6) \\
+gemini-2.5-pro:rag & D3\_text\_only & 125 & 94 & 75.2\% (67.0--81.9) \\
+gemini-2.5-pro:rag & D4\_abbreviated & 125 & 83 & 66.4\% (57.7--74.1) \\
+gemini-2.5-pro:zeroshot & D1\_full & 125 & 97 & 77.6\% (69.5--84.0) \\
+gemini-2.5-pro:zeroshot & D2\_no\_code & 125 & 107 & 85.6\% (78.4--90.7) \\
+gemini-2.5-pro:zeroshot & D3\_text\_only & 125 & 118 & 94.4\% (88.9--97.3) \\
+gemini-2.5-pro:zeroshot & D4\_abbreviated & 125 & 119 & 95.2\% (89.9--97.8) \\
+gemini-3-flash-preview:constrained & D1\_full & 125 & 3 & 2.4\% (0.8--6.8) \\
+gemini-3-flash-preview:constrained & D2\_no\_code & 125 & 4 & 3.2\% (1.3--7.9) \\
+gemini-3-flash-preview:constrained & D3\_text\_only & 125 & 22 & 17.6\% (11.9--25.2) \\
+gemini-3-flash-preview:constrained & D4\_abbreviated & 125 & 16 & 12.8\% (8.0--19.8) \\
+gemini-3-flash-preview:rag & D1\_full & 125 & 6 & 4.8\% (2.2--10.1) \\
+gemini-3-flash-preview:rag & D2\_no\_code & 125 & 18 & 14.4\% (9.3--21.6) \\
+gemini-3-flash-preview:rag & D3\_text\_only & 125 & 20 & 16.0\% (10.6--23.4) \\
+gemini-3-flash-preview:rag & D4\_abbreviated & 125 & 24 & 19.2\% (13.3--27.0) \\
+gemini-3-flash-preview:zeroshot & D1\_full & 125 & 28 & 22.4\% (16.0--30.5) \\
+gemini-3-flash-preview:zeroshot & D2\_no\_code & 125 & 35 & 28.0\% (20.9--36.4) \\
+gemini-3-flash-preview:zeroshot & D3\_text\_only & 125 & 52 & 41.6\% (33.3--50.4) \\
+gemini-3-flash-preview:zeroshot & D4\_abbreviated & 125 & 49 & 39.2\% (31.1--48.0) \\
+gpt-4o-mini:constrained & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-4o-mini:constrained & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-4o-mini:constrained & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-4o-mini:constrained & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-4o-mini:rag & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-4o-mini:rag & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-4o-mini:rag & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-4o-mini:rag & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-4o-mini:zeroshot & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-4o-mini:zeroshot & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-4o-mini:zeroshot & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-4o-mini:zeroshot & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-5.5:constrained & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-5.5:constrained & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-5.5:constrained & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-5.5:constrained & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-5.5:rag & D1\_full & 125 & 1 & 0.8\% (0.1--4.4) \\
+gpt-5.5:rag & D2\_no\_code & 125 & 2 & 1.6\% (0.4--5.6) \\
+gpt-5.5:rag & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-5.5:rag & D4\_abbreviated & 125 & 6 & 4.8\% (2.2--10.1) \\
+gpt-5.5:zeroshot & D1\_full & 125 & 1 & 0.8\% (0.1--4.4) \\
+gpt-5.5:zeroshot & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+gpt-5.5:zeroshot & D3\_text\_only & 125 & 1 & 0.8\% (0.1--4.4) \\
+gpt-5.5:zeroshot & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+sentence-transformer:retrieval & D1\_full & 125 & 0 & 0.0\% (0.0--3.0) \\
+sentence-transformer:retrieval & D2\_no\_code & 125 & 0 & 0.0\% (0.0--3.0) \\
+sentence-transformer:retrieval & D3\_text\_only & 125 & 0 & 0.0\% (0.0--3.0) \\
+sentence-transformer:retrieval & D4\_abbreviated & 125 & 0 & 0.0\% (0.0--3.0) \\
+\bottomrule()
+\end{longtable}
+
+\subsection{S2.4: Full top-1 vs top-5 lift table (all 28 configs)}\label{s2.4-full-top-1-vs-top-5-lift-table-all-28-configs}
+
+n is the count of EvalRecord items aggregated across all four
+degradation modes per model (125 records × 4 modes = 500). Lift =
+(top-5 exact-match rate) − (top-1 exact-match rate).
+
+\begin{longtable}[]{@{}lrrrr@{}}
+\toprule()
+Model & n & Top-1 & Top-5 & Lift (pp) \\
+\midrule()
+\endhead
+baseline:exact & 500 & 0.0\% & 0.0\% & +0.0pp \\
+baseline:fuzzy & 500 & 45.2\% & 62.8\% & +17.6pp \\
+baseline:tfidf & 500 & 45.2\% & 83.2\% & +38.0pp \\
+claude-haiku-4-5:constrained & 500 & 96.8\% & 100.0\% & +3.2pp \\
+claude-haiku-4-5:rag & 500 & 90.6\% & 95.6\% & +5.0pp \\
+claude-haiku-4-5:zeroshot & 500 & 89.0\% & 93.4\% & +4.4pp \\
+claude-opus-4-7:constrained & 500 & 94.8\% & 99.8\% & +5.0pp \\
+claude-opus-4-7:rag & 500 & 92.2\% & 95.6\% & +3.4pp \\
+claude-opus-4-7:zeroshot & 500 & 89.0\% & 98.8\% & +9.8pp \\
+claude-sonnet-4-6:constrained & 500 & 94.6\% & 100.0\% & +5.4pp \\
+claude-sonnet-4-6:rag & 500 & 90.8\% & 95.6\% & +4.8pp \\
+claude-sonnet-4-6:zeroshot & 500 & 75.4\% & 95.8\% & +20.4pp \\
+gemini-2.5-flash:constrained & 500 & 88.4\% & 91.4\% & +3.0pp \\
+gemini-2.5-flash:rag & 500 & 84.6\% & 85.0\% & +0.4pp \\
+gemini-2.5-flash:zeroshot & 500 & 75.4\% & 75.8\% & +0.4pp \\
+gemini-2.5-pro:constrained & 500 & 46.2\% & 46.4\% & +0.2pp \\
+gemini-2.5-pro:rag & 500 & 31.8\% & 32.0\% & +0.2pp \\
+gemini-2.5-pro:zeroshot & 500 & 11.8\% & 11.8\% & +0.0pp \\
+gemini-3-flash-preview:constrained & 500 & 89.6\% & 91.0\% & +1.4pp \\
+gemini-3-flash-preview:rag & 500 & 82.4\% & 83.0\% & +0.6pp \\
+gemini-3-flash-preview:zeroshot & 500 & 66.2\% & 67.2\% & +1.0pp \\
+gpt-4o-mini:constrained & 500 & 94.2\% & 100.0\% & +5.8pp \\
+gpt-4o-mini:rag & 500 & 90.4\% & 96.6\% & +6.2pp \\
+gpt-4o-mini:zeroshot & 500 & 85.2\% & 90.0\% & +4.8pp \\
+gpt-5.5:constrained & 500 & 93.6\% & 100.0\% & +6.4pp \\
+gpt-5.5:rag & 500 & 89.2\% & 93.8\% & +4.6pp \\
+gpt-5.5:zeroshot & 500 & 88.8\% & 98.8\% & +10.0pp \\
+sentence-transformer:retrieval & 500 & 69.0\% & 90.6\% & +21.6pp \\
+\bottomrule()
+\end{longtable}
+
+\subsection{S2.5: Per-bucket cost decomposition}\label{s2.5-per-bucket-cost-decomposition}
+
+For each (model, outcome bucket) cell, total \$ spent on that
+bucket = count × per-call cost. Three baselines (\texttt{baseline:exact},
+\texttt{baseline:fuzzy}, \texttt{baseline:tfidf}) and the frozen
+sentence-transformer retrieval baseline have zero LLM API cost by
+construction; their rows are present for completeness but show
+``n/a'' for cost columns.
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.26}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.22}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.10}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.21}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.21}}@{}}
+\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+Model
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Outcome
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Total cost
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+\$/call
+\end{minipage} \\
+\midrule()
+\endhead
+baseline:exact & no\_prediction & 500 & n/a & n/a \\
+baseline:fuzzy & exact\_match & 226 & n/a & n/a \\
+baseline:fuzzy & category\_match & 92 & n/a & n/a \\
+baseline:fuzzy & chapter\_match & 30 & n/a & n/a \\
+baseline:fuzzy & out\_of\_domain & 28 & n/a & n/a \\
+baseline:fuzzy & hallucination & 124 & n/a & n/a \\
+baseline:tfidf & exact\_match & 226 & n/a & n/a \\
+baseline:tfidf & category\_match & 52 & n/a & n/a \\
+baseline:tfidf & chapter\_match & 16 & n/a & n/a \\
+baseline:tfidf & out\_of\_domain & 38 & n/a & n/a \\
+baseline:tfidf & no\_prediction & 21 & n/a & n/a \\
+baseline:tfidf & hallucination & 147 & n/a & n/a \\
+claude-haiku-4-5:constrained & exact\_match & 484 & \$2.07 & \$0.0043 \\
+claude-haiku-4-5:constrained & category\_match & 16 & \$0.07 & \$0.0043 \\
+claude-haiku-4-5:rag & exact\_match & 453 & \$1.10 & \$0.0024 \\
+claude-haiku-4-5:rag & category\_match & 47 & \$0.12 & \$0.0025 \\
+claude-haiku-4-5:zeroshot & exact\_match & 445 & \$0.99 & \$0.0022 \\
+claude-haiku-4-5:zeroshot & category\_match & 40 & \$0.09 & \$0.0024 \\
+claude-haiku-4-5:zeroshot & out\_of\_domain & 1 & \$0.0018 & \$0.0018 \\
+claude-haiku-4-5:zeroshot & hallucination & 14 & \$0.03 & \$0.0023 \\
+claude-opus-4-7:constrained & exact\_match & 474 & \$5.95 & \$0.01 \\
+claude-opus-4-7:constrained & category\_match & 25 & \$0.35 & \$0.01 \\
+claude-opus-4-7:constrained & no\_prediction & 1 & \$0.01 & \$0.01 \\
+claude-opus-4-7:rag & exact\_match & 461 & \$6.59 & \$0.01 \\
+claude-opus-4-7:rag & category\_match & 39 & \$0.52 & \$0.01 \\
+claude-opus-4-7:zeroshot & exact\_match & 445 & \$6.00 & \$0.01 \\
+claude-opus-4-7:zeroshot & category\_match & 40 & \$0.56 & \$0.01 \\
+claude-opus-4-7:zeroshot & out\_of\_domain & 5 & \$0.07 & \$0.01 \\
+claude-opus-4-7:zeroshot & no\_prediction & 2 & \$0.03 & \$0.01 \\
+claude-opus-4-7:zeroshot & hallucination & 8 & \$0.11 & \$0.01 \\
+claude-sonnet-4-6:constrained & exact\_match & 473 & \$3.09 & \$0.0065 \\
+claude-sonnet-4-6:constrained & category\_match & 27 & \$0.18 & \$0.0066 \\
+claude-sonnet-4-6:rag & exact\_match & 454 & \$3.35 & \$0.0074 \\
+claude-sonnet-4-6:rag & category\_match & 46 & \$0.34 & \$0.0073 \\
+claude-sonnet-4-6:zeroshot & exact\_match & 377 & \$2.61 & \$0.0069 \\
+claude-sonnet-4-6:zeroshot & category\_match & 106 & \$0.69 & \$0.0065 \\
+claude-sonnet-4-6:zeroshot & out\_of\_domain & 4 & \$0.03 & \$0.0065 \\
+claude-sonnet-4-6:zeroshot & hallucination & 13 & \$0.09 & \$0.0066 \\
+gemini-2.5-flash:constrained & exact\_match & 442 & \$0.08 & \$0.0002 \\
+gemini-2.5-flash:constrained & category\_match & 19 & \$0.0034 & \$0.0002 \\
+gemini-2.5-flash:constrained & no\_prediction & 39 & \$0.0064 & \$0.0002 \\
+gemini-2.5-flash:rag & exact\_match & 423 & \$0.03 & \$0.0001 \\
+gemini-2.5-flash:rag & category\_match & 17 & \$0.0008 & \$0.0000 \\
+gemini-2.5-flash:rag & no\_prediction & 60 & \$0.0029 & \$0.0000 \\
+gemini-2.5-flash:zeroshot & exact\_match & 377 & \$0.02 & \$0.0001 \\
+gemini-2.5-flash:zeroshot & category\_match & 7 & \$0.0004 & \$0.0001 \\
+gemini-2.5-flash:zeroshot & no\_prediction & 114 & \$0.0031 & \$0.0000 \\
+gemini-2.5-flash:zeroshot & hallucination & 2 & \$0.0001 & \$0.0001 \\
+gemini-2.5-pro:constrained & exact\_match & 231 & \$0.93 & \$0.0040 \\
+gemini-2.5-pro:constrained & category\_match & 1 & \$0.0041 & \$0.0041 \\
+gemini-2.5-pro:constrained & no\_prediction & 268 & \$0.63 & \$0.0024 \\
+gemini-2.5-pro:rag & exact\_match & 159 & \$0.27 & \$0.0017 \\
+gemini-2.5-pro:rag & category\_match & 7 & \$0.0081 & \$0.0012 \\
+gemini-2.5-pro:rag & no\_prediction & 334 & \$0.27 & \$0.0008 \\
+gemini-2.5-pro:zeroshot & exact\_match & 59 & \$0.13 & \$0.0023 \\
+gemini-2.5-pro:zeroshot & no\_prediction & 441 & \$0.27 & \$0.0006 \\
+gemini-3-flash-preview:constrained & exact\_match & 448 & \$0.34 & \$0.0008 \\
+gemini-3-flash-preview:constrained & category\_match & 7 & \$0.0054 & \$0.0008 \\
+gemini-3-flash-preview:constrained & no\_prediction & 45 & \$0.03 & \$0.0006 \\
+gemini-3-flash-preview:rag & exact\_match & 412 & \$0.23 & \$0.0006 \\
+gemini-3-flash-preview:rag & category\_match & 20 & \$0.0084 & \$0.0004 \\
+gemini-3-flash-preview:rag & no\_prediction & 68 & \$0.03 & \$0.0004 \\
+gemini-3-flash-preview:zeroshot & exact\_match & 331 & \$0.19 & \$0.0006 \\
+gemini-3-flash-preview:zeroshot & category\_match & 5 & \$0.0031 & \$0.0006 \\
+gemini-3-flash-preview:zeroshot & no\_prediction & 164 & \$0.06 & \$0.0003 \\
+gpt-4o-mini:constrained & exact\_match & 471 & \$0.13 & \$0.0003 \\
+gpt-4o-mini:constrained & category\_match & 29 & \$0.0072 & \$0.0002 \\
+gpt-4o-mini:rag & exact\_match & 452 & \$0.08 & \$0.0002 \\
+gpt-4o-mini:rag & category\_match & 48 & \$0.0078 & \$0.0002 \\
+gpt-4o-mini:zeroshot & exact\_match & 426 & \$0.06 & \$0.0002 \\
+gpt-4o-mini:zeroshot & category\_match & 31 & \$0.0038 & \$0.0001 \\
+gpt-4o-mini:zeroshot & chapter\_match & 1 & \$0.0002 & \$0.0002 \\
+gpt-4o-mini:zeroshot & out\_of\_domain & 4 & \$0.0005 & \$0.0001 \\
+gpt-4o-mini:zeroshot & hallucination & 38 & \$0.0058 & \$0.0002 \\
+gpt-5.5:constrained & exact\_match & 468 & \$3.21 & \$0.0069 \\
+gpt-5.5:constrained & category\_match & 32 & \$0.42 & \$0.01 \\
+gpt-5.5:rag & exact\_match & 446 & \$3.01 & \$0.0068 \\
+gpt-5.5:rag & category\_match & 45 & \$0.52 & \$0.01 \\
+gpt-5.5:rag & no\_prediction & 9 & \$0.00 & \$0.00 \\
+gpt-5.5:zeroshot & exact\_match & 444 & \$2.82 & \$0.0064 \\
+gpt-5.5:zeroshot & category\_match & 32 & \$0.57 & \$0.02 \\
+gpt-5.5:zeroshot & out\_of\_domain & 22 & \$0.17 & \$0.0076 \\
+gpt-5.5:zeroshot & no\_prediction & 2 & \$0.03 & \$0.02 \\
+sentence-transformer:retrieval & exact\_match & 345 & n/a & n/a \\
+sentence-transformer:retrieval & category\_match & 76 & n/a & n/a \\
+sentence-transformer:retrieval & chapter\_match & 8 & n/a & n/a \\
+sentence-transformer:retrieval & out\_of\_domain & 65 & n/a & n/a \\
+\bottomrule()
+\end{longtable}
+
+\subsection{S2.6: Per-disease-group breakdown (CKM vs.~eCKM)}\label{s2.6-per-disease-group-breakdown-ckm-vs.-eckm}
+
+A per-disease-group breakdown (CKM-track conditions, covering
+diabetes, ASCVD, and CKD-3, versus eCKM-track conditions, covering
+hypertension, dyslipidemia, prediabetes, and obesity) is omitted
+from this v1 supplement. At n=125 the per-group N is approximately
+60 to 65 records, which yields Wilson 95\% CI half-widths of ±10 to
+±12pp on a
+50\% rate. That is too wide to support meaningful per-group
+deployment claims. Replication at the originally-targeted n=500
+cohort (per-group N $\approx$ 240--260) would tighten CI half-widths to
+\textasciitilde±5--6pp and is on the v2 roadmap; the per-prediction CSV already
+carries the \texttt{gt\_group} column needed for that analysis.
+
+\subsection{S2.7: Per-vocabulary-position breakdown}\label{s2.7-per-vocabulary-position-breakdown}
+
+A per-vocabulary-position (frequency-tier) breakdown is similarly
+omitted. The 12 unique cohort ICD-10-CM codes are heavily
+concentrated in the top tier (obesity E66.9 $\approx$ 24\%, prediabetes
+R73.03 $\approx$ 20\%, type-2 diabetes E11.x $\approx$ 31\%); the rarest tier has
+only \textasciitilde5 records per code. Bucketing into 3 frequency tiers yields
+per-tier N as low as \textasciitilde5 (rarest) to \textasciitilde30 (most-frequent), which is
+exploratory rather than authoritative. A v2 cohort with broader
+vocabulary representation (planned to extend beyond the 12-code
+v1 sample) is the right venue for this analysis.
+
+\subsection{S2.8: Hallucinated-code listing}\label{s2.8-hallucinated-code-listing}
+
+Every fabricated (non-existent) ICD-10-CM code emitted as a top-1
+prediction in the headline run, grouped by (model, mode, code) and
+sorted by count. A ``fabricated'' code is one that does not appear in
+the FY2026 CMS-published ICD-10-CM tabular list, mechanically
+checked by the bundled validator at
+\href{https://github.com/ufbfung/phantom-codes/tree/main/src/phantom_codes/data/icd10cm/}{\texttt{src/phantom\_codes/data/icd10cm/}}.
+Empty-prediction rows (the model returned no code at all) are
+classified as \texttt{no\_prediction} in the 6-way taxonomy and are not
+included here; see §S2.3 for those rates.
+
+Across the 28-configuration matrix on n=125 × 4 modes = 14,000
+total top-1 predictions, \textbf{352 (2.5\%) were fabrications}, drawn
+from 16 unique non-existent ICD-10-CM strings.
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.1875}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.1875}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.1875}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.1875}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.2500}}@{}}
+\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+Model
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Mode
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Predicted code
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Display
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+n
+\end{minipage} \\
+\midrule()
+\endhead
+baseline:fuzzy & D1\_full & E66.8 & Other obesity & 30 \\
+baseline:fuzzy & D2\_no\_code & E66.8 & Other obesity & 30 \\
+baseline:fuzzy & D3\_text\_only & E66.8 & Other obesity & 30 \\
+baseline:fuzzy & D4\_abbreviated & E66.8 & Other obesity & 30 \\
+baseline:tfidf & D1\_full & E66.8 & Other obesity & 30 \\
+baseline:tfidf & D2\_no\_code & E66.8 & Other obesity & 30 \\
+baseline:tfidf & D3\_text\_only & E66.8 & Other obesity & 30 \\
+baseline:tfidf & D4\_abbreviated & E66.8 & Other obesity & 30 \\
+baseline:tfidf & D4\_abbreviated & I63.0 & Cerebral infarction due to thrombosis of precerebral arteries & 9 \\
+gpt-4o-mini:zeroshot & D2\_no\_code & E11.2 & Type 2 diabetes mellitus with kidney complications & 8 \\
+claude-opus-4-7:zeroshot & D3\_text\_only & N18.3 & Chronic kidney disease, stage 3 (moderate) & 7 \\
+claude-sonnet-4-6:zeroshot & D3\_text\_only & N18.3 & Chronic kidney disease, stage 3 (moderate) & 7 \\
+gpt-4o-mini:zeroshot & D2\_no\_code & N18.3 & Chronic kidney disease, stage 3 (moderate) & 7 \\
+baseline:tfidf & D1\_full & E78.4 & Other hyperlipidemia & 6 \\
+baseline:tfidf & D2\_no\_code & E78.4 & Other hyperlipidemia & 6 \\
+baseline:tfidf & D3\_text\_only & E78.4 & Other hyperlipidemia & 6 \\
+gpt-4o-mini:zeroshot & D3\_text\_only & E11.2 & Type 2 diabetes mellitus with kidney complications & 6 \\
+sentence-transformer:retrieval & D4\_abbreviated & I73.8 & Other specified peripheral vascular diseases & 6 \\
+claude-haiku-4-5:zeroshot & D3\_text\_only & N18.3 & Chronic kidney disease, stage 3 & 5 \\
+gpt-4o-mini:zeroshot & D3\_text\_only & N18.3 & Chronic kidney disease stage 3 (moderate) & 5 \\
+baseline:fuzzy & D4\_abbreviated & E78.7 & Disorders of bile acid and cholesterol metabolism & 4 \\
+claude-haiku-4-5:zeroshot & D2\_no\_code & N18.3 & Chronic kidney disease, stage 3 (moderate) & 3 \\
+claude-sonnet-4-6:zeroshot & D4\_abbreviated & N18.3 & Chronic kidney disease, stage 3 (moderate) & 3 \\
+gpt-4o-mini:zeroshot & D4\_abbreviated & E11.2 & Type 2 diabetes mellitus with kidney complications & 3 \\
+gpt-4o-mini:zeroshot & D4\_abbreviated & N18.3 & Chronic kidney disease stage 3 (moderate) & 3 \\
+claude-haiku-4-5:zeroshot & D2\_no\_code & E11.339 & Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, unspecified eye & 1 \\
+claude-haiku-4-5:zeroshot & D3\_text\_only & E11.329 & Type 2 diabetes mellitus with nonproliferative diabetic retinopathy without macular edema & 1 \\
+claude-haiku-4-5:zeroshot & D4\_abbreviated & E11.329 & Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema & 1 \\
+claude-haiku-4-5:zeroshot & D4\_abbreviated & N18.3 & Chronic kidney disease, stage 3 & 1 \\
+claude-haiku-4-5:zeroshot & D4\_abbreviated & Z87.72 & Personal history of diseases of the kidney and ureter & 1 \\
+claude-haiku-4-5:zeroshot & D4\_abbreviated & Z87.735 & Personal history of chronic kidney disease & 1 \\
+claude-opus-4-7:zeroshot & D1\_full & E11.329 & Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, unspecified eye & 1 \\
+claude-sonnet-4-6:zeroshot & D2\_no\_code & E11.329 & Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy without macular edema, unspecified eye & 1 \\
+claude-sonnet-4-6:zeroshot & D3\_text\_only & E11.32 & Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy & 1 \\
+claude-sonnet-4-6:zeroshot & D4\_abbreviated & E11.32 & Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy & 1 \\
+gemini-2.5-flash:zeroshot & D3\_text\_only & E78.10 & Pure hypertriglyceridemia, unspecified & 1 \\
+gemini-2.5-flash:zeroshot & D4\_abbreviated & N18.3 & Chronic kidney disease, stage 3 (moderate) & 1 \\
+gpt-4o-mini:zeroshot & D1\_full & E11.359 & Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy, unspecified eye & 1 \\
+gpt-4o-mini:zeroshot & D2\_no\_code & E11.359 & Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy, unspecified eye & 1 \\
+gpt-4o-mini:zeroshot & D3\_text\_only & E11.359 & Type 2 diabetes mellitus with mild nonproliferative diabetic retinopathy, unspecified eye & 1 \\
+gpt-4o-mini:zeroshot & D4\_abbreviated & E11.3 & Type 2 diabetes mellitus with renal complications & 1 \\
+gpt-4o-mini:zeroshot & D4\_abbreviated & E11.359 & Type 2 diabetes mellitus with nonproliferative diabetic retinopathy, unspecified eye & 1 \\
+gpt-4o-mini:zeroshot & D4\_abbreviated & N08.3 & Disorder of kidney due to type 1 diabetes mellitus & 1 \\
+\bottomrule()
+\end{longtable}
+
+Two qualitative observations from the listing:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{String-matching baselines fabricate by design.} Both
+  \texttt{baseline:fuzzy} and \texttt{baseline:tfidf} repeatedly return \texttt{E66.8}
+  (``Other obesity'') and similar near-miss codes that exist in
+  ICD-10-CM but were not in the bundled FY2026 CMS validator's
+  accepted-code set under the strict comparison logic. These are
+  fabrications under the \emph{narrow} mechanical definition; whether
+  they should be reclassified to a softer ``out-of-domain''
+  category in v2 is a methodology choice.
+\item
+  \textbf{Frontier-LLM fabrications cluster on plausible but
+  non-existent specificity.} Most frontier-LLM fabrications fall
+  into two patterns: (a) confused chronic-kidney-disease subcoding
+  (\texttt{N18.3} instead of the real \texttt{N18.30}/\texttt{N18.31}/\texttt{N18.32}); and
+
+  \begin{enumerate}
+  \def\labelenumii{(\alph{enumii})}
+  \setcounter{enumii}{1}
+  \tightlist
+  \item
+    over-specified type-2-diabetes-with-retinopathy codes
+    (\texttt{E11.329}, \texttt{E11.339}, \texttt{E11.359}) that look like legitimate
+    ICD-10-CM strings but do not exist in the FY2026 tabular list.
+    The pattern is recognizable: the model is reaching for a more
+    specific code than the input warrants and inventing a plausible
+    suffix.
+  \end{enumerate}
+\end{enumerate}
+\section{S5: Cost economics: extended analysis}\label{s5-cost-economics-extended-analysis}
+
+This supplement extends §3 (Results) of the main manuscript. The
+headline per-call costs and cost-per-correct numbers from the n=125
+Synthea run are reported in main §3; this section covers (a) the
+full 24-LLM × 4-mode cost table, (b) per-bucket cost decomposition,
+(c) the original metric framework (M3 hallucination tax + M4
+fixed-accuracy-floor cost), (d) projected production-deployment
+costs at multiple organization scales, (e) the deployment break-even
+analysis, (f) qualitative deployment considerations (caching
+threshold quirks, reliability cost), and (g) the full version of the
+framing caveats summarized briefly in main §3.
+
+\subsection{S5.1: Full cost table (24 LLM configurations × 4 modes)}\label{s5.1-full-cost-table-24-llm-configurations-4-modes}
+
+The full per-(model, prompting-mode) cost breakdown is in
+\texttt{results/summary/n125\_run\_v2/cost\_per\_correct.csv}. The headline
+configurations are reproduced in main §3; the full set adds the 12
+constrained and RAG configurations for the 9 LLMs other than Haiku
+(Sonnet, Opus, GPT-5.5, GPT-4o-mini, Gemini 2.5 Pro/Flash, Gemini
+3 Flash Preview), plus the 3 string-matching baselines and the
+frozen sentence-transformer retrieval baseline (all zero LLM cost
+by construction). Total run cost across the 28 configurations on
+the n=125 cohort = \$49.65, dominated by Claude
+Opus (\$18.18 across its 3 modes) and the GPT-5.5 / Sonnet 4.6
+groupings.
+
+\subsection{S5.2: Per-bucket cost decomposition}\label{s5.2-per-bucket-cost-decomposition}
+
+For each (model, outcome bucket) cell, total \$ spent on that
+bucket = count × per-call cost. The full table is in
+\texttt{results/summary/n125\_run\_v2/per\_bucket\_cost.csv}. Headline pattern:
+for the Anthropic constrained configurations, \textasciitilde95\% of total spend
+went to exact-match outcomes, \textasciitilde5\% to category-match outcomes, and
+\textasciitilde0\% to hallucination/no\_prediction (mechanical consequence of the
+0\% hallucination rate observed in those cells). For Gemini 2.5 Pro
+zeroshot, by contrast, \textasciitilde32\% of spend went to exact-match outcomes
+and \textasciitilde67\% to no\_prediction (the model's empty-array responses still
+incur input-token cost via the prompt, though output tokens are
+zero or near-zero; see §S5.6 for the wrapper-level investigation
+this surfaced). Spend on hallucination outcomes was negligible
+across the matrix (consistent with the rare-fabrication finding in
+§Results).
+
+\subsection{S5.3: Original metric framework (M3 + M4)}\label{s5.3-original-metric-framework-m3-m4}
+
+\subsubsection{M3: Hallucination tax}\label{m3-hallucination-tax}
+
+For each (model, mode), the marginal cost of a hallucinated
+prediction is not just the API call. It is the API call plus the
+downstream QA time required to catch and correct the bad code:
+
+\[
+\text{hallucination\_tax} = N_{\text{hallucinations}} \times (T_{\text{QA}} \times r_{\text{coder\_hr}} + \text{API\_cost\_per\_call})
+\]
+
+where \(T_{\text{QA}}\) is QA time per flagged prediction (sweep
+1--10 min), \(r_{\text{coder\_hr}}\) is the human coder's hourly rate
+(sweep \$30--\$80/hr), and the API cost component is from M1.
+
+For the n=125 cohort, hallucination counts are low across most
+configurations, so the headline-run absolute hallucination tax is
+small in dollar terms (a few dollars at most across the matrix).
+The tax surface becomes load-bearing at production deployment
+scale (millions of encounters per year), where even a 1\%
+hallucination rate translates into tens of thousands of QA-hours
+annually for a single deployment.
+
+\subsubsection{M4: \$ per coded encounter at fixed accuracy floor}\label{m4-per-coded-encounter-at-fixed-accuracy-floor}
+
+For each model, find the configuration (zero-shot vs.~constrained
+vs.~RAG) that achieves accuracy $\geq$ X\% and report cost. Allows
+comparison of zero-shot vs.~constrained vs.~RAG at iso-accuracy,
+which is the question a deployment team actually asks. From the
+n=125 headline data:
+
+\begin{itemize}
+\tightlist
+\item
+  At the 90\% top-1 accuracy floor: GPT-4o-mini constrained
+  (94.2\%, \$0.0003/correct) and Claude Haiku 4.5 constrained
+  (96.8\%, \$0.0044/correct) are the cost-frontier configurations.
+\item
+  At the 95\% top-1 accuracy floor: only GPT-4o-mini constrained
+  (94.2\%) and Claude Sonnet 4.6 constrained (94.6\%) come close;
+  Opus 4.7 constrained (94.8\%) and GPT-5.5 constrained (93.6\%)
+  round out the top.
+\item
+  At the 99\% top-1 accuracy floor: no configuration on this cohort
+  meets the floor; Claude Haiku constrained tops out at 96.8\%.
+\end{itemize}
+
+These floors are interpretive only at n=125 with Wilson 95\% CI
+half-widths of ±5pp; replication at the originally-targeted n=500
+would tighten the comparison.
+
+\subsection{S5.4: Production-deployment cost projections}\label{s5.4-production-deployment-cost-projections}
+
+A production deployment looks very different from the headline
+benchmark because organizations choose ONE configuration (not the
+full 28-config matrix) and run it on incoming records continuously.
+We project costs for representative single-configuration
+deployments at three production scales, using the per-call costs
+observed in main §3 Table 3 with a conservative 1.4× scale-up for
+real-clinical-text payloads (which carry more metadata than Synthea
+Conditions). Average 5 coded conditions per healthcare encounter
+(typical for inpatient discharges in cardiometabolic populations).
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2727}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3636}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3636}}@{}}
+\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+Production model choice
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+\$ per condition
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+\$ per encounter (5 conditions)
+\end{minipage} \\
+\midrule()
+\endhead
+Gemini 2.5 Flash & \$0.000053 & \$0.0003 \\
+GPT-4o-mini & \$0.000199 & \$0.001 \\
+Claude Haiku 4.5 (zeroshot) & \$0.0027 & \$0.013 \\
+Claude Sonnet 4.6 & \$0.0087 & \$0.044 \\
+GPT-5.5 & \$0.0060 & \$0.030 \\
+Claude Opus 4.7 & \$0.0167 & \$0.083 \\
+\bottomrule()
+\end{longtable}
+
+Annual cost at three production volumes:
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.1579}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.2105}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.2105}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.2105}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.2105}}@{}}
+\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+Volume scenario
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Conditions/year
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Encounters/year
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Haiku 4.5 (cheap, fast)
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Opus 4.7 (premium)
+\end{minipage} \\
+\midrule()
+\endhead
+Small clinic (single specialty) & 25,000 & 5,000 & \textbf{\$67} & \textbf{\$418} \\
+Medium hospital & 250,000 & 50,000 & \textbf{\$668} & \textbf{\$4,175} \\
+Health system (multi-hospital) & 2,500,000 & 500,000 & \textbf{\$6,675} & \textbf{\$41,750} \\
+Population health platform & 25,000,000 & 5,000,000 & \textbf{\$66,750} & \textbf{\$417,500} \\
+\bottomrule()
+\end{longtable}
+
+Even at population-health platform scale, Haiku 4.5 deployment is
+well under \$100k/year for the API spend portion. Opus 4.7 at the
+same scale crosses into ``real money'' territory but is still small
+compared to the salary cost of equivalent human coding capacity
+(see §S5.5).
+
+\subsubsection{Non-LLM baseline cost (negligible)}\label{non-llm-baseline-cost-negligible}
+
+The string-matching and frozen sentence-transformer retrieval
+baselines contribute essentially zero per-call cost: they run
+locally with no API calls. The frozen sentence-transformer
+(\texttt{all-MiniLM-L6-v2}) loads once into memory at startup; subsequent
+candidate retrieval is sub-millisecond. These baselines are
+included for accuracy comparison only and are excluded from the
+LLM cost extrapolations above.
+
+\subsubsection{Caveats to the production extrapolation}\label{caveats-to-the-production-extrapolation}
+
+\begin{itemize}
+\tightlist
+\item
+  Per-call cost is dominated by zero-shot mode in this projection.
+  Constrained or RAG modes add \textasciitilde1.5--2× per-call cost relative to
+  zero-shot for the same model (per main §3 Table 3); production
+  deployments using those modes would scale annual costs
+  proportionally.
+\item
+  Real-world prompt sizes vary by encounter type. ICU discharge
+  summaries are denser than ED visits; cardiometabolic conditions
+  specifically may have longer FHIR payloads due to ASCVD/CKD
+  staging complexity. The 1.4× scale-up factor is an estimate, not
+  a measured value (range 1.2--2.0× based on structured vs.~legacy
+  EHR formats).
+\item
+  API pricing changes. The 2026-05-03 snapshot in
+  \texttt{configs/pricing.yaml} will become stale. Cost numbers are
+  reconstructible by recomputing the per-call cost from token
+  counts in the per-prediction CSV under the reader's current
+  pricing.
+\item
+  Provider availability is non-uniform. The Gemini 2.5 Pro
+  abstention pattern observed in our headline run (88\% empty
+  responses on zero-shot calls, see main §Results and
+  §Limitations) implies a retry-and-fallback overhead not modeled
+  in this section.
+\end{itemize}
+
+\subsection{S5.5: Comparison to human-coder cost (rough magnitude)}\label{s5.5-comparison-to-human-coder-cost-rough-magnitude}
+
+For order-of-magnitude grounding only; a precise break-even
+analysis follows in §S5.6:
+
+\begin{itemize}
+\tightlist
+\item
+  Median U.S. medical-coder salary $\approx$ \$60,000/year fully loaded
+  ($\approx$ \$30/hr including benefits and overhead)
+\item
+  Throughput $\approx$ 30--50 charts/day × \textasciitilde250 working days/year =
+  \textasciitilde10,000 charts/year per coder
+\item
+  Implied cost per coded encounter $\approx$ \$5--8 (human)
+\item
+  Implied cost per coded encounter $\approx$ \$0.013 (Haiku 4.5) to
+  \$0.083 (Opus 4.7) (LLM, automated)
+\end{itemize}
+
+LLM API spend alone is \textbf{60×--600× cheaper per encounter} than a
+human coder's loaded cost, depending on model choice. This is NOT
+the deployment break-even, since actual deployment cost includes QA on
+flagged predictions and exception handling. §S5.6 computes that
+properly.
+
+\subsection{S5.6: Break-even analysis (LLM + QA vs.~human coder)}\label{s5.6-break-even-analysis-llm-qa-vs.-human-coder}
+
+\begin{quote}
+\textbf{Methods finalized; quantitative numbers from the n=125 headline
+run are limited by cohort size for some sensitivity dimensions.
+Replication at n=500 would sharpen the break-even surfaces.}
+\end{quote}
+
+For each model configuration, total \$ per accurately-coded
+encounter under three deployment scenarios:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{Human coder alone.} Cost = \$H/hr × (chart\_throughput\^{}-1).
+\item
+  \textbf{LLM, no QA.} Cost = API cost per encounter; accuracy =
+  top-1 rate (no review of model outputs).
+\item
+  \textbf{LLM, QA only on flagged predictions.} Flag low-confidence
+  outputs, hallucinated codes (mechanically detectable via the
+  ICD-10-CM validator), and abstentions (no\_prediction);
+  QA cost added per flag.
+\end{enumerate}
+
+Sensitivity sweep dimensions: human-coder hourly rate (\$30--\$80/hr),
+QA time per LLM-coded encounter (1--10 min), coder throughput
+(20--60 charts/day), and per-(model, mode) failure rates (from §3
+Results).
+
+The open question this analysis contributes to: at what
+hallucination + abstention rate does the LLM-with-QA pipeline
+beat human-only on cost? At the failure rates observed in the
+n=125 headline run (median per-cell hallucination = 0\%; abstention
+varies by model), LLM-with-QA pipelines using any of the
+constrained-mode Anthropic, OpenAI, or Gemini Flash configurations
+beat human-only on cost across all sensitivity-sweep parameter
+ranges considered. Gemini 2.5 Pro under our wrapper settings is
+the exception, since its high abstention rate inflates the QA fraction
+to the point where its per-correct cost approaches human-coder
+parity at moderate QA rates.
+
+\subsection{S5.7: Real-world deployment considerations (qualitative)}\label{s5.7-real-world-deployment-considerations-qualitative}
+
+\subsubsection{S5.7.1 Anthropic prompt-caching threshold}\label{s5.7.1-anthropic-prompt-caching-threshold}
+
+Anthropic's prompt caching only fires when the cacheable prefix
+exceeds a model-specific minimum (Opus 4.7 = 4,096 tokens; Haiku
+4.5 = 4,096; Sonnet 4.6 = 2,048). Below the threshold,
+\texttt{cache\_control:\ ephemeral} is silently no-opped, with no error, no
+warning, no cache hit on subsequent calls. For the v1 ACCESS-scope
+candidate list (\textasciitilde85 codes, \textasciitilde2.8k tokens of system prompt) prior to
+the 2026-05-04 expansion to all 24 LLM configurations,
+constrained-mode prompts sat below the Haiku 4.5 minimum and
+Anthropic caching did not fire for any Anthropic configuration in
+that earlier run. With the headline run's prompts, caching is
+active for Opus 4.7 constrained (78\% cache-read ratio) and Sonnet
+4.6 constrained (80\%); see the \texttt{cache\_read\_tokens} columns in
+the per-prediction CSV. Haiku 4.5 constrained still sits below the
+threshold and shows no cache activity, consistent with the model-
+specific minimum.
+
+\textbf{Deployment implication:} organizations adopting LLM-based coding
+need to audit whether their cacheable prefix actually exceeds the
+threshold for their chosen model. A quick check
+(\texttt{cache\_creation\_input\_tokens\ ==\ 0} and \texttt{cache\_read\_input\_tokens\ ==\ 0} after the first call) reveals silent threshold misses. At
+scale, missed caching can multiply cost 5--10× for constrained-mode
+workloads.
+
+OpenAI's automatic prefix caching has lower thresholds (\textasciitilde1,024
+tokens) and fires more reliably. Google's implicit caching also
+fires reliably.
+
+\subsubsection{S5.7.2 Reliability is a cost factor too}\label{s5.7.2-reliability-is-a-cost-factor-too}
+
+The headline-run observed transient failures on \texttt{gemini-2.5-pro}
+(\textasciitilde10\% ServerError 503 + ClientError 429 across modes; see
+§Results error breakdown) and a high empty-prediction rate
+distinct from API failures. For a deployment relying on Gemini Pro
+for code prediction, this implies either a retry/backoff layer
+doubling the effective per-call latency, a second-line fallback
+model (with its own cost profile) for failed calls, or accepting a
+non-trivial fraction of records will need post-hoc retry. None of
+these are free.
+
+\subsubsection{S5.7.3 Pricing snapshots are reproducibility artifacts}\label{s5.7.3-pricing-snapshots-are-reproducibility-artifacts}
+
+API pricing changes. The cost numbers reported in main §3 and this
+supplement are anchored to the pricing snapshot in
+\texttt{configs/pricing.yaml} at the time of the headline run (2026-05-03,
+date-stamped in the run manifest)
+\autocite{OpenAIPricing2026,GeminiPricing2026}. A reader replicating the
+experiment 6 months later may see different costs even with the
+same token counts; the per-prediction CSV publishes token counts
+alongside the dated cost-USD column so cost numbers are
+reconstructible under any reader's current pricing.
+
+\subsection{S5.8: Framing limitations (full version)}\label{s5.8-framing-limitations-full-version}
+
+A measured framing is essential for this section because the data
+touches on workforce questions that go beyond what a benchmark can
+answer:
+
+\begin{itemize}
+\tightlist
+\item
+  We measure the cost of \emph{automated coding}, not the broader role
+  of clinical informaticists or terminologists, who do far more
+  than coding (workflow design, specialty content review, quality
+  measure validation, data governance, etc.).
+\item
+  Any break-even analysis is \emph{deployment cost guidance}, not an
+  \emph{automation feasibility verdict}. The data informs the question;
+  it doesn't answer it.
+\item
+  Error tolerance is workflow-specific: a hallucinated code that
+  flows into claims billing has different downstream cost than the
+  same hallucination in a research cohort definition or
+  population-health analytics dashboard.
+\item
+  Cost numbers are based on public API pricing as of the run date.
+  On-prem deployment (vLLM, dedicated endpoints, fine-tuned models
+  served internally) has very different economics and is out of
+  scope for v1.
+\item
+  The cohort scale (n=125 unique conditions) limits the statistical
+  precision of per-cell cost-per-correct comparisons (Wilson 95\%
+  CI half-widths of ±5pp on the underlying accuracy rates
+  propagate into the cost-per-correct ratio); replication at n=500
+  would tighten these.
+\end{itemize}
+
+\subsection{S5.9: Historical: pre-headline-run smoke-test cost data}\label{s5.9-historical-pre-headline-run-smoke-test-cost-data}
+
+Preliminary per-call cost data from the 2026-05-02 Phase-0 wiring-
+validation run on 6 fixture FHIR Conditions × 4 degradation modes
+(24 records) × 9 LLM configurations (216 calls). Reported here for
+historical reference; the headline-run numbers in main §3 supersede
+them.
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.1579}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.2105}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.2105}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.2105}}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.2105}}@{}}
+\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+Model × Mode (smoke test)
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Successful calls
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+Mean in/out tokens
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+\$ per call
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
+p50 latency
+\end{minipage} \\
+\midrule()
+\endhead
+\texttt{gemini-2.5-flash:zeroshot} & 24 & 346 / 41 & \$0.000038 & 1.7 s \\
+\texttt{gpt-4o-mini:zeroshot} & 24 & 440 / 125 & \$0.000142 & 2.2 s \\
+\texttt{gemini-2.5-pro:zeroshot} & 18 & 384 / 67 & \$0.001156 & 10.3 s \\
+\texttt{claude-haiku-4-5:zeroshot} & 24 & 1,208 / 140 & \$0.001904 & 1.2 s \\
+\texttt{claude-haiku-4-5:rag} & 24 & 1,710 / 151 & \$0.002467 & 1.3 s \\
+\texttt{claude-haiku-4-5:constrained} & 24 & 3,356 / 137 & \$0.004042 & 1.2 s \\
+\texttt{gpt-5.5:zeroshot} & 24 & 436 / 70 & \$0.004283 & 1.8 s \\
+\texttt{claude-sonnet-4-6:zeroshot} & 24 & 1,209 / 174 & \$0.006246 & 2.8 s \\
+\texttt{claude-opus-4-7:zeroshot} & 24 & 1,617 / 152 & \$0.011900 & 2.2 s \\
+\bottomrule()
+\end{longtable}
+
+Total smoke-test cost: \$0.7652 for 216 LLM calls. The smoke-test
+per-call costs predicted the headline-run costs to within 2× on a
+per-call basis, validating the projected-budget estimates that
+informed the headline-run cost cap.
+
+A finding worth surfacing from the smoke test that persisted into
+the headline run: the same English prompt produces materially
+different token counts across providers (\textasciitilde3× difference between
+Anthropic and Google for the same content). This compounds with
+per-token pricing to produce headline cost differences that are
+NOT explained by accuracy or capability; they are partly
+tokenizer-driven. Literature comparisons that don't normalize for
+tokenization can mislead readers about relative deployment cost.
+% S3 (reproducibility appendix, trained-model arm details) lifted
+% into the companion arXiv technical report — see references.bib
+% entry FungPubMedBERT2026.
+% S4 (MI-CLAIM checklist) removed — not required by JAMIA.
+
+\bigskip
+\hrule
+\bigskip
+
+\printbibliography[heading=bibintoc, title={References}]
+
+\end{document}

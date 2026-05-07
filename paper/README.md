@@ -47,6 +47,10 @@ paper/
   pubmedbert_finetuning.pdf              (tech report snapshot)
 
   cover_letter.md                        (JAMIA submission cover letter)
+  scripts/flatten_paper.py                (modular .tex → flat .tex)
+
+  phantom_codes.tex                      (GENERATED — main, single self-contained .tex)
+  phantom_codes_supplementary.tex        (GENERATED — supplement, single self-contained .tex)
 
   phantom_codes/
     main.tex                             (main paper LaTeX master)
@@ -75,6 +79,14 @@ paper/
 
 Pure LaTeX. xelatex + biber compile section sources directly; there
 is no markdown / pandoc step.
+
+> **Modular sources are canonical; the top-level
+> `phantom_codes.tex` and `phantom_codes_supplementary.tex` are
+> generated build artifacts** (auto-flattened from the modular
+> sources by `make flatten`, chained into every `make snapshot-*`).
+> They're committed for JAMIA's reference. The first 12 lines of
+> each carry a `% GENERATED FILE — DO NOT EDIT` banner. Edit the
+> small section files; the flat .tex regenerates on snapshot.
 
 - **Prose edits** happen in `.tex` files under
   `phantom_codes/sections/`, `phantom_codes/supp_sections/`, or
@@ -132,6 +144,9 @@ make snapshot-all                # all three at once
 make clean                       # wipe both build/ subdirectories
 make watch                       # rebuild on any source change (requires `brew install entr`)
 make test                        # build all three + sanity-check page counts
+
+make flatten-all                 # generate phantom_codes.tex + phantom_codes_supplementary.tex
+make verify-flat                 # confirm flat .tex renders identically to modular build
 ```
 
 The committed `*.pdf` files in this directory are
@@ -145,7 +160,7 @@ Single-line change in the relevant LaTeX master. Find the biblatex
 `\usepackage` line and edit `style=`:
 
 ```latex
-% vancouver [1] superscripted — biomedical (JAMIA, NEJM AI, BMJ) ← current
+% vancouver [1] superscripted — biomedical (JAMIA, BMJ) ← current
 \usepackage[backend=biber, style=vancouver, sortlocale=en_US]{biblatex}
 
 % numeric-comp [1, 2] — IEEE, Nature, NeurIPS

@@ -228,7 +228,7 @@ scripts/        # demo_minimal_training.py (synthetic-fixture end-to-end demo)
 tests/          # unit tests + synthetic fixtures (205 tests, ruff clean)
 benchmarks/     # released open benchmark (Synthea — TBD)
 paper/
-  phantom_codes/    # JAMIA main manuscript + supplement (pure LaTeX)
+  phantom_codes/    # JAMIA main manuscript + supplement (pure LaTeX, modular)
     main.tex            # main manuscript master
     supplementary.tex   # supplement master
     sections/           # 00_title_page → 06_conclusion (.tex)
@@ -238,12 +238,20 @@ paper/
     sections/           # 00_introduction → 06_appendix (.tex)
   references.bib    # shared bibliography (biblatex Vancouver)
   Makefile          # `make phantom_codes` / `make pubmedbert` / `make snapshot-all`
+  scripts/flatten_paper.py     # modular .tex → flat .tex (auto-run by snapshot)
   figures/          # 3 figures (heatmap, cost frontier, D4 outcome stack)
   cover_letter.md   # submission cover letter
-  phantom_codes.pdf            # committed snapshot of the main manuscript
-  phantom_codes_supplementary.pdf  # committed supplement snapshot
-  pubmedbert_finetuning.pdf        # committed arXiv tech-report snapshot
+  phantom_codes.tex                 # GENERATED — single self-contained .tex for JAMIA
+  phantom_codes_supplementary.tex   # GENERATED — single self-contained .tex for JAMIA
+  phantom_codes.pdf                 # committed snapshot of the main manuscript
+  phantom_codes_supplementary.pdf   # committed supplement snapshot
+  pubmedbert_finetuning.pdf         # committed arXiv tech-report snapshot
 ```
+
+The two GENERATED `.tex` files are auto-flattened from the modular
+sources every time `make snapshot-phantom_codes` runs, so JAMIA
+reviewers see exactly the source we render. Edit the modular files
+under `paper/phantom_codes/`; never edit the flat `.tex` directly.
 
 ## Roadmap
 

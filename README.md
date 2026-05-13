@@ -1,6 +1,6 @@
 # Phantom Codes
 
-> *Hallucination, Accuracy, and Cost in Frontier-LLM Medical Concept Normalization.*
+> *Hallucination, Accuracy, and Cost in LLM-Based Medical Concept Normalization.*
 
 A reproducible benchmark for evaluating how well frontier LLMs map degraded clinical data to standardized terminology codes — how often they fabricate codes that don't exist, and at what cost-per-correct they actually deliver.
 

@@ -20,6 +20,24 @@ hold for the frontier models shipping today? And what does the cost
 side of the deployment tradeoff look like for the configurations
 that do work?
 
+Concept normalization is also a load-bearing component of
+\textbf{semantic interoperability}: the property that lets disparate
+healthcare information systems exchange data in ways that preserve
+clinical meaning, not just syntactic structure. Modern interoperability
+stacks (HL7 FHIR, IHE profiles, the OMOP Common Data Model) presume
+that values in coded fields resolve to entries in controlled
+vocabularies (ICD-10-CM, LOINC, RxNorm, SNOMED CT); they break
+silently when those resolutions fail. As clinical data warehouses
+scale to support secondary use, multi-site cohort construction, and
+FAIR data practices, automated terminology grounding becomes a
+critical step in the harmonization pipeline. LLMs are a candidate
+mechanism for that step. What determines whether they are viable in
+production is not raw accuracy in isolation but the conjunction of
+three properties: how often they fabricate codes that do not exist
+(silently corrupting downstream harmonization), how often they
+abstain (creating tractable gaps a reviewer can fill), and at what
+per-prediction cost the resulting pipeline operates at scale.
+
 The literature has documented the fabrication problem but on
 generations that are now dated. Soroush et al.\ (2024) reported
 that GPT-4 achieved only 46\% exact match on ICD-9 and 34\% on
@@ -47,27 +65,34 @@ operationally relevant question is which (model, prompting mode)
 combination achieves a useful accuracy at a tolerable cost. The
 literature does not yet answer that question.
 
-We present \textbf{Phantom Codes}, a reproducible benchmark with
-three contributions. The first is empirical coverage of the most
-recent frontier LLMs: 24 (model, prompting-mode) configurations
-spanning Claude Opus 4.7, Sonnet 4.6, and Haiku 4.5; GPT-5.5 and
-GPT-4o-mini; and Gemini 2.5 Pro, 2.5 Flash, and 3 Flash Preview.
-Several of these models were released within weeks of the evaluation
-date. The second is per-prediction cost as an outcome alongside
-accuracy: every prediction in the matrix records token usage and
-dollar cost at runtime, computed against the published per-token
-rates of each provider, and we report cost-per-correct (USD per
-exact-match outcome) at both the per-call and per-correct level.
-The third is a set of methodological choices that make the first
-two contributions interpretable: a six-way outcome taxonomy in
-which fabrication of non-existent codes (hallucination) and
-abstention (\texttt{no\_prediction}) are explicit, mutually
-exclusive buckets; a within-model ablation across zero-shot,
-constrained, and retrieval-augmented prompting modes that holds
-the model and input fixed; and an abbreviation-stress mode (D4)
-that replaces canonical display strings with clinical jargon
-(T2DM, HTN, CKD-3) to expose where string-matching baselines
-collapse. The headline matrix runs against Synthea-generated FHIR
-Bundles \autocite{Walonoski2018}, a freely-redistributable synthetic
-patient dataset that gives full reproducibility from a pinned
-Synthea version and seed.
+We present \textbf{Phantom Codes}, whose primary contribution is a
+reproducible evaluation framework for LLM-based terminology
+grounding, demonstrated on the most recent frontier-model
+generation. The framework has four reusable components. \emph{First},
+a \textbf{six-way outcome taxonomy} in which fabrication of
+non-existent codes (hallucination) and abstention
+(\texttt{no\_prediction}) are explicit, mutually exclusive buckets;
+the taxonomy generalizes to any closed-vocabulary grounding task
+including LOINC and RxNorm. \emph{Second}, a \textbf{within-model
+ablation} across zero-shot, constrained, and retrieval-augmented
+prompting modes that holds the model and input fixed and varies
+only whether a candidate list is provided, isolating ``wandering
+off the menu'' from genuine ignorance. \emph{Third}, an
+\textbf{abbreviation-stress mode (D4)} that replaces canonical
+display strings with clinical jargon (T2DM, HTN, CKD-3) to expose
+where string-matching baselines collapse and where genuine semantic
+mapping is required; D4 functions as a robustness probe for any
+LLM-grounding pipeline. \emph{Fourth}, \textbf{per-prediction cost
+as a first-class outcome} alongside accuracy; we report cost-per-
+correct (USD per exact-match outcome) as the deployment-relevant
+normalization, computed from per-call token usage against published
+per-token rates.
+
+The empirical application of this framework spans 24 (model,
+prompting-mode) configurations across Claude Opus 4.7, Sonnet 4.6,
+and Haiku 4.5; GPT-5.5 and GPT-4o-mini; and Gemini 2.5 Pro, 2.5
+Flash, and 3 Flash Preview --- several released within weeks of the
+evaluation date. The headline matrix runs against Synthea-generated
+FHIR Bundles \autocite{Walonoski2018}, a freely-redistributable
+synthetic patient dataset that gives full reproducibility from a
+pinned Synthea version and seed.

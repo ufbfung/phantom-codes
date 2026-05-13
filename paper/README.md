@@ -4,7 +4,7 @@ Two papers from this project live here, each in its own subdirectory:
 
 | Snapshot PDF | Sources | What it is |
 |---|---|---|
-| [`phantom_codes.pdf`](phantom_codes.pdf) | [`phantom_codes/`](phantom_codes/) | Main manuscript (target venue: **JAMIA Research and Applications**) — *Phantom Codes: Hallucination, Accuracy, and Cost in Frontier-LLM Medical Concept Normalization* |
+| [`phantom_codes.pdf`](phantom_codes.pdf) | [`phantom_codes/`](phantom_codes/) | Main manuscript (target venue: **JAMIA Research and Applications**) — *Phantom Codes: Hallucination, Accuracy, and Cost in LLM-Based Medical Concept Normalization* |
 | [`phantom_codes_supplementary.pdf`](phantom_codes_supplementary.pdf) | [`phantom_codes/supp_sections/`](phantom_codes/supp_sections/) | Supplement to the main manuscript (S1 prompt templates, S2 extended results, S5 extended cost economics) |
 | [`pubmedbert_finetuning.pdf`](pubmedbert_finetuning.pdf) | [`pubmedbert/`](pubmedbert/) | Companion technical report (planned arXiv preprint) — *Local Fine-Tuning of PubMedBERT for ACCESS-Scope ICD-10-CM Classification under PhysioNet Compliance Constraints* |
 

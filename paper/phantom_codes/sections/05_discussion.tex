@@ -85,6 +85,36 @@ role from candidate selection to category-match adjudication.
 Either architecture keeps a clinical adjudicator in the decision
 loop where accuracy matters most.
 
+\subsection{Implications for semantic interoperability}\label{implications-for-semantic-interoperability}
+
+Automated terminology grounding is a load-bearing component of
+modern interoperability pipelines: HL7 FHIR, IHE profiles, and the
+OMOP Common Data Model all presume that coded fields resolve to
+entries in controlled vocabularies, and they degrade silently when
+those resolutions fail. The 6-way outcome taxonomy has three
+practical consequences for pipeline design. \emph{First}, the
+\texttt{hallucination} bucket is a data-quality red flag for any
+harmonization step: a fabricated code propagates into the
+harmonized dataset undetected, silently corrupting cohort
+definitions, billing aggregates, and downstream training data. The
+\texttt{no\_prediction} bucket, by contrast, is a tractable gap
+that surfaces as a missing value a reviewer or fallback heuristic
+can resolve. Treating these as the same failure mode (as some prior
+work does) under-counts the silent-corruption risk. \emph{Second},
+cost-per-correct is a budget input for interoperability-pipeline
+design. A pipeline processing 250,000 conditions/year at \$0.0003
+per correct (GPT-4o-mini constrained) costs ~\$70/year in API
+spend; the same pipeline at \$0.0133 per correct (Opus 4.7
+constrained) costs ~\$3,300/year for the same accuracy floor. The
+choice is not "which model is best" but "which (model, prompting
+mode) point on the Pareto frontier matches the deployment
+constraints." \emph{Third}, the 6-way taxonomy generalizes as a
+reusable yardstick for any vocabulary-grounding component, not just
+ICD-10-CM: LOINC for labs, RxNorm for medications, SNOMED CT for
+broader clinical concepts. The bundled FY2026 CMS validator that
+distinguishes hallucination from out-of-domain in our matrix has
+direct analogs in the other vocabulary registries.
+
 \subsection{Limitations}\label{limitations}
 
 The v1 headline matrix evaluates n=125 unique Synthea Conditions.

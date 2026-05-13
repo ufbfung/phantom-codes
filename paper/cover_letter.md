@@ -1,34 +1,53 @@
-Dear Dr. Bakken and Editorial Team,
+Dear Editors,
 
 I am pleased to submit the enclosed manuscript, "Phantom Codes:
-Hallucination, Accuracy, and Cost in Frontier-LLM Medical Concept
-Normalization," for consideration as a Research and Applications
-article in JAMIA.
+Hallucination, Accuracy, and Cost in LLM-Based Medical Concept
+Normalization," for consideration in the *IEEE Journal of Biomedical
+and Health Informatics* Special Issue on "Large Language Models with
+Applications in Bioinformatics and Biomedicine, Part II."
 
-The paper contributes two findings that we believe are
-deployment-relevant for clinical informatics groups currently
-evaluating LLMs for medical-coding workflows. First, across a
-24-LLM-configuration evaluation matrix on 125 Synthea-generated
-FHIR Conditions, every fabrication of a non-existent ICD-10-CM
-code we observed occurred under zero-shot prompting; constrained
-prompting eliminated it entirely for every Anthropic and OpenAI
-model evaluated. This adds independent evidence that zero-shot
-LLM coding is inferior to grounded prompting for production use,
-and that the fabrication-free property is recoverable through
-prompting structure rather than model choice. Second, when configurations are scored on
-cost-per-correct-prediction rather than accuracy alone, the
-deployment frontier collapses to two grounded sub-flagship models
-(GPT-4o-mini constrained at \$0.0003 per correct, Claude Haiku 4.5
-constrained at \$0.0044). The largest frontier model tested
-(Claude Opus 4.7 constrained) does not appear on that frontier
-despite competitive accuracy, because cost-per-correct varies by
-roughly 270× across the matrix while top-1 accuracy varies by far
-less. Reporting accuracy in isolation systematically misranks
-deployment options.
+The special issue's call identifies hallucination — the production
+of plausible but factually incorrect output — as a central barrier
+to safe clinical deployment of LLMs. This manuscript contributes a
+reproducible evaluation framework that operationalizes hallucination
+as an explicit, mechanically-checked outcome, applies that framework
+to the most recent frontier-model generation, and reports the
+deployment economics that determine pipeline viability.
 
-The entire evaluation runs against freely-redistributable Synthea
-data, so the benchmark is reproducible by any reader without a
-data-use agreement.
+The primary contribution is methodological. The paper introduces a
+**six-way outcome taxonomy** that splits fabrication of non-existent
+codes (hallucination) from abstention (no_prediction) as mutually-
+exclusive, deployment-distinct failure modes — a distinction that
+prior work conflates and that matters for downstream data quality,
+since a fabricated code silently corrupts a harmonized dataset while
+an abstention surfaces a tractable gap. The taxonomy generalizes
+across closed-vocabulary grounding tasks (ICD-10-CM, LOINC, RxNorm,
+SNOMED CT). The paper additionally introduces a **D4
+abbreviation-stress robustness probe** that strips lexical signal
+to isolate genuine semantic-mapping behavior from lexical lookup,
+a **within-model ablation across zero-shot, constrained, and
+retrieval-augmented prompting** that isolates "wandering off the
+menu" from genuine ignorance, and **per-prediction cost as a
+first-class outcome** alongside accuracy with cost-per-correct
+(USD per exact-match outcome) reported as the deployment-relevant
+normalization.
+
+The empirical demonstration spans 24 (model, prompting-mode)
+configurations across Claude Opus 4.7, Sonnet 4.6, and Haiku 4.5;
+GPT-5.5 and GPT-4o-mini; and Gemini 2.5 Pro, 2.5 Flash, and 3 Flash
+Preview — several released within weeks of the evaluation date.
+Headline findings: zero fabrication under constrained prompting for
+every Anthropic and OpenAI model evaluated; cost-per-correct varies
+by a factor of 270× across the matrix while top-1 accuracy varies
+by far less; the deployment frontier collapses to two grounded
+sub-flagship configurations (GPT-4o-mini constrained at \$0.0003
+per correct, Claude Haiku 4.5 constrained at \$0.0044) that
+dominate the largest frontier model tested. The full evaluation
+runs against freely-redistributable Synthea-generated FHIR Bundles,
+so the benchmark is reproducible by any reader without a data-use
+agreement; the per-prediction CSV, the FY2026 CMS ICD-10-CM
+validator, and the eval runner are released under the MIT License
+alongside the manuscript.
 
 The manuscript has not been published elsewhere and is not under
 consideration by any other journal. The author is unaffiliated and
@@ -40,5 +59,5 @@ statement on Authorship and AI Tools.
 
 Sincerely,
 
-Brian K. Fung
+Brian K. Fung, PharmD, MPH
 brian@briankfung.com

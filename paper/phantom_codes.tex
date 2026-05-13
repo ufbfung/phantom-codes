@@ -10,7 +10,7 @@
 % Generator:     paper/scripts/flatten_paper.py
 % ====================================================================
 
-% Phantom Codes — main paper master file (JAMIA submission).
+% Phantom Codes — main paper master file (IEEE J-BHI submission).
 %
 % Pure-LaTeX source. Section prose lives in sections/*.tex; xelatex +
 % biber compiles directly with no pandoc step. To rebuild after
@@ -25,60 +25,44 @@
 %   - All prose edits happen in sections/*.tex.
 %   - This main.tex only changes when you add/remove/reorder sections,
 %     change document class, add/remove packages, or restyle the title.
+%
+% Venue note: this preamble is configured for IEEE J-BHI (IEEEtran
+% journal class, two-column, IEEE numerical citations). The JAMIA
+% submission format is preserved in git history at commit d9ae5b2.
 
-\documentclass[11pt]{article}
+\documentclass[journal]{IEEEtran}
 
-% ─── Fonts & Unicode (XeLaTeX) ─────────────────────────────────────────
-% Build engine is xelatex (see paper/Makefile). fontspec switches to
-% OpenType font handling; STIX Two Text is a Times-like OpenType font
-% with broad Unicode coverage that is available on texlive-basic
-% installs (some Latin Modern OTF variants are not). Mathematical
-% glyphs (≥, ≤, →, ≈) are written in source as $\geq$, $\leq$, etc.
+% ─── Fonts (XeLaTeX with fontspec) ─────────────────────────────────────
+% IEEEtran defaults to Times-like fonts via pdflatex; under xelatex we
+% use fontspec + STIX Two Text (Times-like OpenType with broad Unicode
+% coverage). Mathematical glyphs (≥, ≤, →, ≈) are written in source as
+% $\geq$, $\leq$, etc.
 \usepackage{fontspec}
 \setmainfont{STIX Two Text}
 
-% ─── Layout & typography ───────────────────────────────────────────────
-\usepackage[margin=1in]{geometry}
-\usepackage{microtype}                  % subtle kerning improvements
-\usepackage{parskip}                    % paragraphs separated by blank lines
-
 % ─── Tables, figures, lists ────────────────────────────────────────────
 \usepackage{graphicx}
-\usepackage{booktabs}                   % \toprule/\midrule/\bottomrule
-\usepackage{longtable}                  % multi-page tables
+\usepackage{booktabs}
+\usepackage{longtable}
 \usepackage{array}
-\usepackage{caption}
-% Smaller, italic caption text with a bold "Figure N:" label, so
-% captions visually separate from body prose. Standard scientific
-% convention.
-\captionsetup{font={small,it}, labelfont={small,bf,up}, labelsep=colon}
+\usepackage{calc}
+\usepackage{etoolbox}
 
-% JAMIA heading hierarchy: BOLD CAPS, bold lower case, Plain text,
-% Italics (per General Instructions for Authors). Top-level section
-% headings are written in uppercase directly in section sources so
-% they render as BOLD CAPS without depending on titlesec (not in
-% texlive-basic). Subsections inherit the default bold sentence-case;
-% sub-subsections are plain; paragraphs are italic.
-\usepackage{calc}                       % column-width expressions in tables
+% Long tables — apply footnote font size so wide tables (model ×
+% prompting-mode × bucket layouts) fit within IEEE two-column width.
+% IEEEtran is single-spaced by default; no setspace package needed.
+\AtBeginEnvironment{longtable}{\footnotesize}
 
 % ─── Math ──────────────────────────────────────────────────────────────
 \usepackage{amsmath}
-\usepackage{amssymb}                    % \mathbb, \leq, \geq, etc.
+\usepackage{amssymb}
 
 % ─── Bibliography ──────────────────────────────────────────────────────
-% biblatex with biber backend — modern Unicode-friendly citation engine.
-% Sections use \autocite{Key}; biblatex resolves at build time against
-% references.bib using the style configured below.
-%
-% Citation style options (one-line swap between venues):
-%   - vancouver:    superscripted   — biomedical (JAMIA, BMJ) ← active
-%   - numeric-comp: [1, 2]          — IEEE, Nature, NeurIPS
-%   - authoryear:   (Devlin, 2019)  — skim-friendly drafting style
-%
-% Active style: vancouver (JAMIA Research and Applications uses
-% AMA-family superscripted numeric refs).
-\usepackage[backend=biber, style=vancouver, sortlocale=en_US,
-            maxnames=3, minnames=3]{biblatex}
+% IEEE numerical citations [1], [2-4]. biblatex with biber backend;
+% \autocite{Key} in section sources resolves at build time against
+% references.bib.
+\usepackage[backend=biber, style=ieee, sortlocale=en_US,
+            maxnames=99]{biblatex}
 \addbibresource{references.bib}
 
 % ─── Links & references ────────────────────────────────────────────────
@@ -86,162 +70,81 @@
             linkcolor=blue!60!black,
             citecolor=blue!60!black,
             urlcolor=blue!60!black]{hyperref}
-\usepackage{xurl}                       % wrap long URLs
+\usepackage{xurl}
 
 % ─── Code & quotes ─────────────────────────────────────────────────────
 \usepackage{xcolor}
-\usepackage{fancyvrb}                   % code blocks
-\usepackage{framed}                     % blockquote backgrounds
+\usepackage{fancyvrb}
+\usepackage{framed}
 \usepackage{csquotes}
 
-% ─── Review-mode niceties ─────────────────────────────────────────────
-% Line numbers on the submitted PDF let reviewers reference specific
-% lines; comment-out for read-throughs, uncomment if a venue requires.
-% \usepackage{lineno}
-% \linenumbers
-% Double-spacing per JAMIA submission convention.
-\usepackage{setspace}
-\doublespacing
-
 % ─── Pandoc legacy shim ────────────────────────────────────────────────
-% \tightlist still appears in section sources (it suppresses inter-item
-% spacing in lists). Define it so the document compiles standalone.
+% \tightlist still appears in section sources.
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 
+% ─── Title and author block (IEEE format) ──────────────────────────────
+\title{Phantom Codes: Hallucination, Accuracy, and Cost in
+LLM-Based Medical Concept Normalization}
+
+\author{Brian~K.~Fung,~\IEEEmembership{PharmD,~MPH}%
+\thanks{B.~K.~Fung is an independent researcher,
+Brandon, FL, USA (e-mail: brian@briankfung.com;
+ORCID: 0000-0002-5951-3770).}}
+
+\markboth{IEEE Journal of Biomedical and Health Informatics,~Vol.~XX,
+No.~X, 2026}%
+{Fung: Phantom Codes: Hallucination, Accuracy, and Cost in LLM-Based
+Medical Concept Normalization}
+
 \begin{document}
 
-% ─── Title page ────────────────────────────────────────────────────────
-% Content lives in sections/title_page.tex; this file provides the
-% titlepage environment + single-spacing wrapper so the section file
-% can stay focused on JAMIA-required content.
-\begin{titlepage}
-\thispagestyle{empty}
-\begin{singlespace}
-% Title page — JAMIA spec.
-%
-% Required elements (per JAMIA General Instructions for Authors):
-%   - Title of the article
-%   - Full name, postal address, email, telephone of corresponding
-%     author
-%   - Full name, department, institution, city, country, degree of
-%     all co-authors
-%   - Up to five keywords or phrases (MeSH terms preferred)
-%   - Word count, excluding title page, abstract, references,
-%     figures, and tables
-%
-% This file is wrapped in a titlepage environment with single-spacing
-% by main.tex; do not redeclare those here.
+\maketitle
 
-\begin{center}
-
-\vspace*{0.5in}
-
-{\LARGE\bfseries Phantom Codes:\\[0.4em]
-\Large Hallucination, Accuracy, and Cost in LLM-Based Medical Concept Normalization\par}
-
-\vspace{2.5em}
-
-{\large Brian K. Fung, PharmD, MPH\par}
-
-\vspace{0.4em}
-
-{\small Independent Researcher \\
-Brandon, Florida, USA\par}
-
-\vspace{2.5em}
-
-\textbf{Corresponding author:}\\
-Brian K. Fung, PharmD, MPH\\
-Independent Researcher (unaffiliated)\\
-Brandon, Florida, USA\\
-Email: \href{mailto:brian@briankfung.com}{brian@briankfung.com}\\
-Postal address and telephone available upon request.
-
-\vfill
-
-\begin{flushleft}
-\textbf{Keywords:} natural language processing; international
-classification of diseases; artificial intelligence; medical
-informatics; reproducibility of results.
-
-\medskip
-
-\textbf{Word count} (excluding title page, abstract, references,
-figures, and tables): approximately 3{,}200 words.
-\end{flushleft}
-
-\end{center}
-\end{singlespace}
-\end{titlepage}
-
-% ─── Abstract ──────────────────────────────────────────────────────────
-% Structured abstract on its own page. Content lives in
-% sections/abstract.tex; see that file for the JAMIA-required
-% subsection structure and word-count cap.
-% Structured abstract — JAMIA convention.
-%
-% Required subsections (per JAMIA General Instructions for Authors):
-%   Objective / Materials and Methods / Results / Discussion / Conclusion
-% Word limit: 250 prose words (subsection labels do not count).
-%
-% Subsection labels are rendered as BOLD CAPS per JAMIA's heading
-% hierarchy spec ("BOLD CAPS, bold lower case, Plain text, Italics").
-
-\begin{center}
-{\Large\bfseries ABSTRACT\par}
-\end{center}
-
-\noindent\textbf{OBJECTIVE.}\\
-To evaluate the most recent frontier large language models (LLMs)
-on medical concept normalization, separating fabrication of non-
-existent codes from abstention as failure modes, and to identify
-the (model, prompting-mode) configurations that combine high
-accuracy with low per-prediction cost.
-
-\medskip
-\noindent\textbf{MATERIALS AND METHODS.}\\
-We evaluate eight frontier LLMs under three prompting modes
-(zero-shot, constrained, retrieval-augmented) against
-string-matching and frozen sentence-transformer baselines.
-Inputs are Synthea-generated FHIR Conditions under four
-degradation modes. A six-way outcome taxonomy separates
-fabrication from abstention.
-
-\medskip
-\noindent\textbf{RESULTS.}\\
-On 125 unique Synthea Conditions across 4 degradation modes,
-fabrication ranged from 0 to 5.6\% across flagship configurations
-and from 0 to 12.8\% across sub-flagship configurations.
-Constrained prompting eliminated fabrication for every Anthropic
-and OpenAI model. Abstention proved more consequential for some
-models: Gemini 2.5 Pro returned an empty prediction on 88\% of
-zero-shot D4 inputs. Cost-per-correct varied by a factor of 270
-across the matrix; GPT-4o-mini in constrained mode achieved the
-lowest cost at \$0.0003 per exact match.
-
-\medskip
-\noindent\textbf{DISCUSSION.}\\
-Hallucination appears more controllable than prior literature
-suggested at this scale. Larger cohorts with more realistic
-clinical text are needed to establish the true effect size.
-
-\medskip
-\noindent\textbf{CONCLUSION.}\\
-Zero-shot LLM prompting is inferior to constrained and retrieval-
-augmented grounding for medical concept normalization. Among grounded configurations,
-cost-per-correct drives deployment selection: GPT-4o-mini
+% ─── Abstract (IEEE convention: plain paragraph, no structured headings)
+\begin{abstract}
+We evaluate the most recent frontier large language models (LLMs)
+on medical concept normalization, separating fabrication of
+non-existent codes from abstention as distinct failure modes, and
+identify the (model, prompting-mode) configurations that combine
+high accuracy with low per-prediction cost. We evaluate eight
+frontier LLMs (Claude Opus 4.7, Sonnet 4.6, Haiku 4.5; GPT-5.5,
+GPT-4o-mini; Gemini 2.5 Pro, 2.5 Flash, 3 Flash Preview) under
+three prompting modes (zero-shot, constrained, retrieval-augmented)
+against string-matching and frozen sentence-transformer baselines.
+Inputs are Synthea-generated FHIR Conditions under four degradation
+modes; a six-way outcome taxonomy separates fabrication from
+abstention. On 125 unique Synthea Conditions across four
+degradation modes, fabrication ranged from 0 to 5.6\% across
+flagship configurations and from 0 to 12.8\% across sub-flagship
+configurations. Constrained prompting eliminated fabrication for
+every Anthropic and OpenAI model. Abstention proved more
+consequential for some models: Gemini 2.5 Pro returned an empty
+prediction on 88\% of zero-shot D4 inputs. Cost-per-correct varied
+by a factor of 270 across the matrix; GPT-4o-mini in constrained
+mode achieved the lowest cost at \$0.0003 per exact match.
+Zero-shot LLM prompting is inferior to constrained and
+retrieval-augmented grounding for medical concept normalization;
+only the grounded configurations eliminated observed fabrication.
+Cost-per-correct drives deployment selection: GPT-4o-mini
 constrained leads at 94.2\% top-1 and \$0.0003 per correct, with
 Claude Haiku 4.5 constrained as the higher-accuracy alternative
-(96.8\%, \$0.0044). Both dominate the largest frontier model
-tested (Opus 4.7, \$0.0133 per correct).
+(96.8\%, \$0.0044). Both dominate the largest frontier model tested
+(Opus 4.7, \$0.0133 per correct).
+\end{abstract}
 
-\newpage
+\begin{IEEEkeywords}
+Natural language processing, International Classification of
+Diseases, artificial intelligence, medical informatics,
+reproducibility of results, large language models, hallucination,
+semantic interoperability.
+\end{IEEEkeywords}
 
 % ─── Body ──────────────────────────────────────────────────────────────
-% Each section is a hand-edited .tex file under sections/. Add new
-% sections by: (1) creating sections/NN_name.tex and (2) appending an
-% \input{sections/NN_name} line below.
+% Each section is a hand-edited .tex file under sections/. The
+% IEEE template does NOT use a separate title page or structured
+% abstract page; sections/00_title_page.tex and sections/01_abstract.tex
+% are JAMIA-format and not included in the IEEE build.
 
 \section{BACKGROUND AND SIGNIFICANCE}\label{background-and-significance}
 
@@ -528,14 +431,16 @@ Table 1 reports both rates per cell as hallucination \% /
 no\_prediction \%. Per-cell N = 125; Wilson 95\% CIs are ±3pp at 0\%,
 ±5pp at 5\%, and ±8 to ±9pp at 50\% (full CIs in §S2.2 to §S2.3).
 
-\begin{longtable}[]{@{}
+\begin{table*}[!t]
+\centering
+\caption{Failure-mode breakdown by model and degradation mode. Each cell reports hallucination \% / no\_prediction \%.}
+\begin{tabular}{@{}
   >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.2000}}
   >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.2000}}
   >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.2000}}
   >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.2000}}
   >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.2000}}@{}}
-\caption{Failure-mode breakdown by model and degradation mode. Each cell reports hallucination \% / no\_prediction \%.}\tabularnewline
-\toprule()
+\toprule
 \begin{minipage}[b]{\linewidth}\raggedright
 Model (mode)
 \end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
@@ -547,22 +452,7 @@ D3\_text\_only
 \end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
 D4\_abbreviated
 \end{minipage} \\
-\midrule()
-\endfirsthead
-\toprule()
-\begin{minipage}[b]{\linewidth}\raggedright
-Model (mode)
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-D1\_full
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-D2\_no\_code
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-D3\_text\_only
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-D4\_abbreviated
-\end{minipage} \\
-\midrule()
-\endhead
+\midrule
 claude-haiku-4-5 (constrained) & 0.0 / 0.0 & 0.0 / 0.0 & 0.0 / 0.0 & 0.0 / 0.0 \\
 claude-haiku-4-5 (zeroshot) & 0.0 / 0.0 & 3.2 / 0.0 & 4.8 / 0.0 & 3.2 / 0.0 \\
 claude-sonnet-4-6 (constrained) & 0.0 / 0.0 & 0.0 / 0.0 & 0.0 / 0.0 & 0.0 / 0.0 \\
@@ -577,8 +467,9 @@ gemini-2.5-pro (zeroshot) & 0.0 / 77.6 & 0.0 / 85.6 & 0.0 / 94.4 & 0.0 / 95.2 \\
 gemini-2.5-pro (constrained) & 0.0 / 54.4 & 0.0 / 32.0 & 0.0 / 67.2 & 0.0 / 60.8 \\
 gemini-2.5-flash (zeroshot) & 0.0 / 0.0 & 0.0 / 11.2 & 0.8 / 37.6 & 0.8 / 42.4 \\
 gemini-3-flash-preview (zeroshot) & 0.0 / 22.4 & 0.0 / 28.0 & 0.0 / 41.6 & 0.0 / 39.2 \\
-\bottomrule()
-\end{longtable}
+\bottomrule
+\end{tabular}
+\end{table*}
 
 \begin{figure}[tbp]
 \centering
@@ -612,16 +503,13 @@ candidates even when their top-1 pick is wrong. Table 2 reports
 top-1 accuracy, top-5 accuracy, and the resulting lift across
 selected configurations.
 
-\begin{longtable}[]{@{}llll@{}}
-\caption{Top-1 vs top-5 exact-match lift across selected configurations.}\tabularnewline
-\toprule()
+\begin{table*}[!t]
+\centering
+\caption{Top-1 vs top-5 exact-match lift across selected configurations.}
+\begin{tabular}{@{}llll@{}}
+\toprule
 Model & Top-1 & Top-5 & Lift \\
-\midrule()
-\endfirsthead
-\toprule()
-Model & Top-1 & Top-5 & Lift \\
-\midrule()
-\endhead
+\midrule
 claude-haiku-4-5 (constrained) & 96.8\% & 100.0\% & +3.2pp \\
 claude-sonnet-4-6 (constrained) & 94.6\% & 100.0\% & +5.4pp \\
 claude-opus-4-7 (constrained) & 94.8\% & 99.8\% & +5.0pp \\
@@ -632,8 +520,9 @@ baseline:tfidf & 45.2\% & 83.2\% & +38.0pp \\
 claude-sonnet-4-6 (zeroshot) & 75.4\% & 95.8\% & +20.4pp \\
 gpt-5.5 (zeroshot) & 88.8\% & 98.8\% & +10.0pp \\
 gemini-2.5-pro (zeroshot) & 11.8\% & 11.8\% & +0.0pp \\
-\bottomrule()
-\end{longtable}
+\bottomrule
+\end{tabular}
+\end{table*}
 
 Two patterns are visible. LLMs in \emph{constrained} mode saturate
 at top-1 (lift $\leq$6pp), so there is little additional value in
@@ -658,16 +547,13 @@ decomposition, break-even analysis (LLM and QA versus a human
 coder), and annual cost projections at deployment scale are
 reported in Supplementary §S5.
 
-\begin{longtable}[]{@{}lrrr@{}}
-\caption{Per-call API cost across selected (model, prompting-mode) configurations from the headline matrix. n = number of completed calls (out of 500 attempted). †, ‡ explained in the footnotes below.}\tabularnewline
-\toprule()
+\begin{table*}[!t]
+\centering
+\caption{Per-call API cost across selected (model, prompting-mode) configurations from the headline matrix. n = number of completed calls (out of 500 attempted). †, ‡ explained in the footnotes below.}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
 Model × Mode & n & \$ total & \$ per call (mean) \\
-\midrule()
-\endfirsthead
-\toprule()
-Model × Mode & n & \$ total & \$ per call (mean) \\
-\midrule()
-\endhead
+\midrule
 claude-opus-4-7:zeroshot & 500 & 6.77 & 0.01354 \\
 claude-sonnet-4-6:zeroshot & 500 & 3.41 & 0.00682 \\
 claude-haiku-4-5:constrained & 500 & 2.14 & 0.00428 \\
@@ -675,8 +561,9 @@ gpt-5.5:zeroshot † & 499 & 3.59 & 0.00720 \\
 gpt-4o-mini:constrained & 500 & 0.14 & 0.00028 \\
 gemini-2.5-pro:zeroshot ‡ & 424 & 0.41 & 0.00096 \\
 gemini-2.5-flash:zeroshot & 500 & 0.03 & 0.00005 \\
-\bottomrule()
-\end{longtable}
+\bottomrule
+\end{tabular}
+\end{table*}
 
 † One of 500 attempted gpt-5.5 zero-shot calls exhausted the SDK
 retry budget on a transient API error and is excluded from the cost
@@ -719,15 +606,17 @@ Table 4 below. Sorted by \$/correct ascending; n=500 per row.
 \label{fig:cost}
 \end{figure}
 
-\begin{longtable}[]{@{}
+\begin{table*}[!t]
+\centering
+\caption{Cost per correct prediction. \emph{constr.} = constrained. *Gemini 2.5 Pro constrained reflects abstention pattern, not error rate; see §4.3 (Failure-mode breakdown).}
+\begin{tabular}{@{}
   >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.4267}}
   >{\raggedright\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.1333}}
   >{\raggedleft\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.0933}}
   >{\raggedleft\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.1067}}
   >{\raggedleft\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.0933}}
   >{\raggedleft\arraybackslash}p{(\columnwidth - 10\tabcolsep) * \real{0.1467}}@{}}
-\caption{Cost per correct prediction. \emph{constr.} = constrained. *Gemini 2.5 Pro constrained reflects abstention pattern, not error rate; see §4.3 (Failure-mode breakdown).}\tabularnewline
-\toprule()
+\toprule
 \begin{minipage}[b]{\linewidth}\raggedright
 Model
 \end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
@@ -741,24 +630,7 @@ Total
 \end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
 \$/correct
 \end{minipage} \\
-\midrule()
-\endfirsthead
-\toprule()
-\begin{minipage}[b]{\linewidth}\raggedright
-Model
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Mode
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
-Top-1
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
-Halluc
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
-Total
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedleft
-\$/correct
-\end{minipage} \\
-\midrule()
-\endhead
+\midrule
 Gemini 2.5 Flash & rag & 84.6\% & 0.0\% & \$0.03 & \$0.0001 \\
 GPT-4o-mini & zeroshot & 85.2\% & 7.6\% & \$0.07 & \$0.0002 \\
 GPT-4o-mini & rag & 90.4\% & 0.0\% & \$0.09 & \$0.0002 \\
@@ -771,8 +643,9 @@ Claude Sonnet 4.6 & constr. & 94.6\% & 0.0\% & \$3.26 & \$0.0069 \\
 GPT-5.5 & constr. & 93.6\% & 0.0\% & \$3.63 & \$0.0078 \\
 Gemini 2.5 Pro* & constr. & 46.2\% & 0.0\% & \$1.57 & \$0.0068 \\
 Claude Opus 4.7 & constr. & 94.8\% & 0.0\% & \$6.31 & \$0.0133 \\
-\bottomrule()
-\end{longtable}
+\bottomrule
+\end{tabular}
+\end{table*}
 
 Reading the table top-down, the cheaper rows are all 4 to 19pp
 lower on top-1 or carry nonzero hallucination. \textbf{GPT-4o-mini
@@ -994,17 +867,9 @@ frontier model (Opus 4.7 constrained, 94.8\%, \$0.0133). The
 supported workflow is LLM-augmented coding with terminologist
 review.
 
-\bigskip
-\hrule
-\bigskip
+% ─── Back-matter ───────────────────────────────────────────────────────
 
-% ─── Back-matter (JAMIA order) ─────────────────────────────────────────
-% JAMIA General Instructions order: Acknowledgments, Competing
-% Interests, Funding, then other required statements (Data
-% availability, Code availability, Author contributions). Reference
-% list follows.
-
-\section*{ACKNOWLEDGMENTS}
+\section*{Acknowledgments}
 \textbf{Use of AI tools.} This work used Anthropic's Claude (Claude
 Code, model Claude Opus 4.7) as a coding, drafting, and
 figure-design assistant during the development of the benchmark
@@ -1013,17 +878,18 @@ conceived and designed the study, defined the experimental framework
 and outcome taxonomy, conducted all analyses, and reviewed and
 verified the AI-generated content. The author retains full
 responsibility for the content, methodology, results, and any
-errors. 
+errors.
 
-\section*{COMPETING INTERESTS}
+\section*{Competing Interests}
 The author declares no competing interests.
 
-\section*{FUNDING}
+\section*{Funding}
 This work received no external funding. LLM API access (Anthropic,
 OpenAI, Google) for the evaluation matrix was self-funded by the
-corresponding author; per-call costs are itemized in §Results.
+corresponding author; per-call costs are itemized in the Results
+section.
 
-\section*{DATA AVAILABILITY}
+\section*{Data Availability}
 The Synthea-generated FHIR Bundles used for the headline evaluation
 are freely redistributable and will be released as
 \texttt{benchmarks/synthetic\_v1/} alongside the paper at
@@ -1032,7 +898,7 @@ including the data-preparation pipeline, degradation logic,
 ICD-10-CM validator, eval runner, prompts, and baselines, is
 publicly available at the same repository under the MIT License.
 
-\section*{CODE AVAILABILITY}
+\section*{Code Availability}
 All source code, configuration files, synthetic test fixtures, and
 the manuscript source are publicly available at
 \url{https://github.com/ufbfung/phantom-codes} under the MIT
@@ -1040,17 +906,6 @@ License. The repository includes the full evaluation pipeline and
 the Synthea generation configuration needed to reproduce the
 headline matrix end-to-end.
 
-\section*{AUTHOR CONTRIBUTIONS}
-B.K.F.\ designed the benchmark, implemented the codebase, conducted
-the experiments, and wrote the manuscript.
-
-\bigskip
-\hrule
-\bigskip
-
-% Auto-generated bibliography — biblatex pulls cited entries from
-% references.bib, formats per the style configured in the preamble.
-\section*{REFERENCES}
-\printbibliography[heading=none]
+\printbibliography
 
 \end{document}

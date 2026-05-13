@@ -4,8 +4,8 @@ Two papers from this project live here, each in its own subdirectory:
 
 | Snapshot PDF | Sources | What it is |
 |---|---|---|
-| [`phantom_codes.pdf`](phantom_codes.pdf) | [`phantom_codes/`](phantom_codes/) | Main manuscript (target venue: **JAMIA Research and Applications**) — *Phantom Codes: Hallucination, Accuracy, and Cost in LLM-Based Medical Concept Normalization* |
-| [`phantom_codes_supplementary.pdf`](phantom_codes_supplementary.pdf) | [`phantom_codes/supp_sections/`](phantom_codes/supp_sections/) | Supplement to the main manuscript (S1 prompt templates, S2 extended results, S5 extended cost economics) |
+| [`phantom_codes.pdf`](phantom_codes.pdf) | [`phantom_codes/`](phantom_codes/) | Main manuscript (target: **IEEE J-BHI LLM Special Issue, Part II**, deadline 2026-06-01) — *Phantom Codes: Hallucination, Accuracy, and Cost in LLM-Based Medical Concept Normalization* |
+| [`phantom_codes_supplementary.pdf`](phantom_codes_supplementary.pdf) | [`phantom_codes/supp_sections/`](phantom_codes/supp_sections/) | Supplement to the main manuscript (S1 prompt templates + provider schemas; S2.1 full per-(model, mode) outcome distribution; S2.8 hallucinated-code listing; pointers to GitHub for trimmed extended sections) |
 | [`pubmedbert_finetuning.pdf`](pubmedbert_finetuning.pdf) | [`pubmedbert/`](pubmedbert/) | Companion technical report (planned arXiv preprint) — *Local Fine-Tuning of PubMedBERT for ACCESS-Scope ICD-10-CM Classification under PhysioNet Compliance Constraints* |
 
 Both papers share [`references.bib`](references.bib) via biblatex.
@@ -17,19 +17,21 @@ the PDFs from source.
 
 ## Status
 
-Headline n=125 Synthea evaluation completed 2026-05-04; the JAMIA
-manuscript is submission-ready. Main text fits JAMIA's 4,000-word
-limit (~3,200 words); structured abstract is ~225 prose words
-(≤250 cap). 4 tables and 3 figures (at JAMIA's 4-table / 6-figure
-caps). The PubMedBERT tech report is a separate arXiv-bound
-companion (~3,200 words) covering data + compliance, architecture,
-hardware, optimization, results, discussion, and a reproduction
-appendix.
+Headline n=125 Synthea evaluation completed 2026-05-04; the IEEE J-BHI
+manuscript is submission-ready (after a Phase-2 conversion from the
+prior JAMIA layout, see git log). Main paper is **11 pages** in
+IEEEtran two-column format (under the J-BHI 14-page limit with 3
+pages of room); 3 figures, 4 tables. Supplement is **17 pages** in
+the original article-class layout (uploaded separately at submission;
+S2.2–S2.7 and most of S5 trimmed to GitHub pointers). The PubMedBERT
+tech report is a separate arXiv-bound companion (~3,200 words)
+covering data + compliance, architecture, hardware, optimization,
+results, discussion, and a reproduction appendix.
 
 | Document | Structure | State |
 |---|---|---|
-| Phantom Codes (JAMIA) | Title page → Abstract → §1 Background and Significance → §5 Conclusion → back-matter | ✅ submission-ready |
-| Phantom Codes supplement | S1 prompts, S2 extended results, S5 extended cost economics | ✅ submission-ready |
+| Phantom Codes (IEEE J-BHI) | IEEEtran journal mode: title block + plain abstract + Index Terms → §I Background and Significance → §V Conclusion → Acknowledgments + back-matter | ✅ submission-ready |
+| Phantom Codes supplement | S1 prompt templates + provider schemas, S2.1 full outcome distribution, S2.8 hallucinated-code listing, pointers to GitHub for everything else | ✅ submission-ready |
 | PubMedBERT tech report | §0 Introduction → §6 Appendix | ✅ drafted |
 
 Submission-readiness tasks are tracked in the project
@@ -53,16 +55,19 @@ paper/
   phantom_codes_supplementary.tex        (GENERATED — supplement, single self-contained .tex)
 
   phantom_codes/
-    main.tex                             (main paper LaTeX master)
-    supplementary.tex                    (supplement LaTeX master)
-    sections/                            (00_title_page, 01_abstract,
-                                          02_background_and_significance,
+    main.tex                             (IEEEtran main paper LaTeX master)
+    supplementary.tex                    (article-class supplement LaTeX master)
+    sections/                            (02_background_and_significance,
                                           03_materials_and_methods,
                                           04_results, 05_discussion,
-                                          06_conclusion)
+                                          06_conclusion;
+                                          00_title_page + 01_abstract are
+                                          unused in the IEEE format — abstract
+                                          and title block live inline in
+                                          main.tex)
     supp_sections/                       (S1_prompt_templates,
-                                          S2_extended_results,
-                                          S5_cost_economics_extended)
+                                          S2_extended_results [trimmed],
+                                          S5_cost_economics_extended [pointer])
     build/                               (gitignored, xelatex/biber output)
 
   pubmedbert/
@@ -84,9 +89,10 @@ is no markdown / pandoc step.
 > `phantom_codes.tex` and `phantom_codes_supplementary.tex` are
 > generated build artifacts** (auto-flattened from the modular
 > sources by `make flatten`, chained into every `make snapshot-*`).
-> They're committed for JAMIA's reference. The first 12 lines of
-> each carry a `% GENERATED FILE — DO NOT EDIT` banner. Edit the
-> small section files; the flat .tex regenerates on snapshot.
+> They're committed so IEEE reviewers see exactly the source we
+> render. The first 12 lines of each carry a `% GENERATED FILE — DO
+> NOT EDIT` banner. Edit the small section files; the flat .tex
+> regenerates on snapshot.
 
 - **Prose edits** happen in `.tex` files under
   `phantom_codes/sections/`, `phantom_codes/supp_sections/`, or
@@ -160,11 +166,11 @@ Single-line change in the relevant LaTeX master. Find the biblatex
 `\usepackage` line and edit `style=`:
 
 ```latex
-% vancouver [1] superscripted — biomedical (JAMIA, BMJ) ← current
-\usepackage[backend=biber, style=vancouver, sortlocale=en_US]{biblatex}
+% ieee [1], [2-4] — IEEE J-BHI and the IEEE family ← current
+\usepackage[backend=biber, style=ieee, sortlocale=en_US]{biblatex}
 
-% numeric-comp [1, 2] — IEEE, Nature, NeurIPS
-\usepackage[backend=biber, style=numeric-comp, sortlocale=en_US]{biblatex}
+% vancouver [1] superscripted — biomedical (JAMIA, BMJ)
+\usepackage[backend=biber, style=vancouver, sortlocale=en_US]{biblatex}
 
 % authoryear (Devlin, 2019) — easier-to-skim drafting style
 \usepackage[backend=biber, style=authoryear, sortlocale=en_US]{biblatex}

@@ -4,7 +4,7 @@ Two papers from this project live here, each in its own subdirectory:
 
 | Snapshot PDF | Sources | What it is |
 |---|---|---|
-| [`phantom_codes.pdf`](phantom_codes.pdf) | [`phantom_codes/`](phantom_codes/) | Main manuscript (target: **IEEE J-BHI LLM Special Issue, Part II**, deadline 2026-06-01) — *Phantom Codes: Hallucination, Accuracy, and Cost in LLM-Based Medical Concept Normalization* |
+| [`phantom_codes.pdf`](phantom_codes.pdf) | [`phantom_codes/`](phantom_codes/) | Main manuscript (target: **IEEE J-BHI** as a regular research article) — *Phantom Codes: Hallucination, Accuracy, and Cost in LLM-Based Medical Concept Normalization* |
 | [`phantom_codes_supplementary.pdf`](phantom_codes_supplementary.pdf) | [`phantom_codes/supp_sections/`](phantom_codes/supp_sections/) | Supplement to the main manuscript (S1 prompt templates + provider schemas; S2.1 full per-(model, mode) outcome distribution; S2.8 hallucinated-code listing; pointers to GitHub for trimmed extended sections) |
 | [`pubmedbert_finetuning.pdf`](pubmedbert_finetuning.pdf) | [`pubmedbert/`](pubmedbert/) | Companion technical report (planned arXiv preprint) — *Local Fine-Tuning of PubMedBERT for ACCESS-Scope ICD-10-CM Classification under PhysioNet Compliance Constraints* |
 
@@ -20,8 +20,8 @@ the PDFs from source.
 Headline n=125 Synthea evaluation completed 2026-05-04; the IEEE J-BHI
 manuscript is submission-ready (after a Phase-2 conversion from the
 prior JAMIA layout, see git log). Main paper is **11 pages** in
-IEEEtran two-column format (under the J-BHI 14-page limit with 3
-pages of room); 3 figures, 4 tables. Supplement is **17 pages** in
+IEEEtran two-column format (within J-BHI's regular-article page
+norms); 3 figures, 4 tables. Supplement is **17 pages** in
 the original article-class layout (uploaded separately at submission;
 S2.2–S2.7 and most of S5 trimmed to GitHub pointers). The PubMedBERT
 tech report is a separate arXiv-bound companion (~3,200 words)

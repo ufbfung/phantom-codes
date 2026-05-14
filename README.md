@@ -8,7 +8,7 @@ A reproducible benchmark for evaluating how well frontier LLMs map degraded clin
 
 **Read the paper:** [paper/phantom_codes.pdf](paper/phantom_codes.pdf) (main, IEEE format, 11 pages) · [paper/phantom_codes_supplementary.pdf](paper/phantom_codes_supplementary.pdf) (supplement, 17 pages) · [paper/cover_letter.md](paper/cover_letter.md) · [paper/README.md](paper/README.md) for build details. Headline n=125 Synthea evaluation completed 2026-05-04; per-(model, mode) aggregates at [results/summary/n125_run_v2/](results/summary/n125_run_v2/).
 
-**Status:** v1 complete for diagnoses. Degradation pipeline ([data/degrade.py](src/phantom_codes/data/degrade.py)), 6-way outcome taxonomy ([eval/metrics.py](src/phantom_codes/eval/metrics.py)), ICD-10-CM validator ([data/icd10cm/](src/phantom_codes/data/icd10cm/)), LLM module ([models/llm.py](src/phantom_codes/models/llm.py): Claude + GPT + Gemini in zero-shot + constrained + RAG modes), bi-encoder retrieval baseline ([models/retrieval.py](src/phantom_codes/models/retrieval.py)), string-matching baselines ([models/baselines.py](src/phantom_codes/models/baselines.py)), token + cost tracking ([eval/cost.py](src/phantom_codes/eval/cost.py)), run-manifest sidecars ([eval/manifest.py](src/phantom_codes/eval/manifest.py)), blinded `--infra-only` smoke-test mode, and end-to-end eval runner ([eval/runner.py](src/phantom_codes/eval/runner.py)) are implemented and tested. Manuscript submission-ready for **IEEE Journal of Biomedical and Health Informatics, LLM Special Issue Part II** (deadline 2026-06-01); 11 pages IEEE J-BHI two-column format, 3 figures, 4 tables, ~17-page supplement, accompanied by a companion arXiv tech report on the PubMedBERT fine-tuning.
+**Status:** v1 complete for diagnoses. Degradation pipeline ([data/degrade.py](src/phantom_codes/data/degrade.py)), 6-way outcome taxonomy ([eval/metrics.py](src/phantom_codes/eval/metrics.py)), ICD-10-CM validator ([data/icd10cm/](src/phantom_codes/data/icd10cm/)), LLM module ([models/llm.py](src/phantom_codes/models/llm.py): Claude + GPT + Gemini in zero-shot + constrained + RAG modes), bi-encoder retrieval baseline ([models/retrieval.py](src/phantom_codes/models/retrieval.py)), string-matching baselines ([models/baselines.py](src/phantom_codes/models/baselines.py)), token + cost tracking ([eval/cost.py](src/phantom_codes/eval/cost.py)), run-manifest sidecars ([eval/manifest.py](src/phantom_codes/eval/manifest.py)), blinded `--infra-only` smoke-test mode, and end-to-end eval runner ([eval/runner.py](src/phantom_codes/eval/runner.py)) are implemented and tested. Manuscript submission-ready for **IEEE Journal of Biomedical and Health Informatics** as a regular research article; 11 pages IEEE J-BHI two-column format, 3 figures, 4 tables, ~17-page supplement, accompanied by a companion arXiv tech report on the PubMedBERT fine-tuning.
 
 **v1 scope:** diagnoses (ICD-10-CM). v2+ extends to labs (LOINC) and medications (RxNorm) using the same framework.
 
@@ -142,7 +142,7 @@ Full paper-build documentation in [paper/README.md](paper/README.md).
 
 ## Roadmap
 
-- **v1**: diagnoses (ICD-10-CM) — manuscript submission-ready for IEEE J-BHI LLM Special Issue Part II (deadline 2026-06-01)
+- **v1**: diagnoses (ICD-10-CM) — manuscript submission-ready for IEEE J-BHI as a regular research article
 - **v2**: + labs (LOINC), via Observation resources
 - **v3**: + medications (RxNorm), via MedicationRequest resources
 

@@ -49,13 +49,16 @@ agreement; the per-prediction CSV, the FY2026 CMS ICD-10-CM
 validator, and the eval runner are released under the MIT License
 alongside the manuscript.
 
-The manuscript has not been published elsewhere and is not under
-consideration by any other journal. The author is unaffiliated and
-declares no competing interests. The work received no external
-funding; LLM API costs were self-funded. The author used Anthropic's
-Claude as a coding, drafting, and figure-design assistant; this is
-disclosed in the manuscript's Acknowledgments per the COPE position
-statement on Authorship and AI Tools.
+The manuscript is entirely original; it has not been copyrighted,
+published, submitted, or accepted for publication elsewhere, and no
+preliminary version has appeared as a conference abstract or paper.
+This is a first submission to *IEEE J-BHI*, not a revision or
+resubmission. The author is unaffiliated and declares no competing
+interests. The work received no external funding; LLM API costs were
+self-funded. The author used Anthropic's Claude as a coding,
+drafting, and figure-design assistant; this is disclosed in the
+manuscript's Acknowledgments per the COPE position statement on
+Authorship and AI Tools.
 
 Sincerely,
 

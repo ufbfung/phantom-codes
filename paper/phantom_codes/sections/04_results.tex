@@ -39,39 +39,24 @@ no\_prediction \%. Per-cell N = 125; Wilson 95\% CIs are ±3pp at 0\%,
 \begin{table*}[!t]
 \centering
 \caption{Failure-mode breakdown by model and degradation mode. Each cell reports hallucination \% / no\_prediction \%.}
-\begin{tabular}{@{}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.2000}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.2000}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.2000}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.2000}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.2000}}@{}}
+\begin{tabular}{@{}llcccc@{}}
 \toprule
-\begin{minipage}[b]{\linewidth}\raggedright
-Model (mode)
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-D1\_full
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-D2\_no\_code
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-D3\_text\_only
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-D4\_abbreviated
-\end{minipage} \\
+Model & Mode & D1\_full & D2\_no\_code & D3\_text\_only & D4\_abbreviated \\
 \midrule
-claude-haiku-4-5 (constrained) & 0.0 / 0.0 & 0.0 / 0.0 & 0.0 / 0.0 & 0.0 / 0.0 \\
-claude-haiku-4-5 (zeroshot) & 0.0 / 0.0 & 3.2 / 0.0 & 4.8 / 0.0 & 3.2 / 0.0 \\
-claude-sonnet-4-6 (constrained) & 0.0 / 0.0 & 0.0 / 0.0 & 0.0 / 0.0 & 0.0 / 0.0 \\
-claude-sonnet-4-6 (zeroshot) & 0.0 / 0.0 & 0.8 / 0.0 & 6.4 / 0.0 & 3.2 / 0.0 \\
-claude-opus-4-7 (constrained) & 0.0 / 0.0 & 0.0 / 0.0 & 0.8 / 0.8 & 0.0 / 0.0 \\
-claude-opus-4-7 (zeroshot) & 0.8 / 0.0 & 0.0 / 0.0 & 5.6 / 0.0 & 1.6 / 1.6 \\
-gpt-5.5 (constrained) & 0.0 / 0.0 & 0.0 / 0.0 & 0.0 / 0.0 & 0.0 / 0.0 \\
-gpt-5.5 (zeroshot) & 0.8 / 0.8 & 0.0 / 0.0 & 0.8 / 0.8 & 0.0 / 0.0 \\
-gpt-4o-mini (constrained) & 0.0 / 0.0 & 0.0 / 0.0 & 0.0 / 0.0 & 0.0 / 0.0 \\
-gpt-4o-mini (zeroshot) & 0.8 / 0.0 & 12.8 / 0.0 & 9.6 / 0.0 & 7.2 / 0.0 \\
-gemini-2.5-pro (zeroshot) & 0.0 / 77.6 & 0.0 / 85.6 & 0.0 / 94.4 & 0.0 / 95.2 \\
-gemini-2.5-pro (constrained) & 0.0 / 54.4 & 0.0 / 32.0 & 0.0 / 67.2 & 0.0 / 60.8 \\
-gemini-2.5-flash (zeroshot) & 0.0 / 0.0 & 0.0 / 11.2 & 0.8 / 37.6 & 0.8 / 42.4 \\
-gemini-3-flash-preview (zeroshot) & 0.0 / 22.4 & 0.0 / 28.0 & 0.0 / 41.6 & 0.0 / 39.2 \\
+claude-haiku-4-5       & constrained & 0.0 / 0.0 & 0.0 / 0.0  & 0.0 / 0.0  & 0.0 / 0.0  \\
+claude-haiku-4-5       & zeroshot    & 0.0 / 0.0 & 3.2 / 0.0  & 4.8 / 0.0  & 3.2 / 0.0  \\
+claude-sonnet-4-6      & constrained & 0.0 / 0.0 & 0.0 / 0.0  & 0.0 / 0.0  & 0.0 / 0.0  \\
+claude-sonnet-4-6      & zeroshot    & 0.0 / 0.0 & 0.8 / 0.0  & 6.4 / 0.0  & 3.2 / 0.0  \\
+claude-opus-4-7        & constrained & 0.0 / 0.0 & 0.0 / 0.0  & 0.8 / 0.8  & 0.0 / 0.0  \\
+claude-opus-4-7        & zeroshot    & 0.8 / 0.0 & 0.0 / 0.0  & 5.6 / 0.0  & 1.6 / 1.6  \\
+gpt-5.5                & constrained & 0.0 / 0.0 & 0.0 / 0.0  & 0.0 / 0.0  & 0.0 / 0.0  \\
+gpt-5.5                & zeroshot    & 0.8 / 0.8 & 0.0 / 0.0  & 0.8 / 0.8  & 0.0 / 0.0  \\
+gpt-4o-mini            & constrained & 0.0 / 0.0 & 0.0 / 0.0  & 0.0 / 0.0  & 0.0 / 0.0  \\
+gpt-4o-mini            & zeroshot    & 0.8 / 0.0 & 12.8 / 0.0 & 9.6 / 0.0  & 7.2 / 0.0  \\
+gemini-2.5-pro         & zeroshot    & 0.0 / 77.6 & 0.0 / 85.6 & 0.0 / 94.4 & 0.0 / 95.2 \\
+gemini-2.5-pro         & constrained & 0.0 / 54.4 & 0.0 / 32.0 & 0.0 / 67.2 & 0.0 / 60.8 \\
+gemini-2.5-flash       & zeroshot    & 0.0 / 0.0 & 0.0 / 11.2 & 0.8 / 37.6 & 0.8 / 42.4 \\
+gemini-3-flash-preview & zeroshot    & 0.0 / 22.4 & 0.0 / 28.0 & 0.0 / 41.6 & 0.0 / 39.2 \\
 \bottomrule
 \end{tabular}
 \end{table*}

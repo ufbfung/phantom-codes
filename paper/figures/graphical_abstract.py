@@ -63,7 +63,7 @@ INLINE_LABELS = {
     },
     ("claude-haiku-4-5", "constrained"): {
         "label": "Claude Haiku 4.5\n$4.40/1k correct",
-        "xytext_offset": (-12, +8),  # above-left
+        "xytext_offset": (-12, -22),  # below-left, into the empty region
         "ha": "right",
     },
     ("claude-opus-4-7", "constrained"): {

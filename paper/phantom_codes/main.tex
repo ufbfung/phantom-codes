@@ -28,6 +28,12 @@
 \usepackage{fontspec}
 \setmainfont{STIX Two Text}
 
+% IEEEtran's \IEEEPARstart drop-cap macro hard-codes a Type 1 font
+% lookup ("ptmrq8r") that XeLaTeX + fontspec cannot resolve. Override
+% it to use our main font at a larger scale, preserving the drop-cap
+% effect without the font-resolution failure.
+\renewcommand{\IEEEPARstart}[2]{{\fontsize{40pt}{42pt}\selectfont #1}#2}
+
 % ─── Tables, figures, lists ────────────────────────────────────────────
 \usepackage{graphicx}
 \usepackage{booktabs}
@@ -75,7 +81,7 @@
 \title{Phantom Codes: Hallucination, Accuracy, and Cost in
 LLM-Based Medical Concept Normalization}
 
-\author{Brian~K.~Fung,~\IEEEmembership{PharmD,~MPH}%
+\author{Brian~K.~Fung,~PharmD,~MPH%
 \thanks{B.~K.~Fung is an independent researcher,
 Brandon, FL, USA (e-mail: brian@briankfung.com;
 ORCID: 0000-0002-5951-3770).}}
@@ -180,5 +186,19 @@ the Synthea generation configuration needed to reproduce the
 headline matrix end-to-end.
 
 \printbibliography
+
+% ─── Author biography (IEEE convention) ────────────────────────────────
+% Single author, no photograph supplied. IEEE convention is to include
+% a brief bio at the end of the article; for venues that allow no
+% photograph, IEEEbiographynophoto is the right environment.
+\begin{IEEEbiographynophoto}{Brian K. Fung}
+(PharmD, MPH) is an independent researcher based in Brandon, Florida,
+USA. He holds a Doctor of Pharmacy (PharmD) and a Master of Public
+Health (MPH), and his research focuses on the safe and cost-effective
+deployment of large language models in healthcare, with current
+emphasis on medical concept normalization, semantic interoperability,
+and reproducible evaluation infrastructure for clinical NLP. He
+declares no competing interests.
+\end{IEEEbiographynophoto}
 
 \end{document}
